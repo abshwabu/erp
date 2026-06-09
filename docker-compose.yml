@@ -5,14 +5,13 @@ services:
     container_name: erp-backend
     environment:
       APP_ENV: local
-      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       APP_URL: http://localhost:8000
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
       DB_DATABASE: erp
       DB_USERNAME: erp
-      DB_PASSWORD: erpsecret
+      DB_PASSWORD: secret
       REDIS_HOST: redis
       REDIS_PORT: 6379
       MAIL_MAILER: smtp
@@ -58,7 +57,7 @@ services:
     environment:
       POSTGRES_DB: erp
       POSTGRES_USER: erp
-      POSTGRES_PASSWORD: erpsecret
+      POSTGRES_PASSWORD: secret
     ports:
       - "5432:5432"
     volumes:
