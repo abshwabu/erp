@@ -2,17 +2,27 @@
 
 declare(strict_types=1);
 
-use Stancl\Tenancy\Database\Models\Domain;
-use Stancl\Tenancy\Database\Models\Tenant;
+use App\Modules\Core\Models\Tenant;
+use App\Modules\Core\Tenancy\Finders\DomainTenantFinder;
+use App\Modules\Core\Tenancy\Finders\SubdomainTenantFinder;
 use Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLSchemaManager;
+
+$moduleMigrationPaths = array_values(array_filter(
+    glob(app_path('Modules/*/database/migrations'), GLOB_ONLYDIR) ?: [],
+    'is_dir'
+));
 
 return [
     'tenant_model' => Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
-    'domain_model' => Domain::class,
+    'domain_model' => Stancl\Tenancy\Database\Models\Domain::class,
     'central_domains' => [
         '127.0.0.1',
         'localhost',
+    ],
+    'tenant_finders' => [
+        SubdomainTenantFinder::class,
+        DomainTenantFinder::class,
     ],
     'bootstrappers' => [
         Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
@@ -56,7 +66,7 @@ return [
     'routes' => true,
     'migration_parameters' => [
         '--force' => true,
-        '--path' => [database_path('migrations/tenant')],
+        '--path' => array_merge([database_path('migrations/tenant')], $moduleMigrationPaths),
         '--realpath' => true,
     ],
     'seeder_parameters' => [

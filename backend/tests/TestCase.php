@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Str;
-use Stancl\Tenancy\Database\Models\Tenant;
+use App\Modules\Core\Models\Tenant;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -19,6 +19,9 @@ abstract class TestCase extends BaseTestCase
     {
         return Tenant::create(array_merge([
             'id' => (string) Str::uuid(),
+            'name' => 'Test Tenant',
+            'slug' => 'test-tenant',
+            'status' => 'active',
         ], $attributes));
     }
 
