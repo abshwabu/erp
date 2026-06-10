@@ -3,6 +3,7 @@
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
+         failOnDeprecation="false"
 >
     <testsuites>
         <testsuite name="Unit">
@@ -16,6 +17,9 @@
         <include>
             <directory>app</directory>
         </include>
+        <exclude>
+            <directory>vendor</directory>
+        </exclude>
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
@@ -29,5 +33,6 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="JWT_SECRET" value="38YJtP2Y2Sbh5G6N8FhJkKqpYtR78wq0"/>
     </php>
 </phpunit>
