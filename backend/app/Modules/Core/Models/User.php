@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Core\Models;
 
+use App\Modules\Core\Enums\Permission;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -56,5 +57,26 @@ class User extends Authenticatable implements JWTSubject
         return [
             'tenant_id' => $this->tenant_id,
         ];
+    }
+
+    /**
+     * Check whether this user has at least one permission in the given module.
+     * e.g. $user->hasModuleAccess('pos') returns true if the user has any pos.* permission.
+     */
+    public function hasModuleAccess(string $module): bool
+    {
+        $permissions = Permission::module($module);
+
+        if (empty($permissions)) {
+            return false;
+        }
+
+        foreach ($permissions as $permission) {
+            if ($this->can($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

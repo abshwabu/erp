@@ -34,5 +34,6 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="JWT_SECRET" value="38YJtP2Y2Sbh5G6N8FhJkKqpYtR78wq0"/>
+        <env name="AUTH_GUARD" value="api"/>
     </php>
 </phpunit>

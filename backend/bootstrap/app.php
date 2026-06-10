@@ -1,9 +1,10 @@
 <?php
 
+use App\Modules\Core\Http\Middleware\PermissionMiddleware;
+use App\Modules\Core\Http\Middleware\TenantMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Modules\Core\Http\Middleware\TenantMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,7 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             TenantMiddleware::class,
         ]);
+
+        $middleware->alias([
+            'permission' => PermissionMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
