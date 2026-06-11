@@ -30,8 +30,9 @@ class ProductResource extends BaseResource
             'category'             => new ProductCategoryResource($this->whenLoaded('category')),
             'variants'             => ProductVariantResource::collection($this->whenLoaded('variants')),
             'barcodes'             => ProductBarcodeResource::collection($this->whenLoaded('barcodes')),
-            // available_quantity stubbed until StockLocation module is built
-            'available_quantity'   => 0,
+            'available_quantity'   => $this->relationLoaded('stockLevels')
+                ? (int) ($this->stockLevels->sum('quantity_on_hand') - $this->stockLevels->sum('quantity_committed'))
+                : 0,
             'created_at'           => $this->created_at?->toIso8601String(),
             'updated_at'           => $this->updated_at?->toIso8601String(),
         ];

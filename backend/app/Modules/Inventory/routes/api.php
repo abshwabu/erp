@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Inventory\Controllers\BarcodeController;
 use App\Modules\Inventory\Controllers\ProductCategoryController;
 use App\Modules\Inventory\Controllers\ProductController;
+use App\Modules\Inventory\Controllers\StockController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function () {
@@ -52,6 +53,25 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
 
     Route::get('products/{product}/stock', [ProductController::class, 'stock'])
         ->middleware('permission:inventory.stock.view');
+
+    // ── Stock Management ──────────────────────────────────────────────────────
+    Route::get('stock', [StockController::class, 'index'])
+        ->middleware('permission:inventory.stock.view');
+
+    Route::get('stock/movements', [StockController::class, 'movements'])
+        ->middleware('permission:inventory.stock_movements.view');
+
+    Route::get('stock/low', [StockController::class, 'low'])
+        ->middleware('permission:inventory.stock.view');
+
+    Route::get('stock/valuation', [StockController::class, 'valuation'])
+        ->middleware('permission:inventory.stock.view');
+
+    Route::get('stock/{productId}', [StockController::class, 'show'])
+        ->middleware('permission:inventory.stock.view');
+
+    Route::post('stock/adjustments', [StockController::class, 'adjust'])
+        ->middleware('permission:inventory.stock.adjust');
 
     // ── Barcode Lookup (POS scanner endpoint) ─────────────────────────────────
     Route::get('barcodes/lookup', [BarcodeController::class, 'lookup'])

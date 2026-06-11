@@ -52,6 +52,16 @@ class Product extends InventoryModel
         return $this->hasMany(ProductUom::class, 'product_id');
     }
 
+    public function stockLevels(): HasMany
+    {
+        return $this->hasMany(StockLevel::class, 'product_id');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'product_id');
+    }
+
     /**
      * Get the primary image URL.
      */
