@@ -1,93 +1,82 @@
 <script setup lang="ts">
 import { useUIStore } from '@/stores/ui'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  LogOut,
-  Menu,
-  ChevronLeft
-} from 'lucide-vue-next'
+import { useNotificationStore } from '@/stores/notification'
+import AppSidebar from '@/components/shared/AppSidebar.vue'
+import AppHeader from '@/components/shared/AppHeader.vue'
+import UiToast from '@/components/ui/UiToast.vue'
 
 const uiStore = useUIStore()
-const authStore = useAuthStore()
-const router = useRouter()
-
-const navigation = [
-  { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { name: 'POS', to: '/pos', icon: ShoppingCart },
-  { name: 'Inventory', to: '/inventory', icon: Package },
-  { name: 'HR', to: '/hr', icon: Users },
-]
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
+const notificationStore = useNotificationStore()
 </script>
 
 <template>
-  <div class="flex h-screen bg-slate-50">
-    <!-- Sidebar -->
-    <aside
-      class="bg-sidebar text-white transition-all duration-300 flex flex-col"
-      :class="[uiStore.sidebarOpen ? 'w-64' : 'w-20']"
-    >
-      <div class="p-4 flex items-center justify-between border-b border-slate-800">
-        <span v-if="uiStore.sidebarOpen" class="text-xl font-bold">ERP System</span>
-        <button @click="uiStore.toggleSidebar()" class="p-1 hover:bg-slate-800 rounded">
-          <Menu v-if="!uiStore.sidebarOpen" :size="20" />
-          <ChevronLeft v-else :size="20" />
-        </button>
-      </div>
+  <div class="flex h-screen bg-slate-50 overflow-hidden">
+    <AppSidebar />
 
-      <nav class="flex-1 p-4 space-y-2">
-        <router-link
-          v-for="item in navigation"
-          :key="item.name"
-          :to="item.to"
-          class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors"
-          active-class="bg-primary-600 hover:bg-primary-700"
-        >
-          <component :is="item.icon" :size="20" />
-          <span v-if="uiStore.sidebarOpen" class="ml-3">{{ item.name }}</span>
-        </router-link>
-      </nav>
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <AppHeader />
 
-      <div class="p-4 border-t border-slate-800">
-        <button
-          @click="handleLogout"
-          class="flex items-center w-full p-2 text-red-400 hover:bg-slate-800 rounded-md transition-colors"
-        >
-          <LogOut :size="20" />
-          <span v-if="uiStore.sidebarOpen" class="ml-3">Logout</span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden">
-      <!-- Header -->
-      <header class="bg-white border-b border-slate-200 h-16 flex items-center px-6 justify-between shrink-0">
-        <h1 class="text-xl font-semibold">{{ uiStore.pageTitle }}</h1>
-        <div class="flex items-center space-x-4">
-          <div class="text-right">
-            <p class="text-sm font-medium text-slate-900">{{ authStore.user?.name || 'User' }}</p>
-            <p class="text-xs text-slate-500">{{ authStore.user?.email }}</p>
-          </div>
-          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold">
-            {{ authStore.userInitials }}
-          </div>
+      <main class="flex-1 overflow-auto p-4 lg:p-6 custom-scrollbar">
+        <div class="max-w-7xl mx-auto">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </div>
-      </header>
+      </main>
+    </div>
 
-      <!-- Page Content -->
-      <div class="flex-1 overflow-auto p-6">
-        <router-view />
+    <!-- Global Toasts -->
+    <div
+      aria-live="assertive"
+      class="fixed inset-0 flex items-end px-4 py-6 pointer-events-none sm:p-6 sm:items-start z-50"
+    >
+      <div class="w-full flex flex-col items-center space-y-4 sm:items-end">
+        <transition-group
+          enter-active-class="transform ease-out duration-300 transition"
+          enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+          enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+          leave-active-class="transition ease-in duration-100"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <UiToast
+            v-for="toast in notificationStore.toasts"
+            :key="toast.id"
+            :id="toast.id"
+            :message="toast.message"
+            :type="toast.type"
+            @close="notificationStore.removeToast"
+          />
+        </transition-group>
       </div>
-    </main>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>
