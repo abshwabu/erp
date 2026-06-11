@@ -10,6 +10,14 @@ use Illuminate\Http\Request;
 trait QueryFilter
 {
     /**
+     * Apply default request filters to the query builder.
+     */
+    public function scopeFilter(Builder $builder): Builder
+    {
+        return $this->scopeFilterByRequest($builder, request());
+    }
+
+    /**
      * Apply request filters to the query builder.
      *
      * @param Builder $builder

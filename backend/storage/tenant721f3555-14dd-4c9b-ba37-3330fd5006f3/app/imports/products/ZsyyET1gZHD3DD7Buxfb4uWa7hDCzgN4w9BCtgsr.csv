@@ -1,0 +1,2 @@
+sku,name,type,status,cost_price,selling_price,category,description,has_variants
+IMP-001,Imported Product,stockable,active,0,0,,,false

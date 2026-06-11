@@ -21,6 +21,20 @@ class PaginatedCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection,
+        ];
+    }
+
+    /**
+     * Customize the pagination information for the resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  array  $paginated
+     * @param  array  $default
+     * @return array<string, mixed>
+     */
+    public function paginationInformation(Request $request, array $paginated, array $default): array
+    {
+        return [
             'links' => $this->getLinks(),
             'meta' => $this->getMeta(),
         ];

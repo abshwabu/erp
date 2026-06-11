@@ -7,8 +7,12 @@ use App\Modules\Core\Tenancy\Finders\DomainTenantFinder;
 use App\Modules\Core\Tenancy\Finders\SubdomainTenantFinder;
 use Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLSchemaManager;
 
+// Collect both top-level and /tenant sub-directory migration paths from all modules
 $moduleMigrationPaths = array_values(array_filter(
-    glob(app_path('Modules/*/database/migrations'), GLOB_ONLYDIR) ?: [],
+    array_merge(
+        glob(app_path('Modules/*/database/migrations'), GLOB_ONLYDIR) ?: [],
+        glob(app_path('Modules/*/database/migrations/tenant'), GLOB_ONLYDIR) ?: []
+    ),
     'is_dir'
 ));
 
