@@ -18,6 +18,12 @@ const router = createRouter({
           meta: { title: 'Login', requiresAuth: false }
         },
         {
+          path: '/register',
+          name: 'register',
+          component: () => import('@/views/auth/RegisterView.vue'),
+          meta: { title: 'Register', requiresAuth: false }
+        },
+        {
           path: '/forgot-password',
           name: 'forgot-password',
           component: () => import('@/views/auth/ForgotPasswordView.vue'),

@@ -80,6 +80,15 @@ const handleLogin = async () => {
       <UiButton type="submit" class="w-full" :loading="isLoading">
         Sign in
       </UiButton>
+
+      <div class="text-center mt-4">
+        <p class="text-sm text-slate-600">
+          Don't have a workspace? 
+          <router-link to="/register" class="font-medium text-primary-600 hover:text-primary-500">
+            Create one
+          </router-link>
+        </p>
+      </div>
     </form>
   </div>
 </template>
