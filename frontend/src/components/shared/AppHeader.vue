@@ -11,7 +11,7 @@ import {
   Settings,
   LogOut,
   ChevronRight
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
 
 const uiStore = useUIStore()
@@ -19,8 +19,8 @@ const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
 
-const handleLogout = () => {
-  authStore.logout()
+const handleLogout = async () => {
+  await authStore.logout()
   router.push('/login')
 }
 
@@ -101,7 +101,7 @@ const userMenuItems = [
             </div>
             <div class="hidden lg:block text-left">
               <p class="text-sm font-medium text-slate-900 leading-none">{{ authStore.user?.name || 'John Doe' }}</p>
-              <p class="text-xs text-slate-500 mt-1 leading-none">{{ authStore.user?.role || 'Administrator' }}</p>
+              <p class="text-xs text-slate-500 mt-1 leading-none">{{ authStore.user?.roles?.[0] || 'Administrator' }}</p>
             </div>
           </button>
         </template>

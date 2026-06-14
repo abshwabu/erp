@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 Route::prefix('api/auth')->group(function () {
+    Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('refresh', [AuthController::class, 'refresh']);
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api,sanctum');

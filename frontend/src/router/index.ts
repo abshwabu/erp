@@ -51,20 +51,68 @@ const router = createRouter({
         {
           path: 'pos',
           name: 'pos',
-          component: () => import('@/views/pos/POSView.vue'),
+          component: () => import('@/modules/pos/layout/POSLayout.vue'),
           meta: { title: 'Point of Sale', permission: 'pos.sessions.open' }
         },
+        // Inventory Module
         {
-          path: 'inventory',
-          component: () => import('@/views/inventory/InventoryLayout.vue'),
-          meta: { title: 'Inventory', permission: 'inventory.products.view' },
-          children: [
-            {
-              path: '',
-              name: 'inventory-list',
-              component: () => import('@/views/dashboard/DashboardView.vue'), // Placeholder
-            }
-          ]
+          path: 'inventory/products',
+          name: 'inventory-products',
+          component: () => import('@/modules/inventory/pages/ProductsPage.vue'),
+          meta: { title: 'Products', permission: 'inventory.products.view' }
+        },
+        {
+          path: 'inventory/stock',
+          name: 'inventory-stock',
+          component: () => import('@/modules/inventory/pages/StockPage.vue'),
+          meta: { title: 'Stock Levels', permission: 'inventory.products.view' }
+        },
+        {
+          path: 'inventory/movements',
+          name: 'inventory-movements',
+          component: () => import('@/modules/inventory/pages/StockMovementsPage.vue'),
+          meta: { title: 'Stock Movements', permission: 'inventory.products.view' }
+        },
+        {
+          path: 'inventory/low-stock',
+          name: 'inventory-low-stock',
+          component: () => import('@/modules/inventory/pages/LowStockPage.vue'),
+          meta: { title: 'Low Stock Alerts', permission: 'inventory.products.view' }
+        },
+        // HR Module
+        {
+          path: 'hr',
+          redirect: 'hr/employees',
+        },
+        {
+          path: 'hr/employees',
+          name: 'hr-employees',
+          component: () => import('@/modules/hr/pages/EmployeesPage.vue'),
+          meta: { title: 'Employees', permission: 'hr.employees.view' }
+        },
+        {
+          path: 'hr/employees/:id',
+          name: 'hr-employee-profile',
+          component: () => import('@/modules/hr/pages/EmployeeProfilePage.vue'),
+          meta: { title: 'Employee Profile', permission: 'hr.employees.view' }
+        },
+        {
+          path: 'hr/leave',
+          name: 'hr-leave',
+          component: () => import('@/modules/hr/pages/LeaveManagementPage.vue'),
+          meta: { title: 'Leave Management', permission: 'hr.leave.view' }
+        },
+        {
+          path: 'hr/attendance',
+          name: 'hr-attendance',
+          component: () => import('@/modules/hr/pages/AttendancePage.vue'),
+          meta: { title: 'Attendance', permission: 'hr.attendance.view' }
+        },
+        {
+          path: 'hr/org-chart',
+          name: 'hr-org-chart',
+          component: () => import('@/modules/hr/pages/OrgChartPage.vue'),
+          meta: { title: 'Org Chart', permission: 'hr.employees.view' }
         },
         // Add more module routes here...
       ]
@@ -77,7 +125,7 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
   const uiStore = useUIStore()
 
@@ -86,25 +134,29 @@ router.beforeEach(async (to, from, next) => {
     uiStore.setPageTitle(to.meta.title as string)
   }
 
+  // Load user info if missing but authenticated (e.g., on page refresh)
+  if (authStore.isAuthenticated && !authStore.user && to.name !== 'login') {
+    try {
+      await authStore.checkAuth()
+    } catch {
+      return { name: 'login' }
+    }
+  }
+
   // Auth Guard
   if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
-    next({ name: 'login' })
-    return
+    return { name: 'login' }
   }
 
   // Permission Guard
   if (to.meta.permission && !authStore.hasPermission(to.meta.permission as string)) {
-    next({ name: 'dashboard' }) // Or a dedicated 403 page
-    return
+    return { name: 'dashboard' } // Or a dedicated 403 page
   }
 
   // Redirect if logged in
   if (to.name === 'login' && authStore.isAuthenticated) {
-    next({ name: 'dashboard' })
-    return
+    return { name: 'dashboard' }
   }
-
-  next()
 })
 
 export default router

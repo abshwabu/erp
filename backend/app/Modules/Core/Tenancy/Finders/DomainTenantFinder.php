@@ -11,14 +11,6 @@ final class DomainTenantFinder
 {
     public function find(Request $request): ?Tenant
     {
-        if ($request->hasHeader('X-Tenant-ID')) {
-            $tenant = Tenant::query()->whereKey($request->header('X-Tenant-ID'))->first();
-
-            if ($tenant) {
-                return $tenant;
-            }
-        }
-
         $host = $request->getHost();
 
         return Tenant::query()

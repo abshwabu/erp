@@ -21,7 +21,9 @@ return new class extends Migration
             $table->uuid('revenue_account_id')->nullable();
             $table->timestamps();
             $table->softDeletes();
+        });
 
+        Schema::table('product_categories', function (Blueprint $table) {
             $table->foreign('parent_id')
                 ->references('id')
                 ->on('product_categories')

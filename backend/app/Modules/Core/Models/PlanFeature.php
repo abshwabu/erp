@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlanFeature extends Model
 {
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $guarded = [];
 
     protected function casts(): array

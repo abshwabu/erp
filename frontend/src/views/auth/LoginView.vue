@@ -15,21 +15,16 @@ const password = ref('')
 const isLoading = ref(false)
 
 const handleLogin = async () => {
+  if (!email.value || !password.value) return
+
   isLoading.value = true
   try {
-    // Mock login for now
-    authStore.setTokens('mock-access-token', 'mock-refresh-token')
-    authStore.setUser({
-      id: 1,
-      name: 'Admin User',
-      email: email.value,
-      role: 'Administrator',
-    }, ['pos.sessions.open', 'inventory.products.view'])
-    
+    await authStore.login(email.value, password.value)
     toast.success('Login successful')
     router.push('/')
-  } catch (error) {
-    toast.error('Login failed')
+  } catch (error: any) {
+    const message = error.response?.data?.message || 'Login failed. Please check your credentials.'
+    toast.error(message)
   } finally {
     isLoading.value = false
   }

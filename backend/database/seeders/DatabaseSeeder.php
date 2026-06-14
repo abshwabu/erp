@@ -14,8 +14,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            TenantRoleSeeder::class,
-        ]);
+        if (function_exists('tenancy') && tenancy()->initialized) {
+            $this->call([
+                TenantRoleSeeder::class,
+            ]);
+        } else {
+            $this->call([
+                PlanSeeder::class,
+            ]);
+        }
     }
 }

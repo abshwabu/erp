@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { TrendingUp, TrendingDown } from 'lucide-vue-next'
+import { TrendingUp, TrendingDown } from '@lucide/vue'
+import UiIcon from './UiIcon.vue'
 
 interface Props {
   label: string
@@ -20,8 +21,8 @@ defineProps<Props>()
         <p class="text-sm font-medium text-slate-500 truncate">{{ label }}</p>
         <p class="mt-1 text-2xl font-semibold text-slate-900">{{ value }}</p>
       </div>
-      <div v-if="icon" class="p-3 bg-primary-50 rounded-lg text-primary-600">
-        <component :is="icon" :size="24" />
+      <div v-if="icon && typeof icon !== 'string'" class="p-3 bg-primary-50 rounded-lg text-primary-600">
+        <UiIcon :icon="icon" :size="24" />
       </div>
     </div>
     <div v-if="change !== undefined" class="mt-4 flex items-center">

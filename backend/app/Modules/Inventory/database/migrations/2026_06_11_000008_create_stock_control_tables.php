@@ -36,7 +36,9 @@ return new class extends Migration
                 ->references('id')
                 ->on('warehouses')
                 ->onDelete('cascade');
+        });
 
+        Schema::table('stock_locations', function (Blueprint $table) {
             $table->foreign('parent_id')
                 ->references('id')
                 ->on('stock_locations')

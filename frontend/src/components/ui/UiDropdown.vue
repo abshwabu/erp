@@ -6,7 +6,8 @@ import {
   MenuItem, 
   TransitionRoot 
 } from '@headlessui/vue'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown } from '@lucide/vue'
+import UiIcon from './UiIcon.vue'
 
 interface DropdownItem {
   label: string
@@ -63,7 +64,7 @@ withDefaults(defineProps<Props>(), {
                   item.variant === 'danger' ? 'text-red-600' : '',
                 ]"
               >
-                <component :is="item.icon" v-if="item.icon" class="mr-3 h-5 w-5 text-slate-400" aria-hidden="true" />
+                <UiIcon v-if="item.icon" :icon="item.icon" class="mr-3 h-5 w-5 text-slate-400" />
                 {{ item.label }}
               </component>
             </MenuItem>

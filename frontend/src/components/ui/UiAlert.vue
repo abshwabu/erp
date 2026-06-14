@@ -4,7 +4,7 @@ import {
   AlertTriangle, 
   XCircle, 
   Info 
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 interface Props {
   variant?: 'success' | 'warning' | 'error' | 'info'
@@ -29,12 +29,14 @@ withDefaults(defineProps<Props>(), {
     ]"
   >
     <div class="flex-shrink-0">
-      <CheckCircle v-if="variant === 'success'" class="h-5 w-5 text-green-400" />
-      <AlertTriangle v-else-if="variant === 'warning'" class="h-5 w-5 text-yellow-400" />
-      <XCircle v-else-if="variant === 'error'" class="h-5 w-5 text-red-400" />
-      <Info v-else class="h-5 w-5 text-blue-400" />
+      <slot name="icon">
+        <CheckCircle v-if="variant === 'success'" class="h-5 w-5 text-green-400" />
+        <AlertTriangle v-else-if="variant === 'warning'" class="h-5 w-5 text-yellow-400" />
+        <XCircle v-else-if="variant === 'error'" class="h-5 w-5 text-red-400" />
+        <Info v-else class="h-5 w-5 text-blue-400" />
+      </slot>
     </div>
-    <div class="ml-3">
+    <div class="ml-3 flex-1">
       <h3 v-if="title" class="text-sm font-medium" :class="[
         {
           'text-green-800': variant === 'success',
@@ -45,16 +47,12 @@ withDefaults(defineProps<Props>(), {
       ]">
         {{ title }}
       </h3>
-      <div class="mt-2 text-sm" :class="[
-        {
-          'text-green-700': variant === 'success',
-          'text-yellow-700': variant === 'warning',
-          'text-red-700': variant === 'error',
-          'text-blue-700': variant === 'info',
-        }
-      ]">
+      <div :class="[title ? 'mt-2' : '', 'text-sm']">
         <slot />
       </div>
+    </div>
+    <div v-if="$slots.action" class="ml-auto pl-3">
+      <slot name="action" />
     </div>
   </div>
 </template>

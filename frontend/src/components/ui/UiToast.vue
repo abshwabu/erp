@@ -5,7 +5,7 @@ import {
   XCircle, 
   Info, 
   X 
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import type { ToastType } from '@/stores/notification'
 
 interface Props {

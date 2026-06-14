@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Core\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Core\Models\Tenant;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Requests\LoginRequest;
+use App\Modules\Core\Requests\RegisterRequest;
 use App\Modules\Core\Requests\ResetPasswordRequest;
 use App\Modules\Core\Services\MfaService;
 use Carbon\Carbon;
@@ -21,6 +23,59 @@ class AuthController extends Controller
     public function __construct(
         private readonly MfaService $mfaService
     ) {
+    }
+
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        // 1. Create Tenant (triggers migration & seeding via TenancyServiceProvider)
+        $tenant = Tenant::create([
+            'name' => $request->company_name,
+            'slug' => $request->domain,
+            'status' => 'active',
+            'settings' => [
+                'timezone' => config('app.timezone'),
+                'locale' => config('app.locale'),
+                'currency' => config('app.currency', 'USD'),
+            ],
+        ]);
+
+        // 2. Initialize Tenancy to interact with the new tenant DB
+        tenancy()->initialize($tenant);
+
+        // 3. Create the first User in the tenant's database
+        $user = User::create([
+            'tenant_id' => $tenant->getTenantKey(),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'is_active' => true,
+        ]);
+
+        // 4. Assign Owner role (seeded by TenantRoleSeeder)
+        $user->assignRole('Owner');
+
+        // 5. Generate tokens for the new user
+        $accessToken = auth('api')
+            ->claims(['type' => 'access', 'tenant_id' => $tenant->getTenantKey()])
+            ->setTTL(15)
+            ->login($user);
+
+        $refreshToken = auth('api')
+            ->claims(['type' => 'refresh', 'tenant_id' => $tenant->getTenantKey()])
+            ->setTTL(43200)
+            ->tokenById($user->id);
+
+        return response()->json([
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'token_type' => 'bearer',
+            'expires_in' => 15 * 60,
+            'tenant' => [
+                'id' => $tenant->getTenantKey(),
+                'name' => $tenant->name,
+                'domain' => $tenant->slug,
+            ]
+        ], 201);
     }
 
     public function login(LoginRequest $request): JsonResponse

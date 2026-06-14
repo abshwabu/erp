@@ -17,12 +17,34 @@ import {
   Settings,
   Shield,
   ChevronLeft,
-  Menu
-} from 'lucide-vue-next'
+  ChevronDown,
+  Menu,
+  Box,
+  ArrowRightLeft,
+  AlertTriangle,
+  LogOut
+} from '@lucide/vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import UiIcon from '@/components/ui/UiIcon.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
+const router = useRouter()
 const { hasPermission } = usePermission()
+
+const expandedItems = ref<Record<string, boolean>>({
+  Inventory: true
+})
+
+const toggleExpand = (name: string) => {
+  expandedItems.value[name] = !expandedItems.value[name]
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 
 const navigationGroups = [
   {
@@ -30,7 +52,17 @@ const navigationGroups = [
     items: [
       { name: 'Dashboard', to: '/', icon: LayoutDashboard },
       { name: 'Point of Sale', to: '/pos', icon: ShoppingCart, permission: 'pos.sessions.open' },
-      { name: 'Inventory', to: '/inventory', icon: Package, permission: 'inventory.products.view' },
+      { 
+        name: 'Inventory', 
+        icon: Package, 
+        permission: 'inventory.products.view',
+        children: [
+          { name: 'Products', to: '/inventory/products', icon: Package },
+          { name: 'Stock Levels', to: '/inventory/stock', icon: Box },
+          { name: 'Movements', to: '/inventory/movements', icon: ArrowRightLeft },
+          { name: 'Low Stock', to: '/inventory/low-stock', icon: AlertTriangle },
+        ]
+      },
       { name: 'Warehouse', to: '/warehouse', icon: Warehouse, permission: 'warehouse.receive' },
       { name: 'Procurement', to: '/procurement', icon: ShoppingBag, permission: 'procurement.purchase_orders.view' },
     ]
@@ -85,25 +117,83 @@ const filteredGroups = navigationGroups.map(group => ({
           {{ group.title }}
         </h4>
         <div class="space-y-1">
-          <router-link
-            v-for="item in group.items"
-            :key="item.name"
-            :to="item.to"
-            class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors group relative"
-            active-class="bg-primary-600 text-white hover:bg-primary-700"
-            v-tooltip="!uiStore.sidebarOpen ? item.name : ''"
-          >
-            <component :is="item.icon" :size="20" class="shrink-0" />
-            <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
-            
-            <!-- Tooltip for collapsed mode -->
-            <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-slate-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
-              {{ item.name }}
+          <template v-for="item in group.items" :key="item.name">
+            <!-- Item with children -->
+            <div v-if="item.children" class="space-y-1">
+              <button
+                @click="uiStore.sidebarOpen && toggleExpand(item.name)"
+                class="w-full flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors group relative"
+                :class="[!uiStore.sidebarOpen ? 'justify-center' : 'justify-between']"
+              >
+                <div class="flex items-center">
+                  <UiIcon v-if="item.icon" :icon="item.icon" :size="20" class="shrink-0" />
+                  <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
+                </div>
+                <UiIcon
+                  v-if="uiStore.sidebarOpen" 
+                  :icon="ChevronDown"
+                  :size="16" 
+                  class="transition-transform duration-200"
+                  :class="[expandedItems[item.name] ? 'rotate-180' : '']"
+                />
+                
+                <!-- Tooltip for collapsed mode -->
+                <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-slate-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
+                  {{ item.name }}
+                </div>
+              </button>
+              
+              <!-- Sub-items -->
+              <div v-if="uiStore.sidebarOpen && expandedItems[item.name]" class="ml-4 pl-4 border-l border-slate-800 space-y-1">
+                <router-link
+                  v-for="subItem in item.children"
+                  :key="subItem.name"
+                  :to="subItem.to"
+                  class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors text-sm text-slate-400 hover:text-white"
+                  active-class="text-white font-medium"
+                >
+                  <UiIcon v-if="subItem.icon" :icon="subItem.icon" :size="16" class="shrink-0" />
+                  <span class="ml-3 truncate">{{ subItem.name }}</span>
+                </router-link>
+              </div>
             </div>
-          </router-link>
+
+            <!-- Single Item -->
+            <router-link
+              v-else
+              :to="item.to"
+              class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors group relative"
+              active-class="bg-primary-600 text-white hover:bg-primary-700"
+            >
+              <UiIcon v-if="item.icon" :icon="item.icon" :size="20" class="shrink-0" />
+              <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
+              
+              <!-- Tooltip for collapsed mode -->
+              <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-slate-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
+                {{ item.name }}
+              </div>
+            </router-link>
+          </template>
         </div>
       </div>
     </nav>
+
+    <!-- Logout at bottom -->
+    <div class="p-4 border-t border-slate-800">
+      <button
+        @click="handleLogout"
+        class="w-full flex items-center p-2 rounded-md hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-colors group relative"
+        :class="[!uiStore.sidebarOpen ? 'justify-center' : '']"
+      >
+        <UiIcon :icon="LogOut" :size="20" class="shrink-0" />
+        <span v-if="uiStore.sidebarOpen" class="ml-3 truncate font-medium">Logout</span>
+        
+        <!-- Tooltip for collapsed mode -->
+        <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-red-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
+          Logout
+        </div>
+      </button>
+    </div>
   </aside>
 
   <!-- Mobile Overlay -->

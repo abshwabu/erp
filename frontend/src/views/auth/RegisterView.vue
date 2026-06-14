@@ -9,7 +9,6 @@ import UiButton from '@/components/ui/UiButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const tenantStore = useTenantStore()
 const toast = useToast()
 
 const companyName = ref('')
@@ -20,30 +19,23 @@ const password = ref('')
 const isLoading = ref(false)
 
 const handleRegister = async () => {
+  if (!email.value || !password.value || !domain.value || !name.value || !companyName.value) return
+
   isLoading.value = true
   try {
-    // Mock registration logic
-    const mockTenant = {
-      id: Math.random().toString(36).substring(7),
-      name: companyName.value,
-      domain: `${domain.value}.erp.com`,
-    }
-    
-    tenantStore.setTenant(mockTenant)
-    
-    // Mock login after registration
-    authStore.setTokens('mock-access-token', 'mock-refresh-token')
-    authStore.setUser({
-      id: 1,
+    await authStore.register({
+      company_name: companyName.value,
+      domain: domain.value,
       name: name.value,
       email: email.value,
-      role: 'Owner',
-    }, ['*']) // Owners get all permissions
+      password: password.value,
+    })
     
     toast.success('Account created successfully!')
     router.push('/')
-  } catch (error) {
-    toast.error('Registration failed. Please try again.')
+  } catch (error: any) {
+    const message = error.response?.data?.message || 'Registration failed. Please try again.'
+    toast.error(message)
   } finally {
     isLoading.value = false
   }

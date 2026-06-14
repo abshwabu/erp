@@ -6,7 +6,7 @@ import {
   TransitionRoot, 
   TransitionChild 
 } from '@headlessui/vue'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 
 interface Props {
   modelValue: boolean
