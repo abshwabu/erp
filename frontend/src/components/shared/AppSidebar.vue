@@ -14,6 +14,7 @@ import {
   FileText,
   Calculator,
   BarChart2,
+  Calendar,
   Settings,
   Shield,
   ChevronLeft,
@@ -24,7 +25,7 @@ import {
   AlertTriangle,
   LogOut
 } from '@lucide/vue'
-import { ref } from 'vue'
+import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import UiIcon from '@/components/ui/UiIcon.vue'
 
@@ -34,7 +35,8 @@ const router = useRouter()
 const { hasPermission } = usePermission()
 
 const expandedItems = ref<Record<string, boolean>>({
-  Inventory: true
+  Inventory: true,
+  'Human Resources': true
 })
 
 const toggleExpand = (name: string) => {
@@ -50,44 +52,55 @@ const navigationGroups = [
   {
     title: 'OPERATIONS',
     items: [
-      { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-      { name: 'Point of Sale', to: '/pos', icon: ShoppingCart, permission: 'pos.sessions.open' },
+      { name: 'Dashboard', to: '/', icon: markRaw(LayoutDashboard) },
+      { name: 'Point of Sale', to: '/pos', icon: markRaw(ShoppingCart), permission: 'pos.sessions.open' },
       { 
         name: 'Inventory', 
-        icon: Package, 
+        icon: markRaw(Package), 
         permission: 'inventory.products.view',
         children: [
-          { name: 'Products', to: '/inventory/products', icon: Package },
-          { name: 'Stock Levels', to: '/inventory/stock', icon: Box },
-          { name: 'Movements', to: '/inventory/movements', icon: ArrowRightLeft },
-          { name: 'Low Stock', to: '/inventory/low-stock', icon: AlertTriangle },
+          { name: 'Products', to: '/inventory/products', icon: markRaw(Package) },
+          { name: 'Stock Levels', to: '/inventory/stock', icon: markRaw(Box) },
+          { name: 'Movements', to: '/inventory/movements', icon: markRaw(ArrowRightLeft) },
+          { name: 'Low Stock', to: '/inventory/low-stock', icon: markRaw(AlertTriangle) },
         ]
       },
-      { name: 'Warehouse', to: '/warehouse', icon: Warehouse, permission: 'warehouse.receive' },
-      { name: 'Procurement', to: '/procurement', icon: ShoppingBag, permission: 'procurement.purchase_orders.view' },
+      { name: 'Warehouse', to: '/warehouse', icon: markRaw(Warehouse), permission: 'warehouse.receive' },
+      { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view' },
     ]
   },
   {
     title: 'PEOPLE & CUSTOMERS',
     items: [
-      { name: 'HR & Employees', to: '/hr', icon: Users, permission: 'hr.employees.view' },
-      { name: 'Payroll', to: '/payroll', icon: Banknote, permission: 'payroll.runs.view' },
-      { name: 'CRM', to: '/crm', icon: UserCheck, permission: 'sales.orders.view' },
+      { 
+        name: 'Human Resources', 
+        icon: markRaw(Users), 
+        permission: 'hr.employees.view',
+        children: [
+          { name: 'Employees', to: '/hr/employees', icon: markRaw(Users) },
+          { name: 'Departments', to: '/hr/departments', icon: markRaw(Warehouse) },
+          { name: 'Attendance', to: '/hr/attendance', icon: markRaw(UserCheck) },
+          { name: 'Leave Management', to: '/hr/leave', icon: markRaw(Calendar) },
+          { name: 'Org Chart', to: '/hr/org-chart', icon: markRaw(BarChart2) },
+        ]
+      },
+      { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
+      { name: 'CRM', to: '/crm', icon: markRaw(UserCheck), permission: 'sales.orders.view' },
     ]
   },
   {
     title: 'FINANCE',
     items: [
-      { name: 'Sales & Invoicing', to: '/sales', icon: FileText, permission: 'sales.invoices.create' },
-      { name: 'Accounting', to: '/accounting', icon: Calculator, permission: 'accounting.journals.view' },
-      { name: 'Reporting', to: '/reporting', icon: BarChart2, permission: 'accounting.reports.view' },
+      { name: 'Sales & Invoicing', to: '/sales', icon: markRaw(FileText), permission: 'sales.invoices.create' },
+      { name: 'Accounting', to: '/accounting', icon: markRaw(Calculator), permission: 'accounting.journals.view' },
+      { name: 'Reporting', to: '/reporting', icon: markRaw(BarChart2), permission: 'accounting.reports.view' },
     ]
   },
   {
     title: 'SETTINGS',
     items: [
-      { name: 'Settings', to: '/settings', icon: Settings, permission: 'core.settings.view' },
-      { name: 'Users & Roles', to: '/roles', icon: Shield, permission: 'core.roles.view' },
+      { name: 'Settings', to: '/settings', icon: markRaw(Settings), permission: 'core.settings.view' },
+      { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
     ]
   }
 ]

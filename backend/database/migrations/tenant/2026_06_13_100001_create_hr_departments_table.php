@@ -16,7 +16,9 @@ return new class extends Migration
             $table->uuid('head_employee_id')->nullable();
             $table->integer('cost_center_id')->nullable();
             $table->timestamps();
+        });
 
+        Schema::table('hr_departments', function (Blueprint $table) {
             $table->foreign('parent_id')->references('id')->on('hr_departments');
         });
     }

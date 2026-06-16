@@ -20,7 +20,13 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
-            'email' => 'required|email|unique:employees,email',
+            'email' => 'required|email|unique:hr_employees,email',
+            'employee_number' => 'required|string|unique:hr_employees,employee_number',
+            'department_id' => 'required|uuid',
+            'position_id' => 'required|uuid',
+            'start_date' => 'required|date',
+            'employment_type' => 'required|string',
+            'status' => 'required|string',
         ]);
 
         $employee = Employee::create($validated);

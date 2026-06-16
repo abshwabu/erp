@@ -1,20 +1,32 @@
+export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'intern' | 'probationary'
+export type EmployeeStatus = 'active' | 'on-leave' | 'suspended' | 'terminated'
+export type Gender = 'male' | 'female' | 'other'
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'on-leave' | 'holiday'
+
 export interface Department {
   id: string
   name: string
-  code: string
   parent_id?: string
-  head_employee_id?: string
+  manager_id?: string
+  cost_center?: string
+  headcount_budget?: number
+  created_at: string
+  updated_at: string
+  parent?: Department
+  manager?: Employee
 }
 
 export interface Position {
   id: string
-  department_id: string
   title: string
-  job_grade?: string
-  min_salary_cents?: number
-  max_salary_cents?: number
-  description?: string
-  is_active: boolean
+  department_id: string
+  job_description?: string
+  requirements?: string
+  pay_grade_range?: string
+  created_at: string
+  updated_at: string
+  department?: Department
 }
 
 export interface Employee {
@@ -30,19 +42,27 @@ export interface Employee {
   email: string
   phone?: string
   date_of_birth?: string
-  status: 'active' | 'on_leave' | 'suspended' | 'terminated'
+  gender?: Gender
+  employment_type: EmploymentType
+  status: EmployeeStatus
   start_date: string
+  probation_end_date?: string
+  contract_end_date?: string
+  work_location_id?: string
+  emergency_contacts?: EmergencyContact[]
+  custom_fields?: Record<string, any>
+  created_at: string
+  updated_at: string
   department?: Department
   position?: Position
+  manager?: Employee
+  avatar_url?: string
 }
 
-export interface AttendanceLog {
-  id: string
-  employee_id: string
-  clock_type: 'in' | 'out'
-  logged_at: string
-  method: 'web' | 'mobile' | 'biometric' | 'manual'
-  notes?: string
+export interface EmergencyContact {
+  name: string
+  relationship: string
+  phone: string
 }
 
 export interface LeaveType {
@@ -50,7 +70,9 @@ export interface LeaveType {
   name: string
   code: string
   is_paid: boolean
-  max_days_per_year: number
+  requires_approval: boolean
+  max_consecutive_days?: number
+  requires_attachment: boolean
 }
 
 export interface LeaveRequest {
@@ -59,16 +81,55 @@ export interface LeaveRequest {
   leave_type_id: string
   start_date: string
   end_date: string
-  days_taken: number
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  is_half_day: boolean
+  half_day_period?: 'morning' | 'afternoon'
+  reason: string
+  status: LeaveStatus
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
+  working_days: number
+  attachment_url?: string
+  created_at: string
+  updated_at: string
+  employee?: Employee
   leave_type?: LeaveType
 }
 
 export interface LeaveBalance {
+  id: string
+  employee_id: string
   leave_type_id: string
-  entitled_days: number
-  accrued_days: number
-  taken_days: number
-  remaining_days: number
-  leave_type: LeaveType
+  entitled: number
+  used: number
+  pending: number
+  remaining: number
+  carry_over: number
+  leave_type?: LeaveType
+}
+
+export interface AttendanceLog {
+  id: string
+  employee_id: string
+  date: string
+  clock_in?: string
+  clock_out?: string
+  method: string
+  status: AttendanceStatus
+  late_minutes: number
+  early_departure_minutes: number
+  overtime_minutes: number
+  total_hours: number
+  location_data?: any
+  employee?: Employee
+}
+
+export interface AttendanceSummary {
+  total_days: number
+  present: number
+  absent: number
+  late: number
+  on_leave: number
+  holiday: number
+  total_overtime_hours: number
 }

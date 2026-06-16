@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('clock_type'); // in, out
             $table->timestamp('logged_at');
             $table->string('method'); // web, mobile, biometric, manual
-            $table->point('location_coords')->nullable();
+            $table->jsonb('location_coords')->nullable();
             $table->text('notes')->nullable();
             $table->uuid('created_by_id')->nullable();
 

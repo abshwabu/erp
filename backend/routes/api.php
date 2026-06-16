@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 
+require __DIR__.'/../app/Modules/HR/routes/api.php';
+require __DIR__.'/../app/Modules/Accounting/routes/api.php';
+
 Route::get('/health', fn () => response()->json([
     'status' => 'ok',
 ]));

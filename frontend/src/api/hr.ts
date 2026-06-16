@@ -1,30 +1,41 @@
-import axios from 'axios'
-import type { Employee, AttendanceLog, LeaveRequest, LeaveBalance, LeaveType } from '@/types/hr'
-
-const apiClient = axios.create({
-  baseURL: '/api/hr',
-})
+import apiClient from './client'
+import type { 
+  Employee, 
+  Department, 
+  Position, 
+  AttendanceLog, 
+  LeaveRequest, 
+  LeaveType, 
+  LeaveBalance,
+  AttendanceSummary
+} from '@/types/hr'
 
 export const hrApi = {
   // Employees
-  getEmployees: () => apiClient.get<Employee[]>('/employees'),
-  getEmployee: (id: string) => apiClient.get<Employee>(`/employees/${id}`),
-  createEmployee: (data: Partial<Employee>) => apiClient.post('/employees', data),
-  updateEmployee: (id: string, data: Partial<Employee>) => apiClient.patch(`/employees/${id}`, data),
-  getLeaveBalances: (id: string) => apiClient.get<LeaveBalance[]>(`/employees/${id}/leave-balances`),
-  getEmployeeAttendance: (id: string) => apiClient.get<AttendanceLog[]>(`/employees/${id}/attendance`),
-
+  getEmployees: (params?: any) => apiClient.get<Employee[]>('/hr/employees', { params }),
+  getEmployee: (id: string) => apiClient.get<Employee>(`/hr/employees/${id}`),
+  createEmployee: (data: Partial<Employee>) => apiClient.post<Employee>('/hr/employees', data),
+  updateEmployee: (id: string, data: Partial<Employee>) => apiClient.patch<Employee>(`/hr/employees/${id}`, data),
+  deleteEmployee: (id: string) => apiClient.delete(`/hr/employees/${id}`),
+  
+  // Org Structure
+  getDepartments: () => apiClient.get<Department[]>('/hr/departments'),
+  getPositions: () => apiClient.get<Position[]>('/hr/positions'),
+  
   // Attendance
-  clockIn: (data: { employee_id: string; method: string }) => apiClient.post('/attendance/clock-in', data),
-  clockOut: (data: { employee_id: string; method: string }) => apiClient.post('/attendance/clock-out', data),
-  getAttendance: (params: any) => apiClient.get('/attendance', { params }),
-  getAttendanceSummary: (params: any) => apiClient.get('/attendance/summary', { params }),
-
+  getAttendance: (params?: any) => apiClient.get<AttendanceLog[]>('/hr/attendance', { params }),
+  getAttendanceSummary: (params?: any) => apiClient.get<AttendanceSummary>('/hr/attendance/summary', { params }),
+  getEmployeeAttendance: (id: string, params?: any) => apiClient.get<AttendanceLog[]>(`/hr/employees/${id}/attendance`, { params }),
+  clockIn: (data: { employee_id: string; method: string; location?: any }) => apiClient.post('/hr/attendance/clock-in', data),
+  clockOut: (data: { employee_id: string; method: string; location?: any }) => apiClient.post('/hr/attendance/clock-out', data),
+  
   // Leave
-  getLeaveTypes: () => apiClient.get<LeaveType[]>('/leave/types'),
-  getLeaveRequests: () => apiClient.get<LeaveRequest[]>('/leave/requests'),
-  submitLeaveRequest: (data: Partial<LeaveRequest>) => apiClient.post('/leave/requests', data),
-  approveLeaveRequest: (id: string) => apiClient.patch(`/leave/requests/${id}/approve`),
-  rejectLeaveRequest: (id: string, notes: string) => apiClient.patch(`/leave/requests/${id}/reject`, { notes }),
-  cancelLeaveRequest: (id: string) => apiClient.patch(`/leave/requests/${id}/cancel`),
+  getLeaveTypes: () => apiClient.get<LeaveType[]>('/hr/leave/types'),
+  getLeaveRequests: (params?: any) => apiClient.get<LeaveRequest[]>('/hr/leave/requests', { params }),
+  getEmployeeLeaveBalances: (id: string) => apiClient.get<LeaveBalance[]>(`/hr/employees/${id}/leave-balances`),
+  getEmployeeLeaveRequests: (id: string) => apiClient.get<LeaveRequest[]>(`/hr/employees/${id}/leave-requests`),
+  submitLeaveRequest: (data: Partial<LeaveRequest>) => apiClient.post<LeaveRequest>('/hr/leave/requests', data),
+  approveLeaveRequest: (id: string, notes?: string) => apiClient.patch(`/hr/leave/requests/${id}/approve`, { notes }),
+  rejectLeaveRequest: (id: string, notes: string) => apiClient.patch(`/hr/leave/requests/${id}/reject`, { notes }),
+  cancelLeaveRequest: (id: string) => apiClient.patch(`/hr/leave/requests/${id}/cancel`),
 }

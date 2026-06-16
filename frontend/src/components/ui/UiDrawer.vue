@@ -2,7 +2,7 @@
 import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 import { X } from '@lucide/vue'
 
-defineProps<{ modelValue: boolean, title: string }>()
+defineProps<{ modelValue: boolean; title: string }>()
 defineEmits(['update:modelValue'])
 </script>
 

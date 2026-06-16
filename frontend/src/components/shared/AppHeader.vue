@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronRight
 } from '@lucide/vue'
+import { markRaw } from 'vue'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
 
 const uiStore = useUIStore()
@@ -25,9 +26,9 @@ const handleLogout = async () => {
 }
 
 const userMenuItems = [
-  { label: 'Profile', icon: User, to: '/profile' },
-  { label: 'Settings', icon: Settings, to: '/settings' },
-  { label: 'Logout', icon: LogOut, action: handleLogout, variant: 'danger' as const },
+  { label: 'Profile', icon: markRaw(User), to: '/profile' },
+  { label: 'Settings', icon: markRaw(Settings), to: '/settings' },
+  { label: 'Logout', icon: markRaw(LogOut), action: handleLogout, variant: 'danger' as const },
 ]
 </script>
 

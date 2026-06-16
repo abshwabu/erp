@@ -36,6 +36,9 @@ return new class extends Migration
 
             $table->foreign('department_id')->references('id')->on('hr_departments');
             $table->foreign('position_id')->references('id')->on('hr_positions');
+        });
+
+        Schema::table('hr_employees', function (Blueprint $table) {
             $table->foreign('manager_id')->references('id')->on('hr_employees');
         });
     }

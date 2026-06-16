@@ -91,6 +91,12 @@ const router = createRouter({
           meta: { title: 'Employees', permission: 'hr.employees.view' }
         },
         {
+          path: 'hr/departments',
+          name: 'hr-departments',
+          component: () => import('@/modules/hr/pages/DepartmentsPage.vue'),
+          meta: { title: 'Departments', permission: 'hr.employees.view' }
+        },
+        {
           path: 'hr/employees/:id',
           name: 'hr-employee-profile',
           component: () => import('@/modules/hr/pages/EmployeeProfilePage.vue'),
