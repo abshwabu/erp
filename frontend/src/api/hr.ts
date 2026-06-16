@@ -20,6 +20,9 @@ export const hrApi = {
   
   // Org Structure
   getDepartments: () => apiClient.get<Department[]>('/hr/departments'),
+  createDepartment: (data: Partial<Department>) => apiClient.post<Department>('/hr/departments', data),
+  updateDepartment: (id: string, data: Partial<Department>) => apiClient.patch<Department>(`/hr/departments/${id}`, data),
+  deleteDepartment: (id: string) => apiClient.delete(`/hr/departments/${id}`),
   getPositions: () => apiClient.get<Position[]>('/hr/positions'),
   
   // Attendance

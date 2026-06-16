@@ -25,6 +25,22 @@ const { data: employees } = useQuery({
   queryFn: () => hrApi.getEmployees().then(res => res.data)
 })
 
+const saveMutation = useMutation({
+  mutationFn: (data: Partial<Department>) => 
+    editingDepartment.value 
+      ? hrApi.updateDepartment(editingDepartment.value.id!, data) 
+      : hrApi.createDepartment(data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['hr', 'departments'] })
+    isModalOpen.value = false
+  }
+})
+
+const deleteMutation = useMutation({
+  mutationFn: (id: string) => hrApi.deleteDepartment(id),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hr', 'departments'] })
+})
+
 const filteredDepartments = computed(() => {
   if (!departments.value) return []
   return departments.value.filter(d => 
@@ -59,15 +75,13 @@ const openModal = (dept: Department | null = null) => {
   isModalOpen.value = true
 }
 
-// In a real app, these would be mutations
 const saveDepartment = () => {
-  console.log('Saving department:', form.value)
-  isModalOpen.value = false
+  saveMutation.mutate(form.value)
 }
 
 const deleteDepartment = (id: string) => {
   if (confirm('Are you sure you want to delete this department?')) {
-    console.log('Deleting department:', id)
+    deleteMutation.mutate(id)
   }
 }
 </script>
@@ -185,7 +199,7 @@ const deleteDepartment = (id: string) => {
 
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
           <UiButton variant="outline" @click="isModalOpen = false">Cancel</UiButton>
-          <UiButton @click="saveDepartment">
+          <UiButton @click="saveDepartment" :loading="saveMutation.isPending.value">
             {{ editingDepartment ? 'Update Department' : 'Create Department' }}
           </UiButton>
         </div>

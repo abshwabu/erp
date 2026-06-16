@@ -30,7 +30,7 @@ class Department extends Model
         return $this->hasMany(Department::class, 'parent_id');
     }
 
-    public function headEmployee()
+    public function manager()
     {
         return $this->belongsTo(Employee::class, 'head_employee_id');
     }
