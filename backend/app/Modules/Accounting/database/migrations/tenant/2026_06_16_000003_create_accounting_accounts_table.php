@@ -24,8 +24,11 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('parent_id')->references('id')->on('accounting_accounts')->onDelete('set null');
             $table->foreign('account_type_id')->references('id')->on('accounting_account_types');
+        });
+        
+        Schema::table('accounting_accounts', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('accounting_accounts')->onDelete('set null');
         });
     }
 

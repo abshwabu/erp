@@ -27,9 +27,12 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('period_id')->references('id')->on('accounting_fiscal_periods');
-            $table->foreign('reversal_of_id')->references('id')->on('accounting_journals');
             // Assuming users table uses UUIDs as well
             $table->foreign('posted_by_id')->references('id')->on('users');
+        });
+
+        Schema::table('accounting_journals', function (Blueprint $table) {
+            $table->foreign('reversal_of_id')->references('id')->on('accounting_journals');
         });
     }
 

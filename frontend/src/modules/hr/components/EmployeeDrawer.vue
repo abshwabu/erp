@@ -54,12 +54,17 @@ const removeContact = (index: number) => {
 const save = async () => {
   loading.value = true
   errors.value = {}
+  
+  // Debugging
+  console.log('Form data being submitted:', form.value)
+  
   try {
     await hrApi.createEmployee(form.value as any)
     emit('saved')
     emit('update:modelValue', false)
     resetForm()
   } catch (e: any) {
+    console.error('API Error:', e.response?.data)
     if (e.response?.data?.errors) {
       errors.value = e.response.data.errors
     }
@@ -122,7 +127,7 @@ const genders = [
         </div>
         <div class="grid grid-cols-2 gap-4">
           <UiInput v-model="form.email" label="Email" type="email" placeholder="john.doe@company.com" :error="errors.email?.[0]" />
-          <UiInput v-model="form.phone" label="Phone" placeholder="+1..." :error="errors.phone?.[0]" />
+          <UiInput v-model="form.phone" label="Phone" type="tel" placeholder="+1..." pattern="[0-9+\s\-]+" title="Please enter a valid phone number" :error="errors.phone?.[0]" />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <UiSelect v-model="form.gender" label="Gender" :options="genders" />
@@ -189,7 +194,7 @@ const genders = [
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <UiInput v-model="contact.name" label="Name" placeholder="Full name" size="sm" />
             <UiInput v-model="contact.relationship" label="Relationship" placeholder="e.g. Spouse" size="sm" />
-            <UiInput v-model="contact.phone" label="Phone" placeholder="+1..." size="sm" />
+            <UiInput v-model="contact.phone" label="Phone" type="tel" placeholder="+1..." pattern="[0-9+\s\-]+" title="Please enter a valid phone number" size="sm" />
           </div>
         </div>
       </section>

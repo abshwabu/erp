@@ -17,13 +17,14 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
+        \Log::info('Employee store request:', $request->all());
         $validated = $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
             'email' => 'required|email|unique:hr_employees,email',
             'employee_number' => 'required|string|unique:hr_employees,employee_number',
-            'department_id' => 'required|uuid',
-            'position_id' => 'required|uuid',
+            'department_id' => 'nullable|uuid',
+            'position_id' => 'nullable|uuid',
             'start_date' => 'required|date',
             'employment_type' => 'required|string',
             'status' => 'required|string',

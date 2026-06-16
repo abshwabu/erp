@@ -28,6 +28,9 @@ defineEmits(['update:modelValue'])
                   <div class="relative mt-6 flex-1 px-4 sm:px-6">
                     <slot />
                   </div>
+                  <div v-if="$slots.footer" class="px-4 sm:px-6 mt-6">
+                    <slot name="footer" />
+                  </div>
                 </div>
               </DialogPanel>
             </TransitionChild>
