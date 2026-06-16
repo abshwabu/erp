@@ -120,6 +120,53 @@ const router = createRouter({
           component: () => import('@/modules/hr/pages/OrgChartPage.vue'),
           meta: { title: 'Org Chart', permission: 'hr.employees.view' }
         },
+        // Accounting Module
+        {
+          path: 'accounting',
+          redirect: 'accounting/chart-of-accounts',
+        },
+        {
+          path: 'accounting/chart-of-accounts',
+          name: 'accounting-chart-of-accounts',
+          component: () => import('@/modules/accounting/pages/ChartOfAccountsPage.vue'),
+          meta: { title: 'Chart of Accounts', permission: 'accounting.journals.view' }
+        },
+        {
+          path: 'accounting/journals',
+          name: 'accounting-journals',
+          component: () => import('@/modules/accounting/pages/JournalsPage.vue'),
+          meta: { title: 'Journals', permission: 'accounting.journals.view' }
+        },
+        {
+          path: 'accounting/trial-balance',
+          name: 'accounting-trial-balance',
+          component: () => import('@/modules/accounting/pages/TrialBalancePage.vue'),
+          meta: { title: 'Trial Balance', permission: 'accounting.reports.view' }
+        },
+        {
+          path: 'accounting/profit-loss',
+          name: 'accounting-profit-loss',
+          component: () => import('@/modules/accounting/pages/ProfitLossPage.vue'),
+          meta: { title: 'Profit & Loss', permission: 'accounting.reports.view' }
+        },
+        {
+          path: 'accounting/balance-sheet',
+          name: 'accounting-balance-sheet',
+          component: () => import('@/modules/accounting/pages/BalanceSheetPage.vue'),
+          meta: { title: 'Balance Sheet', permission: 'accounting.reports.view' }
+        },
+        {
+          path: 'accounting/ar-aging',
+          name: 'accounting-ar-aging',
+          component: () => import('@/modules/accounting/pages/ARAgingPage.vue'),
+          meta: { title: 'AR Aging', permission: 'accounting.reports.view' }
+        },
+        {
+          path: 'accounting/ap-aging',
+          name: 'accounting-ap-aging',
+          component: () => import('@/modules/accounting/pages/APAgingPage.vue'),
+          meta: { title: 'AP Aging', permission: 'accounting.reports.view' }
+        },
         // Add more module routes here...
       ]
     },

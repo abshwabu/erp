@@ -36,7 +36,8 @@ const { hasPermission } = usePermission()
 
 const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
-  'Human Resources': true
+  'Human Resources': true,
+  Accounting: true,
 })
 
 const toggleExpand = (name: string) => {
@@ -92,7 +93,20 @@ const navigationGroups = [
     title: 'FINANCE',
     items: [
       { name: 'Sales & Invoicing', to: '/sales', icon: markRaw(FileText), permission: 'sales.invoices.create' },
-      { name: 'Accounting', to: '/accounting', icon: markRaw(Calculator), permission: 'accounting.journals.view' },
+      {
+        name: 'Accounting',
+        icon: markRaw(Calculator),
+        permission: 'accounting.journals.view',
+        children: [
+          { name: 'Chart of Accounts', to: '/accounting/chart-of-accounts', icon: markRaw(Calculator) },
+          { name: 'Journals', to: '/accounting/journals', icon: markRaw(FileText) },
+          { name: 'Trial Balance', to: '/accounting/trial-balance', icon: markRaw(BarChart2) },
+          { name: 'Profit & Loss', to: '/accounting/profit-loss', icon: markRaw(BarChart2) },
+          { name: 'Balance Sheet', to: '/accounting/balance-sheet', icon: markRaw(BarChart2) },
+          { name: 'AR Aging', to: '/accounting/ar-aging', icon: markRaw(AlertTriangle) },
+          { name: 'AP Aging', to: '/accounting/ap-aging', icon: markRaw(AlertTriangle) },
+        ]
+      },
       { name: 'Reporting', to: '/reporting', icon: markRaw(BarChart2), permission: 'accounting.reports.view' },
     ]
   },
