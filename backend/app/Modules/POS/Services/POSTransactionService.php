@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\POS\Services;
 
-use App\Models\POS\POSTransaction;
-use App\Models\POS\POSTransactionItem;
-use App\Models\POS\POSPayment;
+use App\Modules\POS\Models\POSTransaction;
+use App\Modules\POS\Models\POSTransactionItem;
+use App\Modules\POS\Models\POSPayment;
 use Illuminate\Support\Facades\DB;
 use App\Events\SaleCompleted;
 use Exception;

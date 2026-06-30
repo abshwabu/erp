@@ -1,9 +1,11 @@
 <?php
 
-use App\Models\Accounting\Account;
-use App\Models\Accounting\AccountType;
-use App\Models\Accounting\FiscalPeriod;
-use App\Models\Accounting\Journal;
+declare(strict_types=1);
+
+use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\AccountType;
+use App\Modules\Accounting\Models\FiscalPeriod;
+use App\Modules\Accounting\Models\Journal;
 use App\Models\User;
 use App\Services\Accounting\JournalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

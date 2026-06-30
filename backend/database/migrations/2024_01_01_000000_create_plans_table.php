@@ -14,8 +14,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->decimal('price_monthly', 12, 2)->default(0);
-            $table->decimal('price_annually', 12, 2)->default(0);
+            $table->bigInteger('price_monthly')->default(0);
+            $table->bigInteger('price_annually')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

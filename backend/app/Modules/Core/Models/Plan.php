@@ -17,8 +17,8 @@ class Plan extends Model
     {
         return [
             'is_active' => 'boolean',
-            'price_monthly' => 'decimal:2',
-            'price_annually' => 'decimal:2',
+            'price_monthly' => 'integer',
+            'price_annually' => 'integer',
         ];
     }
 

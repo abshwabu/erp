@@ -11,7 +11,7 @@ All significant architectural and technology decisions are recorded here with co
 - [ADR-002: Laravel as Backend Framework](#adr-002-laravel-as-backend-framework)
 - [ADR-003: PostgreSQL as Primary Database](#adr-003-postgresql-as-primary-database)
 - [ADR-004: Schema-per-Tenant Multi-Tenancy](#adr-004-schema-per-tenant-multi-tenancy)
-- [ADR-005: React + TypeScript for Frontend](#adr-005-react--typescript-for-frontend)
+- [ADR-005: Vue 3 + TypeScript for Frontend](#adr-005-vue-3--typescript-for-frontend)
 - [ADR-006: REST over GraphQL for API](#adr-006-rest-over-graphql-for-api)
 - [ADR-007: Redis for Caching and Queues](#adr-007-redis-for-caching-and-queues)
 - [ADR-008: POS as PWA with Offline-First Design](#adr-008-pos-as-pwa-with-offline-first-design)
@@ -147,7 +147,7 @@ Three common multi-tenancy strategies exist. The choice affects data isolation, 
 
 ---
 
-## ADR-005: React + TypeScript for Frontend
+## ADR-005: Vue 3 + TypeScript for Frontend
 
 **Status:** Accepted  
 **Date:** Project Start
@@ -165,9 +165,9 @@ Frontend framework choice for a complex, data-heavy business application.
 | Angular | Strong typing but steep learning curve, large bundle |
 
 ### Decision
-**React 18 + TypeScript with a decoupled SPA.** Although Inertia.js would reduce boilerplate, a decoupled SPA means the same API serves web, mobile, and third-party clients. TypeScript prevents an entire class of runtime errors in a complex codebase.
+**Vue 3 + TypeScript with a decoupled SPA.** Although Inertia.js would reduce boilerplate, a decoupled SPA means the same API serves web, mobile, and third-party clients. TypeScript prevents an entire class of runtime errors in a complex codebase.
 
-**TanStack Query** (React Query) for server state management — eliminates the need to manually manage loading/error/caching for API calls. **Zustand** for lightweight global UI state.
+**TanStack Query** (Vue Query) for server state management — eliminates the need to manually manage loading/error/caching for API calls. **Pinia** for lightweight global UI state.
 
 ### Consequences
 - Must maintain CORS configuration for the separate frontend origin

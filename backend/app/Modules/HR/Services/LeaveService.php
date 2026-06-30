@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\HR\Services;
 
-use App\Models\HR\Employee;
-use App\Models\HR\LeaveRequest;
-use App\Models\HR\LeaveEntitlement;
-use App\Models\HR\LeaveType;
+use App\Modules\HR\Models\Employee;
+use App\Modules\HR\Models\LeaveRequest;
+use App\Modules\HR\Models\LeaveEntitlement;
+use App\Modules\HR\Models\LeaveType;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 

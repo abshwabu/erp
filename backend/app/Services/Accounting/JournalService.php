@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Accounting;
 
-use App\Models\Accounting\Journal;
-use App\Models\Accounting\JournalLine;
-use App\Models\Accounting\FiscalPeriod;
-use App\Models\Accounting\Account;
+use App\Modules\Accounting\Models\Journal;
+use App\Modules\Accounting\Models\JournalLine;
+use App\Modules\Accounting\Models\FiscalPeriod;
+use App\Modules\Accounting\Models\Account;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Exception;

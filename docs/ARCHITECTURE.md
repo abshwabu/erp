@@ -323,7 +323,7 @@ EXAMPLE:
 
 ## Frontend Architecture
 
-### Technology: React 18 + TypeScript
+### Technology: Vue 3 + TypeScript
 
 ```
 frontend/
@@ -333,8 +333,8 @@ frontend/
 │   │   ├── pos/
 │   │   │   ├── components/
 │   │   │   ├── pages/
-│   │   │   ├── hooks/
-│   │   │   ├── store/          ← Zustand slice
+│   │   │   ├── composables/
+│   │   │   ├── store/          ← Pinia store
 │   │   │   └── api/            ← API call functions
 │   │   ├── inventory/
 │   │   ├── hr/
@@ -351,9 +351,9 @@ frontend/
 ```
 
 **State management:**
-- **Zustand** for global UI state (current user, tenant, permissions, sidebar)
-- **TanStack Query (React Query)** for all server state — caching, background refetch, optimistic updates
-- **Local component state** (useState) for ephemeral UI state
+- **Pinia** for global UI state (current user, tenant, permissions, sidebar)
+- **TanStack Query (Vue Query)** for all server state — caching, background refetch, optimistic updates
+- **Local component state** (ref, reactive) for ephemeral UI state
 
 **POS as a PWA (Progressive Web App):**
 ```

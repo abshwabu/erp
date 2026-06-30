@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Accounting;
 
-use App\Models\Accounting\Account;
-use App\Models\Accounting\JournalLine;
+use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\JournalLine;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 

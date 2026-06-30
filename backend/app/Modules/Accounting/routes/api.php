@@ -1,11 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Accounting\ChartOfAccountsController;
-use App\Http\Controllers\Accounting\JournalController;
-use App\Http\Controllers\Accounting\ReportController;
+declare(strict_types=1);
 
-Route::prefix('accounting')->group(function () {
+use Illuminate\Support\Facades\Route;
+use App\Modules\Accounting\Controllers\ChartOfAccountsController;
+use App\Modules\Accounting\Controllers\JournalController;
+use App\Modules\Accounting\Controllers\ReportController;
+
+Route::prefix('api/accounting')->middleware('auth:api,sanctum')->group(function () {
     // Chart of Accounts
     Route::get('accounts', [ChartOfAccountsController::class, 'index']);
     Route::get('accounts/tree', [ChartOfAccountsController::class, 'tree']);

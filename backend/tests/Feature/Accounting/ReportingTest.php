@@ -1,8 +1,10 @@
 <?php
 
-use App\Models\Accounting\Account;
-use App\Models\Accounting\AccountType;
-use App\Models\Accounting\FiscalPeriod;
+declare(strict_types=1);
+
+use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\AccountType;
+use App\Modules\Accounting\Models\FiscalPeriod;
 use App\Models\User;
 use App\Services\Accounting\JournalService;
 use App\Services\Accounting\ReportingService;

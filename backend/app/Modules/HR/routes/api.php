@@ -1,13 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HR\EmployeeController;
-use App\Http\Controllers\HR\AttendanceController;
-use App\Http\Controllers\HR\LeaveController;
-use App\Http\Controllers\HR\DepartmentController;
-use App\Http\Controllers\HR\PositionController;
+declare(strict_types=1);
 
-Route::prefix('hr')->group(function () {
+use Illuminate\Support\Facades\Route;
+use App\Modules\HR\Controllers\EmployeeController;
+use App\Modules\HR\Controllers\AttendanceController;
+use App\Modules\HR\Controllers\LeaveController;
+use App\Modules\HR\Controllers\DepartmentController;
+use App\Modules\HR\Controllers\PositionController;
+
+Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     // Employees
     Route::get('employees', [EmployeeController::class, 'index']);
     Route::post('employees', [EmployeeController::class, 'store']);
