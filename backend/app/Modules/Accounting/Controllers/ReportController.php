@@ -24,7 +24,7 @@ class ReportController extends Controller
             'to_date' => 'required|date',
         ]);
 
-        $report = $this->reportingService.trialBalance(
+        $report = $this->reportingService->trialBalance(
             $request->from_date,
             $request->to_date
         );
@@ -39,7 +39,7 @@ class ReportController extends Controller
             'to_date' => 'required|date',
         ]);
 
-        $report = $this->reportingService.profitAndLoss(
+        $report = $this->reportingService->profitAndLoss(
             $request->from_date,
             $request->to_date
         );
@@ -53,7 +53,7 @@ class ReportController extends Controller
             'as_of_date' => 'required|date',
         ]);
 
-        $report = $this->reportingService.balanceSheet($request->as_of_date);
+        $report = $this->reportingService->balanceSheet($request->as_of_date);
 
         return response()->json($report);
     }
@@ -66,7 +66,7 @@ class ReportController extends Controller
             'to_date' => 'required|date',
         ]);
 
-        $report = $this->reportingService.generalLedger(
+        $report = $this->reportingService->generalLedger(
             $request->account_id,
             $request->from_date,
             $request->to_date
@@ -77,11 +77,11 @@ class ReportController extends Controller
 
     public function arAging()
     {
-        return response()->json($this->reportingService.arAging());
+        return response()->json($this->reportingService->arAging());
     }
 
     public function apAging()
     {
-        return response()->json($this->reportingService.apAging());
+        return response()->json($this->reportingService->apAging());
     }
 }

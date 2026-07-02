@@ -1,19 +1,148 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { Download } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import { accountingFiscalPeriods, sampleTrialBalance } from '../data'
+import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
+import type { AccountType, TrialBalanceRow, TrialBalanceSection } from '@/types/accounting'
 
-const fromDate = ref(sampleTrialBalance.fromDate)
-const toDate = ref(sampleTrialBalance.toDate)
-const comparePreviousPeriod = ref(sampleTrialBalance.comparePreviousPeriod)
+const currentYear = new Date().getFullYear()
+
+// Generate fiscal periods matching the database seed
+const accountingFiscalPeriods = Array.from({ length: 12 }, (_, i) => {
+  const month = i + 1
+  const monthStr = String(month).padStart(2, '0')
+  return {
+    id: `${currentYear}-${monthStr}`,
+    year: currentYear,
+    month,
+    startDate: `${currentYear}-${monthStr}-01`,
+    endDate: new Date(currentYear, month, 0).toISOString().slice(0, 10),
+    status: month < new Date().getMonth() + 1 ? 'closed' : 'open',
+  }
+})
+
+const fromDate = ref(`${currentYear}-01-01`)
+const toDate = ref(`${currentYear}-12-31`)
+const comparePreviousPeriod = ref(false)
 const mode = ref<'custom' | 'fiscal'>('custom')
-const selectedPeriod = ref(accountingFiscalPeriods[2]?.id || '')
+const selectedPeriod = ref(`${currentYear}-01`)
 
-const visibleSections = computed(() => sampleTrialBalance.sections)
+const visibleSections = ref<TrialBalanceSection[]>([])
+const totals = ref({
+  openingBalance: 0,
+  debits: 0,
+  credits: 0,
+  closingBalance: 0,
+  priorPeriodBalance: 0
+})
+
+const loadTrialBalance = async () => {
+  try {
+    const params = {
+      from_date: fromDate.value,
+      to_date: toDate.value,
+    }
+    const res = await accountingApi.getTrialBalance(params)
+    const rawRows = res.data || []
+
+    const sectionsMap: Record<string, { label: string; type: AccountType; rows: TrialBalanceRow[] }> = {
+      Asset: { label: 'Assets', type: 'asset', rows: [] },
+      Liability: { label: 'Liabilities', type: 'liability', rows: [] },
+      Equity: { label: 'Equity', type: 'equity', rows: [] },
+      Revenue: { label: 'Revenue', type: 'revenue', rows: [] },
+      COGS: { label: 'Cost of Goods Sold', type: 'cost_of_sales', rows: [] },
+      Expense: { label: 'Expenses', type: 'expense', rows: [] },
+    }
+
+    rawRows.forEach((row: any) => {
+      const typeKey = row.type_name || 'Asset'
+      if (!sectionsMap[typeKey]) {
+        sectionsMap[typeKey] = { label: typeKey, type: 'asset', rows: [] }
+      }
+      
+      sectionsMap[typeKey].rows.push({
+        accountId: row.id,
+        code: row.code,
+        name: row.name,
+        type: (row.type_name?.toLowerCase() || 'asset') as AccountType,
+        openingBalance: (row.opening_balance || 0) / 100,
+        debits: (row.debits || 0) / 100,
+        credits: (row.credits || 0) / 100,
+        closingBalance: (row.closing_balance || 0) / 100,
+      })
+    })
+
+    const mappedSections: any[] = []
+    Object.keys(sectionsMap).forEach((key) => {
+      const sect = sectionsMap[key]
+      if (sect.rows.length === 0) return
+
+      const subtotal = {
+        openingBalance: sect.rows.reduce((sum, r) => sum + r.openingBalance, 0),
+        debits: sect.rows.reduce((sum, r) => sum + r.debits, 0),
+        credits: sect.rows.reduce((sum, r) => sum + r.credits, 0),
+        closingBalance: sect.rows.reduce((sum, r) => sum + r.closingBalance, 0),
+      }
+
+      mappedSections.push({
+        ...sect,
+        subtotal,
+      })
+    })
+
+    visibleSections.value = mappedSections
+
+    totals.value = {
+      openingBalance: visibleSections.value.reduce((sum, s) => sum + s.subtotal.openingBalance, 0),
+      debits: visibleSections.value.reduce((sum, s) => sum + s.subtotal.debits, 0),
+      credits: visibleSections.value.reduce((sum, s) => sum + s.subtotal.credits, 0),
+      closingBalance: visibleSections.value.reduce((sum, s) => sum + s.subtotal.closingBalance, 0),
+      priorPeriodBalance: 0
+    }
+  } catch (err) {
+    console.error('Failed to load trial balance:', err)
+  }
+}
+
+onMounted(() => {
+  loadTrialBalance()
+})
+
+watch(
+  () => selectedPeriod.value,
+  (val) => {
+    if (mode.value === 'fiscal' && val) {
+      const found = accountingFiscalPeriods.find((p) => p.id === val)
+      if (found) {
+        fromDate.value = found.startDate
+        toDate.value = found.endDate
+      }
+    }
+  }
+)
+
+watch(
+  () => mode.value,
+  (val) => {
+    if (val === 'fiscal' && selectedPeriod.value) {
+      const found = accountingFiscalPeriods.find((p) => p.id === selectedPeriod.value)
+      if (found) {
+        fromDate.value = found.startDate
+        toDate.value = found.endDate
+      }
+    }
+  }
+)
+
+watch(
+  [fromDate, toDate],
+  () => {
+    loadTrialBalance()
+  }
+)
 
 const downloadCsv = () => {
   const header = comparePreviousPeriod.value
@@ -140,11 +269,11 @@ const periodLabel = computed(() => {
         <tfoot class="bg-slate-900 text-white">
           <tr>
             <td colspan="2" class="px-4 py-3 text-sm font-semibold">Grand Total</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(sampleTrialBalance.totals.openingBalance) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(sampleTrialBalance.totals.debits) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(sampleTrialBalance.totals.credits) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(sampleTrialBalance.totals.closingBalance) }}</td>
-            <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(sampleTrialBalance.totals.priorPeriodBalance || 0) }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.openingBalance) }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.debits) }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.credits) }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.closingBalance) }}</td>
+            <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.priorPeriodBalance || 0) }}</td>
           </tr>
         </tfoot>
       </table>

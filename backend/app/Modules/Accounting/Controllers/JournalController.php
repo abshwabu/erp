@@ -50,7 +50,7 @@ class JournalController extends Controller
         ]);
 
         try {
-            $journal = $this->journalService.createJournal($validated);
+            $journal = $this->journalService->createJournal($validated);
             return response()->json($journal, 201);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -66,7 +66,7 @@ class JournalController extends Controller
     public function post($id)
     {
         try {
-            $this->journalService.postJournal($id);
+            $this->journalService->postJournal($id);
             return response()->json(['message' => 'Journal posted successfully.']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -78,7 +78,7 @@ class JournalController extends Controller
         $request->validate(['date' => 'required|date']);
 
         try {
-            $reversal = $this->journalService.reverseJournal($id, $request->date);
+            $reversal = $this->journalService->reverseJournal($id, $request->date);
             return response()->json($reversal, 201);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);

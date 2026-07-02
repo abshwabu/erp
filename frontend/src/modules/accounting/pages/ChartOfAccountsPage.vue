@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { ChevronDown, ChevronRight, Filter, Plus, Search, Upload, Pencil, Trash2 } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import AccountModal from '../components/AccountModal.vue'
-import { sampleAccounts } from '../data'
+import { accountingApi } from '@/api/accounting'
 import { formatCurrency } from '@/utils/format'
 import type { Account, AccountType } from '@/types/accounting'
 
@@ -18,10 +18,86 @@ interface AccountRow {
   hasChildren: boolean
 }
 
-const cloneTree = (accounts: Account[]): Account[] => accounts.map((account) => ({
-  ...account,
-  children: account.children ? cloneTree(account.children) : undefined,
-}))
+const accountTree = ref<Account[]>([])
+const accountTypes = ref<any[]>([])
+const filter = ref<TypeFilter>('all')
+const searchQuery = ref('')
+const expandedIds = ref<string[]>([])
+const isAccountModalOpen = ref(false)
+const selectedAccount = ref<Account | null>(null)
+const importFileName = ref('')
+const importInput = ref<HTMLInputElement | null>(null)
+
+const nameMapFromBackend: Record<string, string> = {
+  'Asset': 'asset',
+  'Liability': 'liability',
+  'Equity': 'equity',
+  'Revenue': 'revenue',
+  'Expense': 'expense',
+  'COGS': 'cost_of_sales',
+}
+
+const nameMapToBackend: Record<string, string> = {
+  asset: 'Asset',
+  liability: 'Liability',
+  equity: 'Equity',
+  revenue: 'Revenue',
+  expense: 'Expense',
+  cost_of_sales: 'COGS',
+}
+
+const mapAccountFromBackend = (acc: any): Account => {
+  const typeName = acc.account_type?.name || 'Asset'
+  const frontendType = nameMapFromBackend[typeName] || 'asset'
+  return {
+    id: acc.id,
+    parentId: acc.parent_id,
+    code: acc.code,
+    name: acc.name,
+    type: frontendType as AccountType,
+    description: acc.description || '',
+    currencyCode: acc.currency_code || 'USD',
+    isActive: Boolean(acc.is_active),
+    isSystemAccount: Boolean(acc.is_system_account),
+    currentPeriodBalance: (acc.current_period_balance || 0) / 100, // Cents to Dollars
+    children: acc.children ? acc.children.map(mapAccountFromBackend) : undefined
+  }
+}
+
+const loadAccounts = async () => {
+  try {
+    const res = await accountingApi.getAccountsTree()
+    const mapped = res.data.map(mapAccountFromBackend)
+    accountTree.value = mapped
+    
+    // Auto-expand root elements if expandedIds is empty
+    if (expandedIds.value.length === 0) {
+      expandedIds.value = mapped.map((account) => account.id)
+    }
+  } catch (err) {
+    console.error('Failed to load accounts tree:', err)
+  }
+}
+
+const loadAccountTypes = async () => {
+  try {
+    const res = await accountingApi.getAccountTypes()
+    accountTypes.value = res.data
+  } catch (err) {
+    console.error('Failed to load account types:', err)
+  }
+}
+
+const mapTypeToId = (type: string) => {
+  const targetName = nameMapToBackend[type] || 'Asset'
+  const found = accountTypes.value.find((t) => t.name === targetName)
+  return found ? found.id : null
+}
+
+onMounted(() => {
+  loadAccountTypes()
+  loadAccounts()
+})
 
 const flattenAccounts = (accounts: Account[], depth = 0): AccountRow[] => {
   return accounts.flatMap((account) => [
@@ -75,15 +151,6 @@ const filterTree = (accounts: Account[], filter: TypeFilter, query: string): Acc
 
   return result
 }
-
-const accountTree = ref<Account[]>(cloneTree(sampleAccounts))
-const filter = ref<TypeFilter>('all')
-const searchQuery = ref('')
-const expandedIds = ref<string[]>(accountTree.value.map((account) => account.id))
-const isAccountModalOpen = ref(false)
-const selectedAccount = ref<Account | null>(null)
-const importFileName = ref('')
-const importInput = ref<HTMLInputElement | null>(null)
 
 const filteredTree = computed(() => filterTree(accountTree.value, filter.value, searchQuery.value.trim()))
 
@@ -150,71 +217,55 @@ const openEditAccount = (account: Account) => {
   isAccountModalOpen.value = true
 }
 
-const insertAccount = (nodes: Account[], parentId: string | null, nextAccount: Account): Account[] => {
-  if (!parentId) {
-    return [...nodes, nextAccount]
+const handleSaveAccount = async (payload: Partial<Account>) => {
+  const isEditing = Boolean(payload.id)
+  const apiPayload = {
+    name: payload.name,
+    code: payload.code,
+    account_type_id: mapTypeToId(payload.type || 'asset'),
+    parent_id: payload.parentId || null,
+    description: payload.description || null,
+    currency_code: payload.currencyCode || 'USD',
+    is_active: payload.isActive ?? true,
   }
 
-  return nodes.map((account) => {
-    if (account.id === parentId) {
-      return {
-        ...account,
-        children: [...(account.children || []), nextAccount],
-      }
+  try {
+    if (isEditing && payload.id) {
+      await accountingApi.updateAccount(payload.id, apiPayload)
+    } else {
+      await accountingApi.createAccount(apiPayload)
     }
-
-    return {
-      ...account,
-      children: account.children ? insertAccount(account.children, parentId, nextAccount) : account.children,
-    }
-  })
-}
-
-const updateAccount = (nodes: Account[], updated: Account): Account[] => {
-  return nodes.map((account) => {
-    if (account.id === updated.id) {
-      return {
-        ...account,
-        ...updated,
-      }
-    }
-
-    return {
-      ...account,
-      children: account.children ? updateAccount(account.children, updated) : account.children,
-    }
-  })
-}
-
-const handleSaveAccount = (payload: Partial<Account>) => {
-  const existing = payload.id ? flattenedAccounts.value.find((account) => account.account.id === payload.id)?.account : null
-  const nextAccount: Account = {
-    id: payload.id || `acc-${Date.now()}`,
-    parentId: payload.parentId ?? null,
-    code: payload.code || '',
-    name: payload.name || '',
-    type: (payload.type as AccountType) || 'asset',
-    description: payload.description,
-    currencyCode: payload.currencyCode || 'USD',
-    isActive: payload.isActive ?? true,
-    isSystemAccount: existing?.isSystemAccount ?? false,
-    currentPeriodBalance: existing?.currentPeriodBalance ?? 0,
-    children: existing?.children,
+    await loadAccounts()
+  } catch (err) {
+    console.error('Failed to save account:', err)
   }
+}
 
-  if (existing) {
-    accountTree.value = updateAccount(accountTree.value, nextAccount)
-  } else {
-    accountTree.value = insertAccount(accountTree.value, nextAccount.parentId || null, nextAccount)
-    if (nextAccount.parentId && !expandedIds.value.includes(nextAccount.parentId)) {
-      expandedIds.value = [...expandedIds.value, nextAccount.parentId]
+const handleDeleteAccount = async (id: string) => {
+  if (confirm('Are you sure you want to delete this account?')) {
+    try {
+      await accountingApi.deleteAccount(id)
+      await loadAccounts()
+    } catch (err) {
+      console.error('Failed to delete account:', err)
     }
   }
 }
 
-const handleImport = (event: Event) => {
+const handleImport = async (event: Event) => {
   const input = event.target as HTMLInputElement
-  importFileName.value = input.files?.[0]?.name || ''
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    importFileName.value = file.name
+    try {
+      await accountingApi.importAccountsCsv(file)
+      await loadAccounts()
+      alert('CSV imported successfully!')
+    } catch (err) {
+      console.error('CSV import failed:', err)
+      alert('CSV import failed.')
+    }
+  }
 }
 </script>
 
@@ -306,7 +357,7 @@ const handleImport = (event: Event) => {
                 <UiButton variant="ghost" size="sm" @click="openEditAccount(row.account)">
                   <Pencil class="h-4 w-4" />
                 </UiButton>
-                <UiButton variant="ghost" size="sm">
+                <UiButton variant="ghost" size="sm" @click="handleDeleteAccount(row.account.id)">
                   <Trash2 class="h-4 w-4" />
                 </UiButton>
               </div>

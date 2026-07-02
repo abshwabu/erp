@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         if (function_exists('tenancy') && tenancy()->initialized) {
             $this->call([
                 TenantRoleSeeder::class,
+                AccountingSeeder::class,
             ]);
         } else {
             $this->call([

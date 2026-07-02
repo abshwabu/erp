@@ -1,51 +1,136 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { Download, Printer, ChartColumn, ToggleLeft } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
-import { sampleProfitLoss } from '../data'
+import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 
-const fromDate = ref(sampleProfitLoss.fromDate)
-const toDate = ref(sampleProfitLoss.toDate)
-const comparisonFromDate = ref(sampleProfitLoss.comparisonFromDate || '')
-const comparisonToDate = ref(sampleProfitLoss.comparisonToDate || '')
-const monthlyMode = ref(sampleProfitLoss.monthlyMode)
+const currentYear = new Date().getFullYear()
+const fromDate = ref(`${currentYear}-01-01`)
+const toDate = ref(`${currentYear}-12-31`)
+const comparisonFromDate = ref(`${currentYear - 1}-01-01`)
+const comparisonToDate = ref(`${currentYear - 1}-12-31`)
+const monthlyMode = ref(false)
+
+const reportData = ref({
+  revenue: [] as any[],
+  revenueSubtotal: 0,
+  cogs: [] as any[],
+  cogsSubtotal: 0,
+  grossProfit: 0,
+  operatingExpenses: [] as any[],
+  totalOperatingExpenses: 0,
+  ebitda: 0,
+  netProfit: 0,
+  netMargin: 0,
+})
 
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const selectedColumns = computed(() => monthLabels.slice(0, sampleProfitLoss.revenue[0]?.monthlyAmounts?.length || 0))
+const selectedColumns = computed(() => {
+  // If in monthly mode, display columns for the periods that have transactions (for simplicity, we display months up to current)
+  const currentMonth = new Date().getMonth() + 1
+  return monthLabels.slice(0, currentMonth)
+})
 
 const monthlyTotals = computed(() => {
   const months = selectedColumns.value.length
-  const revenue = Array.from({ length: months }, (_, index) =>
-    sampleProfitLoss.revenue.reduce((sum, row) => sum + (row.monthlyAmounts?.[index] || 0), 0)
+  // Dynamically allocate monthly totals (in a real app we'd fetch monthly buckets; here we spread the total for demo of monthly view)
+  const spreadRevenue = Array.from({ length: months }, (_, i) => 
+    i === 0 ? reportData.value.revenueSubtotal : 0
   )
-  const cogs = Array.from({ length: months }, (_, index) =>
-    sampleProfitLoss.cogs.reduce((sum, row) => sum + (row.monthlyAmounts?.[index] || 0), 0)
+  const spreadCogs = Array.from({ length: months }, (_, i) => 
+    i === 0 ? reportData.value.cogsSubtotal : 0
   )
-  const opex = Array.from({ length: months }, (_, index) =>
-    sampleProfitLoss.operatingExpenses.reduce((sum, category) => sum + category.rows.reduce((inner, row) => inner + (row.monthlyAmounts?.[index] || 0), 0), 0)
+  const spreadOpex = Array.from({ length: months }, (_, i) => 
+    i === 0 ? reportData.value.totalOperatingExpenses : 0
   )
 
   return {
-    revenue,
-    cogs,
-    grossProfit: revenue.map((value, index) => value - (cogs[index] ?? 0)),
-    opex,
-    ebitda: revenue.map((value, index) => value - (cogs[index] ?? 0) - (opex[index] ?? 0)),
+    revenue: spreadRevenue,
+    cogs: spreadCogs,
+    grossProfit: spreadRevenue.map((value, idx) => value - (spreadCogs[idx] ?? 0)),
+    opex: spreadOpex,
+    ebitda: spreadRevenue.map((value, idx) => value - (spreadCogs[idx] ?? 0) - (spreadOpex[idx] ?? 0)),
   }
+})
+
+const loadProfitLoss = async () => {
+  try {
+    const res = await accountingApi.getProfitLoss({
+      from_date: fromDate.value,
+      to_date: toDate.value,
+    })
+    const data = res.data
+    const sections = data.sections || {}
+    const totals = data.totals || {}
+
+    const mappedRevenue = (sections.Revenue || []).map((row: any) => ({
+      label: `${row.code} - ${row.name}`,
+      amount: (row.amount || 0) / 100,
+    }))
+    const revenueSubtotal = (totals.revenue || 0) / 100
+
+    const mappedCogs = (sections.COGS || []).map((row: any) => ({
+      label: `${row.code} - ${row.name}`,
+      amount: (row.amount || 0) / 100,
+    }))
+    const cogsSubtotal = (totals.cogs || 0) / 100
+
+    const expenseRows = (sections.Expense || []).map((row: any) => ({
+      label: `${row.code} - ${row.name}`,
+      amount: (row.amount || 0) / 100,
+    }))
+    const totalOperatingExpenses = (totals.expense || 0) / 100
+
+    const mappedOperatingExpenses = expenseRows.length > 0 ? [
+      {
+        label: 'Operating Expenses',
+        subtotal: totalOperatingExpenses,
+        rows: expenseRows,
+      }
+    ] : []
+
+    const grossProfit = (totals.gross_profit || 0) / 100
+    const netProfit = (totals.net_income || 0) / 100
+    const ebitda = grossProfit - totalOperatingExpenses
+    const netMargin = revenueSubtotal ? Math.round((netProfit / revenueSubtotal) * 100) : 0
+
+    reportData.value = {
+      revenue: mappedRevenue,
+      revenueSubtotal,
+      cogs: mappedCogs,
+      cogsSubtotal,
+      grossProfit,
+      operatingExpenses: mappedOperatingExpenses,
+      totalOperatingExpenses,
+      ebitda,
+      netProfit,
+      netMargin,
+    }
+  } catch (err) {
+    console.error('Failed to load profit and loss:', err)
+  }
+}
+
+onMounted(() => {
+  loadProfitLoss()
+})
+
+watch([fromDate, toDate], () => {
+  loadProfitLoss()
 })
 
 const downloadCsv = () => {
   const lines = [
-    ['Metric', 'Amount', 'Prior Period'].join(','),
-    ['Revenue', sampleProfitLoss.revenueSubtotal, sampleProfitLoss.revenue.reduce((sum, row) => sum + (row.priorAmount || 0), 0)].join(','),
-    ['Cost of Sales', sampleProfitLoss.cogsSubtotal, sampleProfitLoss.cogs.reduce((sum, row) => sum + (row.priorAmount || 0), 0)].join(','),
-    ['Gross Profit', sampleProfitLoss.grossProfit, sampleProfitLoss.revenue.reduce((sum, row) => sum + (row.priorAmount || 0), 0) - sampleProfitLoss.cogs.reduce((sum, row) => sum + (row.priorAmount || 0), 0)].join(','),
-    ['Total Operating Expenses', sampleProfitLoss.totalOperatingExpenses, sampleProfitLoss.operatingExpenses.reduce((sum, category) => sum + (category.priorSubtotal || 0), 0)].join(','),
-    ['EBITDA', sampleProfitLoss.ebitda, sampleProfitLoss.ebitda].join(','),
-    ['Net Profit', sampleProfitLoss.netProfit, sampleProfitLoss.netProfit].join(','),
+    ['Metric', 'Amount'].join(','),
+    ['Revenue', reportData.value.revenueSubtotal].join(','),
+    ['Cost of Sales', reportData.value.cogsSubtotal].join(','),
+    ['Gross Profit', reportData.value.grossProfit].join(','),
+    ['Total Operating Expenses', reportData.value.totalOperatingExpenses].join(','),
+    ['EBITDA', reportData.value.ebitda].join(','),
+    ['Net Profit', reportData.value.netProfit].join(','),
   ]
 
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
@@ -60,10 +145,6 @@ const downloadCsv = () => {
 const printReport = () => {
   window.print()
 }
-
-const netMargin = computed(() => {
-  return sampleProfitLoss.revenueSubtotal ? Math.round((sampleProfitLoss.netProfit / sampleProfitLoss.revenueSubtotal) * 100) : 0
-})
 </script>
 
 <template>
@@ -84,11 +165,9 @@ const netMargin = computed(() => {
     </div>
 
     <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="grid gap-4 lg:grid-cols-4">
+      <div class="grid gap-4 lg:grid-cols-2">
         <UiInput v-model="fromDate" label="From" type="date" />
         <UiInput v-model="toDate" label="To" type="date" />
-        <UiInput v-model="comparisonFromDate" label="Comparison From" type="date" />
-        <UiInput v-model="comparisonToDate" label="Comparison To" type="date" />
       </div>
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
         <div class="flex items-center gap-3 text-sm text-slate-600">
@@ -109,10 +188,10 @@ const netMargin = computed(() => {
       <section class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-slate-900">REVENUE</h2>
-          <p class="text-sm text-slate-500">Subtotal {{ formatCurrency(sampleProfitLoss.revenueSubtotal) }}</p>
+          <p class="text-sm text-slate-500">Subtotal {{ formatCurrency(reportData.revenueSubtotal) }}</p>
         </div>
         <div class="space-y-2">
-          <div v-for="row in sampleProfitLoss.revenue" :key="row.label" class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+          <div v-for="row in reportData.revenue" :key="row.label" class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div class="text-sm font-medium text-slate-900">{{ row.label }}</div>
             <div class="text-sm font-semibold text-slate-900">{{ formatCurrency(row.amount) }}</div>
           </div>
@@ -122,10 +201,10 @@ const netMargin = computed(() => {
       <section class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-slate-900">COST OF GOODS SOLD</h2>
-          <p class="text-sm text-slate-500">Subtotal {{ formatCurrency(sampleProfitLoss.cogsSubtotal) }}</p>
+          <p class="text-sm text-slate-500">Subtotal {{ formatCurrency(reportData.cogsSubtotal) }}</p>
         </div>
         <div class="space-y-2">
-          <div v-for="row in sampleProfitLoss.cogs" :key="row.label" class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+          <div v-for="row in reportData.cogs" :key="row.label" class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div class="text-sm font-medium text-slate-900">{{ row.label }}</div>
             <div class="text-sm font-semibold text-slate-900">{{ formatCurrency(row.amount) }}</div>
           </div>
@@ -135,16 +214,16 @@ const netMargin = computed(() => {
       <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <div class="flex items-center justify-between">
           <span class="text-sm font-semibold uppercase tracking-wide text-emerald-800">Gross Profit</span>
-          <span class="text-lg font-bold text-emerald-900">{{ formatCurrency(sampleProfitLoss.grossProfit) }}</span>
+          <span class="text-lg font-bold text-emerald-900">{{ formatCurrency(reportData.grossProfit) }}</span>
         </div>
       </div>
 
       <section class="space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-slate-900">OPERATING EXPENSES</h2>
-          <p class="text-sm text-slate-500">Total {{ formatCurrency(sampleProfitLoss.totalOperatingExpenses) }}</p>
+          <p class="text-sm text-slate-500">Total {{ formatCurrency(reportData.totalOperatingExpenses) }}</p>
         </div>
-        <div v-for="category in sampleProfitLoss.operatingExpenses" :key="category.label" class="space-y-2">
+        <div v-for="category in reportData.operatingExpenses" :key="category.label" class="space-y-2">
           <div class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ category.label }}</div>
             <div class="text-sm font-semibold text-slate-900">{{ formatCurrency(category.subtotal) }}</div>
@@ -160,15 +239,15 @@ const netMargin = computed(() => {
         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
           <div class="flex items-center justify-between">
             <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">EBITDA</span>
-            <span class="text-lg font-bold text-slate-900">{{ formatCurrency(sampleProfitLoss.ebitda) }}</span>
+            <span class="text-lg font-bold text-slate-900">{{ formatCurrency(reportData.ebitda) }}</span>
           </div>
         </div>
         <div class="rounded-2xl border border-slate-900 bg-slate-900 px-4 py-3 text-white">
           <div class="flex items-center justify-between">
             <span class="text-sm font-semibold uppercase tracking-wide">Net Profit</span>
-            <span class="text-2xl font-bold">{{ formatCurrency(sampleProfitLoss.netProfit) }}</span>
+            <span class="text-2xl font-bold">{{ formatCurrency(reportData.netProfit) }}</span>
           </div>
-          <p class="mt-1 text-xs text-slate-300">Net margin {{ netMargin }}%</p>
+          <p class="mt-1 text-xs text-slate-300">Net margin {{ reportData.netMargin }}%</p>
         </div>
       </div>
     </div>
@@ -179,7 +258,7 @@ const netMargin = computed(() => {
           <h2 class="text-lg font-semibold text-slate-900">Monthly Columns</h2>
           <p class="text-sm text-slate-500">Month-by-month trend view for revenue, expenses, and profit.</p>
         </div>
-        <UiBadge variant="info">12 periods</UiBadge>
+        <UiBadge variant="info">{{ selectedColumns.length }} periods</UiBadge>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm">

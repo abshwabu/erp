@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Accounting\AccountType;
-use App\Models\Accounting\Account;
-use App\Models\Accounting\FiscalPeriod;
+use App\Modules\Accounting\Models\AccountType;
+use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\FiscalPeriod;
+use App\Modules\Accounting\Models\Journal;
+use App\Modules\Accounting\Models\JournalLine;
 use Carbon\Carbon;
 
 class AccountingSeeder extends Seeder
@@ -80,18 +82,217 @@ class AccountingSeeder extends Seeder
 
         // Create Fiscal Periods for the current year
         $year = Carbon::now()->year;
+        $periods = [];
         for ($m = 1; $m <= 12; $m++) {
             $start = Carbon::create($year, $m, 1)->startOfMonth();
             $end = Carbon::create($year, $m, 1)->endOfMonth();
 
-            FiscalPeriod::updateOrCreate(
+            $periods[$m] = FiscalPeriod::updateOrCreate(
                 ['year' => $year, 'month' => $m],
                 [
                     'start_date' => $start->toDateString(),
                     'end_date' => $end->toDateString(),
-                    'status' => 'open'
+                    'status' => $m < Carbon::now()->month ? 'closed' : 'open'
                 ]
             );
         }
+
+        // Add some journals to make trial balance, P&L, balance sheet dynamic
+        $cashAcc = Account::where('code', '1010')->first();
+        $bankAcc = Account::where('code', '1020')->first();
+        $shareCapAcc = Account::where('code', '3100')->first();
+        $salesAcc = Account::where('code', '4100')->first();
+        $cogsAcc = Account::where('code', '5100')->first();
+        $inventoryAcc = Account::where('code', '1400')->first();
+        $rentAcc = Account::where('code', '6200')->first();
+
+        // 1. Initial capital investment ($50,000 Cash, $50,000 Share Capital)
+        $j1 = Journal::create([
+            'reference' => 'JE-0001',
+            'description' => 'Initial capital contribution',
+            'journal_date' => Carbon::create($year, 1, 5)->toDateString(),
+            'period_id' => $periods[1]->id,
+            'status' => 'posted',
+            'posted_at' => Carbon::create($year, 1, 5, 10, 0, 0),
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j1->id,
+            'account_id' => $cashAcc->id,
+            'debit_cents' => 5000000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 5000000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+            'description' => 'Capital receipt'
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j1->id,
+            'account_id' => $shareCapAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 5000000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 5000000,
+            'exchange_rate' => 1.0,
+            'description' => 'Capital receipt'
+        ]);
+
+        // 2. Rent payment ($2,000 Rent Expense, paid from Bank)
+        // First transfer from Cash to Bank ($30,000)
+        $j2 = Journal::create([
+            'reference' => 'JE-0002',
+            'description' => 'Transfer cash to bank',
+            'journal_date' => Carbon::create($year, 1, 10)->toDateString(),
+            'period_id' => $periods[1]->id,
+            'status' => 'posted',
+            'posted_at' => Carbon::create($year, 1, 10, 11, 0, 0),
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j2->id,
+            'account_id' => $bankAcc->id,
+            'debit_cents' => 3000000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 3000000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j2->id,
+            'account_id' => $cashAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 3000000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 3000000,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // Rent expense JE
+        $j3 = Journal::create([
+            'reference' => 'JE-0003',
+            'description' => 'January Office Rent Payment',
+            'journal_date' => Carbon::create($year, 1, 15)->toDateString(),
+            'period_id' => $periods[1]->id,
+            'status' => 'posted',
+            'posted_at' => Carbon::create($year, 1, 15, 14, 0, 0),
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j3->id,
+            'account_id' => $rentAcc->id,
+            'debit_cents' => 200000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 200000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j3->id,
+            'account_id' => $bankAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 200000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 200000,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // 3. Purchase Inventory ($10,000 Inventory, paid from Bank)
+        $j4 = Journal::create([
+            'reference' => 'JE-0004',
+            'description' => 'Purchase stock inventory',
+            'journal_date' => Carbon::create($year, 1, 20)->toDateString(),
+            'period_id' => $periods[1]->id,
+            'status' => 'posted',
+            'posted_at' => Carbon::create($year, 1, 20, 9, 30, 0),
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j4->id,
+            'account_id' => $inventoryAcc->id,
+            'debit_cents' => 1000000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 1000000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+        ]);
+
+        JournalLine::create([
+            'journal_id' => $j4->id,
+            'account_id' => $bankAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 1000000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 1000000,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // 4. Sell goods ($15,000 Sales, Cash received; COGS $6,000 from inventory)
+        $j5 = Journal::create([
+            'reference' => 'JE-0005',
+            'description' => 'Sales transaction and COGS recognition',
+            'journal_date' => Carbon::create($year, 1, 25)->toDateString(),
+            'period_id' => $periods[1]->id,
+            'status' => 'posted',
+            'posted_at' => Carbon::create($year, 1, 25, 16, 0, 0),
+        ]);
+
+        // Debit Cash $15,000
+        JournalLine::create([
+            'journal_id' => $j5->id,
+            'account_id' => $cashAcc->id,
+            'debit_cents' => 1500000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 1500000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // Credit Sales $15,000
+        JournalLine::create([
+            'journal_id' => $j5->id,
+            'account_id' => $salesAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 1500000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 1500000,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // Debit COGS $6,000
+        JournalLine::create([
+            'journal_id' => $j5->id,
+            'account_id' => $cogsAcc->id,
+            'debit_cents' => 600000,
+            'credit_cents' => 0,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 600000,
+            'base_credit_cents' => 0,
+            'exchange_rate' => 1.0,
+        ]);
+
+        // Credit Inventory $6,000
+        JournalLine::create([
+            'journal_id' => $j5->id,
+            'account_id' => $inventoryAcc->id,
+            'debit_cents' => 0,
+            'credit_cents' => 600000,
+            'currency_code' => 'USD',
+            'base_debit_cents' => 0,
+            'base_credit_cents' => 600000,
+            'exchange_rate' => 1.0,
+        ]);
     }
 }

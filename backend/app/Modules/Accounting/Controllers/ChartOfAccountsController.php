@@ -15,13 +15,39 @@ class ChartOfAccountsController extends Controller
     public function index()
     {
         $accounts = Account::with(['accountType', 'parent'])->orderBy('code')->get();
+        $this->loadBalances($accounts);
         return response()->json($accounts);
     }
 
     public function tree()
     {
         $accounts = Account::with('accountType')->orderBy('code')->get();
+        $this->loadBalances($accounts);
         return response()->json($this->buildTree($accounts));
+    }
+
+    protected function loadBalances($accounts)
+    {
+        $balances = DB::table('accounting_journal_lines as l')
+            ->join('accounting_journals as j', 'l.journal_id', '=', 'j.id')
+            ->where('j.status', 'posted')
+            ->select('l.account_id', DB::raw('SUM(l.debit_cents) as debit'), DB::raw('SUM(l.credit_cents) as credit'))
+            ->groupBy('l.account_id')
+            ->get()
+            ->keyBy('account_id');
+
+        foreach ($accounts as $account) {
+            $bal = $balances->get($account->id);
+            $debit = $bal ? (int)$bal->debit : 0;
+            $credit = $bal ? (int)$bal->credit : 0;
+            
+            $normal = $account->accountType?->normal_balance ?? 'debit';
+            if ($normal === 'debit') {
+                $account->current_period_balance = $debit - $credit;
+            } else {
+                $account->current_period_balance = $credit - $debit;
+            }
+        }
     }
 
     protected function buildTree($accounts, $parentId = null)

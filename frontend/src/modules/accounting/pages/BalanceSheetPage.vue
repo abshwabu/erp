@@ -1,21 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { AlertTriangle, Download } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
-import { sampleBalanceSheet } from '../data'
+import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { BalanceSheetGroup } from '@/types/accounting'
 
-const asOfDate = ref(sampleBalanceSheet.asOfDate)
-const comparisonDate = ref(sampleBalanceSheet.comparisonDate || '')
-const assetGroups = sampleBalanceSheet.assets
-const liabilityGroup = sampleBalanceSheet.liabilities[0] as BalanceSheetGroup
-const equityGroup = sampleBalanceSheet.equity[0] as BalanceSheetGroup
+const currentYear = new Date().getFullYear()
+const asOfDate = ref(`${currentYear}-12-31`)
+const comparisonDate = ref(`${currentYear - 1}-12-31`)
+
+const assets = ref<BalanceSheetGroup[]>([])
+const liabilities = ref<BalanceSheetGroup[]>([])
+const equity = ref<BalanceSheetGroup[]>([])
+const reportTotals = ref({
+  assetsTotal: 0,
+  liabilitiesTotal: 0,
+  equityTotal: 0,
+})
+
 const expandedGroups = ref<Record<string, boolean>>({
   'assets-current-assets': true,
-  'assets-non-current-assets': true,
   'liabilities-current-liabilities': true,
   'equity-equity': true,
 })
@@ -30,7 +37,82 @@ const toggleGroup = (section: string, group: BalanceSheetGroup) => {
 }
 
 const balanceDifference = computed(() => {
-  return sampleBalanceSheet.assetsTotal - (sampleBalanceSheet.liabilitiesTotal + sampleBalanceSheet.equityTotal)
+  return reportTotals.value.assetsTotal - (reportTotals.value.liabilitiesTotal + reportTotals.value.equityTotal)
+})
+
+const loadBalanceSheet = async () => {
+  try {
+    const res = await accountingApi.getBalanceSheet({
+      as_of_date: asOfDate.value,
+    })
+    const data = res.data
+    const sections = data.sections || {}
+    const totals = data.totals || {}
+
+    const assetRows = (sections.Asset || []).map((row: any) => ({
+      accountId: row.id,
+      code: row.code,
+      name: row.name,
+      balance: (row.amount || 0) / 100,
+    }))
+    const assetsTotal = (totals.assets || 0) / 100
+
+    const liabilityRows = (sections.Liability || []).map((row: any) => ({
+      accountId: row.id,
+      code: row.code,
+      name: row.name,
+      balance: (row.amount || 0) / 100,
+    }))
+    const liabilitiesTotal = (totals.liabilities || 0) / 100
+
+    const equityRows = (sections.Equity || []).map((row: any) => ({
+      accountId: row.id,
+      code: row.code,
+      name: row.name,
+      balance: (row.amount || 0) / 100,
+    }))
+    const equityTotal = (totals.equity || 0) / 100
+
+    assets.value = [
+      {
+        label: 'Current Assets',
+        subtotal: assetsTotal,
+        rows: assetRows,
+      }
+    ]
+
+    liabilities.value = [
+      {
+        label: 'Current Liabilities',
+        subtotal: liabilitiesTotal,
+        rows: liabilityRows,
+      }
+    ]
+
+    equity.value = [
+      {
+        label: 'Equity',
+        subtotal: equityTotal,
+        rows: equityRows,
+      }
+    ]
+
+    reportTotals.value = {
+      assetsTotal,
+      liabilitiesTotal,
+      equityTotal,
+    }
+  } catch (err) {
+    console.error('Failed to load balance sheet:', err)
+  }
+}
+
+onMounted(() => {
+  loadBalanceSheet()
+})
+
+watch(asOfDate, () => {
+  loadBalanceSheet()
 })
 
 const downloadCsv = () => {
@@ -39,9 +121,9 @@ const downloadCsv = () => {
   ]
 
   ;[
-    ['Assets', sampleBalanceSheet.assets],
-    ['Liabilities', sampleBalanceSheet.liabilities],
-    ['Equity', sampleBalanceSheet.equity],
+    ['Assets', assets.value],
+    ['Liabilities', liabilities.value],
+    ['Equity', equity.value],
   ].forEach(([section, groups]) => {
     ;(groups as BalanceSheetGroup[]).forEach((group) => {
       group.rows.forEach((row) => {
@@ -86,10 +168,10 @@ const downloadCsv = () => {
       <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-slate-900">Assets</h2>
-          <UiBadge variant="info">{{ formatCurrency(sampleBalanceSheet.assetsTotal) }}</UiBadge>
+          <UiBadge variant="info">{{ formatCurrency(reportTotals.assetsTotal) }}</UiBadge>
         </div>
         <div class="space-y-4">
-          <div v-for="group in assetGroups" :key="group.label" class="rounded-2xl border border-slate-200">
+          <div v-for="group in assets" :key="group.label" class="rounded-2xl border border-slate-200">
             <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('assets', group)">
               <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
               <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
@@ -99,8 +181,8 @@ const downloadCsv = () => {
                 <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
                 <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
               </div>
-              <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold">
-                <span class="text-slate-700">Subtotal</span>
+              <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
+                <span class="text-slate-950">Subtotal {{ group.label }}</span>
                 <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
               </div>
             </div>
@@ -108,65 +190,70 @@ const downloadCsv = () => {
         </div>
       </section>
 
-      <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-900">Liabilities + Equity</h2>
-          <UiBadge variant="info">{{ formatCurrency(sampleBalanceSheet.liabilitiesTotal + sampleBalanceSheet.equityTotal) }}</UiBadge>
-        </div>
-        <div class="space-y-4">
-          <div class="rounded-2xl border border-slate-200">
-            <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('liabilities', liabilityGroup)">
-              <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ liabilityGroup.label }}</span>
-              <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(liabilityGroup.subtotal) }}</span>
-            </button>
-            <div v-if="isOpen('liabilities', liabilityGroup)" class="border-t border-slate-200">
-              <div v-for="row in liabilityGroup.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
-                <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
-                <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
-              </div>
-              <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold">
-                <span class="text-slate-700">Subtotal</span>
-                <span class="text-slate-900">{{ formatCurrency(liabilityGroup.subtotal) }}</span>
+      <div class="space-y-6">
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-slate-900">Liabilities</h2>
+            <UiBadge variant="info">{{ formatCurrency(reportTotals.liabilitiesTotal) }}</UiBadge>
+          </div>
+          <div class="space-y-4">
+            <div v-for="group in liabilities" :key="group.label" class="rounded-2xl border border-slate-200">
+              <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('liabilities', group)">
+                <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
+                <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+              </button>
+              <div v-if="isOpen('liabilities', group)" class="border-t border-slate-200">
+                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
+                  <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
+                  <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
+                  <span class="text-slate-950">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+                </div>
               </div>
             </div>
           </div>
+        </section>
 
-          <div class="rounded-2xl border border-slate-200">
-            <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('equity', equityGroup)">
-              <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ equityGroup.label }}</span>
-              <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(equityGroup.subtotal) }}</span>
-            </button>
-            <div v-if="isOpen('equity', equityGroup)" class="border-t border-slate-200">
-              <div v-for="row in equityGroup.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
-                <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
-                <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
-              </div>
-              <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold">
-                <span class="text-slate-700">Subtotal</span>
-                <span class="text-slate-900">{{ formatCurrency(equityGroup.subtotal) }}</span>
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-slate-900">Equity</h2>
+            <UiBadge variant="info">{{ formatCurrency(reportTotals.equityTotal) }}</UiBadge>
+          </div>
+          <div class="space-y-4">
+            <div v-for="group in equity" :key="group.label" class="rounded-2xl border border-slate-200">
+              <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('equity', group)">
+                <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
+                <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+              </button>
+              <div v-if="isOpen('equity', group)" class="border-t border-slate-200">
+                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
+                  <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
+                  <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
+                  <span class="text-slate-950">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
 
-    <div
-      class="flex items-center justify-between rounded-3xl border px-5 py-4 shadow-sm"
-      :class="balanceDifference === 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'"
-    >
-      <div class="flex items-center gap-3">
-        <AlertTriangle class="h-5 w-5" :class="balanceDifference === 0 ? 'text-emerald-600' : 'text-rose-600'" />
-        <div>
-          <p class="text-sm font-semibold text-slate-900">Balance check</p>
-          <p class="text-sm text-slate-600">Assets must equal Liabilities plus Equity.</p>
+        <div
+          v-if="Math.abs(balanceDifference) > 0.01"
+          class="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+        >
+          <div class="flex items-center gap-2">
+            <AlertTriangle class="h-5 w-5 text-rose-600" />
+            <span class="font-semibold text-rose-900">Ledger is out of balance!</span>
+          </div>
+          <p class="mt-1">
+            Total Assets must equal total Liabilities + Equity. The discrepancy is
+            {{ formatCurrency(balanceDifference) }}.
+          </p>
         </div>
-      </div>
-      <div class="text-right">
-        <p class="text-sm text-slate-600">Difference</p>
-        <p class="text-lg font-bold" :class="balanceDifference === 0 ? 'text-emerald-700' : 'text-rose-700'">
-          {{ formatCurrency(balanceDifference) }}
-        </p>
       </div>
     </div>
   </div>

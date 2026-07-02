@@ -20,32 +20,37 @@ class ReportingService
             ->join('accounting_account_types as t', 'a.account_type_id', '=', 't.id')
             ->leftJoin('accounting_journal_lines as l', 'a.id', '=', 'l.account_id')
             ->leftJoin('accounting_journals as j', 'l.journal_id', '=', 'j.id')
-            ->where(function($query) use ($toDate) {
-                $query->where('j.status', 'posted')
-                    ->where('j.journal_date', '<=', $toDate);
-            })
-            ->orWhereNull('j.id')
             ->select(
                 'a.id',
                 'a.code',
                 'a.name',
                 't.name as type_name',
                 't.normal_balance',
-                DB::raw('SUM(l.debit_cents) as total_debit'),
-                DB::raw('SUM(l.credit_cents) as total_credit')
+                DB::raw("SUM(CASE WHEN j.status = 'posted' AND j.journal_date < '{$fromDate}' THEN l.debit_cents ELSE 0 END) as opening_debit"),
+                DB::raw("SUM(CASE WHEN j.status = 'posted' AND j.journal_date < '{$fromDate}' THEN l.credit_cents ELSE 0 END) as opening_credit"),
+                DB::raw("SUM(CASE WHEN j.status = 'posted' AND j.journal_date BETWEEN '{$fromDate}' AND '{$toDate}' THEN l.debit_cents ELSE 0 END) as period_debit"),
+                DB::raw("SUM(CASE WHEN j.status = 'posted' AND j.journal_date BETWEEN '{$fromDate}' AND '{$toDate}' THEN l.credit_cents ELSE 0 END) as period_credit")
             )
             ->groupBy('a.id', 'a.code', 'a.name', 't.name', 't.normal_balance')
             ->orderBy('a.code')
             ->get()
             ->map(function ($row) {
-                $debit = (int)$row->total_debit;
-                $credit = (int)$row->total_credit;
+                $opDebit = (int)$row->opening_debit;
+                $opCredit = (int)$row->opening_credit;
+                $pDebit = (int)$row->period_debit;
+                $pCredit = (int)$row->period_credit;
                 
-                if ($row->normal_balance === 'debit') {
-                    $row->balance = $debit - $credit;
+                $normal = $row->normal_balance;
+                if ($normal === 'debit') {
+                    $row->opening_balance = $opDebit - $opCredit;
+                    $row->closing_balance = $row->opening_balance + $pDebit - $pCredit;
                 } else {
-                    $row->balance = $credit - $debit;
+                    $row->opening_balance = $opCredit - $opDebit;
+                    $row->closing_balance = $row->opening_balance + $pCredit - $pDebit;
                 }
+                
+                $row->debits = $pDebit;
+                $row->credits = $pCredit;
                 
                 return $row;
             });

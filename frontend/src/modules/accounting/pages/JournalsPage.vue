@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { Filter, Plus, Search } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -7,35 +7,105 @@ import UiInput from '@/components/ui/UiInput.vue'
 import { formatCurrency, formatDate } from '@/utils/format'
 import JournalDetailModal from '../components/JournalDetailModal.vue'
 import JournalEntryModal from '../components/JournalEntryModal.vue'
-import { sampleAccounts, sampleJournals } from '../data'
-import type { Account, Journal } from '@/types/accounting'
+import { accountingApi } from '@/api/accounting'
+import type { Account, AccountType, Journal } from '@/types/accounting'
 
-const cloneTree = (accounts: Account[]): Account[] => accounts.map((account) => ({
-  ...account,
-  children: account.children ? cloneTree(account.children) : undefined,
-}))
-
-const flattenAccounts = (accounts: Account[]): Account[] => accounts.flatMap((account) => [
-  account,
-  ...(account.children ? flattenAccounts(account.children) : []),
-])
-
-const journals = ref<Journal[]>(sampleJournals.map((journal) => ({
-  ...journal,
-  lines: journal.lines.map((line) => ({ ...line })),
-})))
-const accounts = ref<Account[]>(cloneTree(sampleAccounts))
+const currentYear = new Date().getFullYear()
+const journals = ref<Journal[]>([])
+const accounts = ref<Account[]>([])
 const statusFilter = ref<'all' | Journal['status']>('all')
 const searchQuery = ref('')
-const fromDate = ref('2026-03-01')
-const toDate = ref('2026-03-31')
+const fromDate = ref(`${currentYear}-01-01`)
+const toDate = ref(`${currentYear}-12-31`)
 const isEntryModalOpen = ref(false)
 const selectedJournal = ref<Journal | null>(null)
 const isDetailModalOpen = ref(false)
 
-const accountIndex = computed(() => {
-  return new Map(flattenAccounts(accounts.value).map((account) => [account.id, account]))
+const mapAccountFromBackend = (acc: any): Account => {
+  const nameMapFromBackend: Record<string, string> = {
+    'Asset': 'asset',
+    'Liability': 'liability',
+    'Equity': 'equity',
+    'Revenue': 'revenue',
+    'Expense': 'expense',
+    'COGS': 'cost_of_sales',
+  }
+  const typeName = acc.account_type?.name || 'Asset'
+  const frontendType = nameMapFromBackend[typeName] || 'asset'
+  return {
+    id: acc.id,
+    parentId: acc.parent_id,
+    code: acc.code,
+    name: acc.name,
+    type: frontendType as AccountType,
+    description: acc.description || '',
+    currencyCode: acc.currency_code || 'USD',
+    isActive: Boolean(acc.is_active),
+    isSystemAccount: Boolean(acc.is_system_account),
+    currentPeriodBalance: (acc.current_period_balance || 0) / 100,
+    children: acc.children ? acc.children.map(mapAccountFromBackend) : undefined
+  }
+}
+
+const mapJournalFromBackend = (j: any): Journal => {
+  const lines = (j.lines || []).map((l: any) => ({
+    id: l.id,
+    journalId: l.journal_id,
+    accountId: l.account_id,
+    account: l.account ? mapAccountFromBackend(l.account) : undefined,
+    description: l.description || '',
+    debit: (l.debit_cents || 0) / 100,
+    credit: (l.credit_cents || 0) / 100,
+    currencyCode: l.currency_code || 'USD',
+  }))
+
+  const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0)
+  const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0)
+
+  return {
+    id: j.id,
+    reference: j.reference,
+    description: j.description,
+    journalDate: j.journal_date,
+    status: j.status,
+    sourceType: j.source_type || 'manual',
+    reversalOfId: j.reversal_of_id,
+    postedAt: j.posted_at,
+    postedBy: j.posted_by?.name || null,
+    totalDebit,
+    totalCredit,
+    lines,
+  }
+}
+
+const loadAccounts = async () => {
+  try {
+    const res = await accountingApi.getAccountsTree()
+    accounts.value = res.data.map(mapAccountFromBackend)
+  } catch (err) {
+    console.error('Failed to load accounts:', err)
+  }
+}
+
+const loadJournals = async () => {
+  try {
+    const res = await accountingApi.getJournals()
+    const rawData = Array.isArray(res.data) ? res.data : res.data.data || []
+    journals.value = rawData.map(mapJournalFromBackend)
+  } catch (err) {
+    console.error('Failed to load journals:', err)
+  }
+}
+
+onMounted(() => {
+  loadAccounts()
+  loadJournals()
 })
+
+const flattenAccounts = (nodes: Account[]): Account[] => nodes.flatMap((account) => [
+  account,
+  ...(account.children ? flattenAccounts(account.children) : []),
+])
 
 const nextReference = computed(() => {
   const highest = journals.value.reduce((max, journal) => {
@@ -43,7 +113,7 @@ const nextReference = computed(() => {
     return Number.isFinite(suffix) && suffix > max ? suffix : max
   }, 0)
 
-  return `JE-2026-${String(highest + 1).padStart(4, '0')}`
+  return `JE-${currentYear}-${String(highest + 1).padStart(4, '0')}`
 })
 
 const filteredJournals = computed(() => {
@@ -78,7 +148,7 @@ const createJournal = () => {
   isEntryModalOpen.value = true
 }
 
-const handleSaved = (payload: {
+const handleSaved = async (payload: {
   status: 'draft' | 'posted'
   journal: {
     reference: string
@@ -88,38 +158,33 @@ const handleSaved = (payload: {
     lines: Array<{ accountId: string; description: string; debit: number; credit: number; currencyCode: string }>
   }
 }) => {
-  const resolvedLines = payload.journal.lines.map((line, index) => {
-    const account = accountIndex.value.get(line.accountId)
-    return {
-      id: `jrnl-line-${Date.now()}-${index}`,
-      journalId: `jrnl-${Date.now()}`,
-      accountId: line.accountId,
-      account,
-      description: line.description,
-      debit: line.debit,
-      credit: line.credit,
-      currencyCode: line.currencyCode,
+  const apiLines = payload.journal.lines.map((l) => ({
+    account_id: l.accountId,
+    description: l.description,
+    debit_cents: Math.round(l.debit * 100),
+    credit_cents: Math.round(l.credit * 100),
+    currency_code: l.currencyCode || 'USD',
+  }))
+
+  const apiPayload = {
+    reference: payload.journal.reference,
+    description: payload.journal.description,
+    journal_date: payload.journal.journalDate,
+    lines: apiLines,
+  }
+
+  try {
+    const res = await accountingApi.createJournal(apiPayload)
+    const journalId = res.data.id
+    if (payload.status === 'posted') {
+      await accountingApi.postJournal(journalId)
     }
-  })
-
-  const totalDebit = resolvedLines.reduce((sum, line) => sum + line.debit, 0)
-  const totalCredit = resolvedLines.reduce((sum, line) => sum + line.credit, 0)
-
-  journals.value = [
-    {
-      id: `jrnl-${Date.now()}`,
-      reference: payload.journal.reference,
-      description: payload.journal.description,
-      journalDate: payload.journal.journalDate,
-      status: payload.status,
-      sourceType: 'manual',
-      totalDebit,
-      totalCredit,
-      lines: resolvedLines,
-      postedAt: payload.status === 'posted' ? new Date().toISOString() : null,
-    },
-    ...journals.value,
-  ]
+    await loadJournals()
+    isEntryModalOpen.value = false
+  } catch (err) {
+    console.error('Failed to create journal entry:', err)
+    alert('Failed to save journal entry.')
+  }
 }
 </script>
 
