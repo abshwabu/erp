@@ -22,16 +22,209 @@ function handleClose() {
 }
 
 function handlePrint() {
-  window.print()
+  const receiptNum = props.orderData?.receiptNumber || 'REC-884920'
+  const dateStr = props.orderData?.date || new Date().toLocaleString()
+  const compName = companyName.value
+  const items = props.orderData?.items || []
+  const subtotal = (props.orderData?.subtotal || 0).toFixed(2)
+  const total = (props.orderData?.total || 0).toFixed(2)
+  const tendered = (props.orderData?.tendered || 0).toFixed(2)
+  const change = (props.orderData?.change || 0).toFixed(2)
+  const method = props.orderData?.method || 'Cash'
+
+  const itemsHtml = items.length > 0 ? items.map((item: any) => `
+    <tr style="border-bottom: 1px border-dashed #eee;">
+      <td style="padding: 4px 0; text-align: left; word-break: break-word;">${item.name}</td>
+      <td style="padding: 4px 0; text-align: center;">${item.quantity} x $${Number(item.price).toFixed(2)}</td>
+      <td style="padding: 4px 0; text-align: right; font-weight: bold;">$${(item.quantity * item.price).toFixed(2)}</td>
+    </tr>
+  `).join('') : `
+    <tr>
+      <td colspan="3" style="padding: 8px 0; text-align: center; color: #666;">No items</td>
+    </tr>
+  `
+
+  const receiptHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Receipt - ${receiptNum}</title>
+      <style>
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
+        body {
+          width: 76mm;
+          margin: 0 auto;
+          padding: 10px;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 11px;
+          color: #000000;
+          background: #ffffff;
+          line-height: 1.3;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 1px dashed #000;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+        }
+        .company-title {
+          font-size: 14px;
+          font-weight: bold;
+          text-transform: uppercase;
+          font-family: Arial, sans-serif;
+          margin: 0 0 4px 0;
+        }
+        .subtitle {
+          font-size: 10px;
+          color: #444;
+          margin: 0;
+        }
+        .meta-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 10px;
+          margin-top: 6px;
+          border-top: 1px solid #eee;
+          padding-top: 4px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 8px 0;
+          font-size: 11px;
+        }
+        th {
+          text-align: left;
+          font-size: 9px;
+          text-transform: uppercase;
+          border-bottom: 1px solid #000;
+          padding-bottom: 4px;
+        }
+        .summary {
+          border-top: 1px dashed #000;
+          border-bottom: 1px dashed #000;
+          padding: 6px 0;
+          margin-top: 8px;
+        }
+        .row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 3px;
+        }
+        .total-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+          font-weight: bold;
+          border-top: 1px solid #000;
+          padding-top: 4px;
+          margin-top: 4px;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 14px;
+          padding-top: 8px;
+          border-top: 1px dashed #bbb;
+        }
+        .footer-brand {
+          font-family: monospace;
+          font-size: 10px;
+          font-weight: bold;
+          color: #222;
+          margin-top: 6px;
+          border-top: 1px solid #eee;
+          padding-top: 4px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1 class="company-title">${compName}</h1>
+        <p class="subtitle">Official Sales Receipt</p>
+        <div class="meta-row">
+          <span>Receipt No: <strong>${receiptNum}</strong></span>
+          <span>Date: ${dateStr}</span>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 45%;">Item</th>
+            <th style="width: 30%; text-align: center;">Qty x Price</th>
+            <th style="width: 25%; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div class="summary">
+        <div class="row">
+          <span>Subtotal:</span>
+          <span>$${subtotal}</span>
+        </div>
+        <div class="total-row">
+          <span>TOTAL VALUE:</span>
+          <span>$${total}</span>
+        </div>
+        <div class="row" style="margin-top: 4px;">
+          <span>Paid via ${method}:</span>
+          <span>$${tendered}</span>
+        </div>
+        <div class="row" style="font-weight: bold;">
+          <span>Change Due:</span>
+          <span>$${change}</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div style="font-size: 11px; font-weight: bold;">Thank you for shopping with us!</div>
+        <div class="footer-brand">Powered by KESB Tech</div>
+      </div>
+    </body>
+    </html>
+  `
+
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument
+  if (doc) {
+    doc.open()
+    doc.write(receiptHtml)
+    doc.close()
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe)
+        }
+      }, 1000)
+    }, 250)
+  }
 }
 </script>
 
 <template>
-  <div v-if="modelValue" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-container">
-    <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border border-slate-200 animate-scale-up modal-card">
+  <div v-if="modelValue" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border border-slate-200 animate-scale-up">
       
-      <!-- Modal Header (Screen Only) -->
-      <div class="bg-emerald-600 text-white p-4 text-center relative no-print">
+      <!-- Modal Header -->
+      <div class="bg-emerald-600 text-white p-4 text-center relative">
         <button
           @click="handleClose"
           class="absolute top-3 right-3 text-emerald-100 hover:text-white p-1 rounded-lg hover:bg-emerald-700 transition-colors"
@@ -44,8 +237,8 @@ function handlePrint() {
         <p class="text-xs text-emerald-100">Transaction Completed</p>
       </div>
 
-      <!-- Printable Thermal Receipt Container -->
-      <div id="printable-receipt-content" class="p-5 text-slate-800 text-xs space-y-4 font-mono">
+      <!-- Receipt On-Screen Preview -->
+      <div class="p-5 text-slate-800 text-xs space-y-4 font-mono">
         <!-- Receipt Header -->
         <div class="text-center border-b border-dashed border-slate-300 pb-3">
           <h4 class="font-extrabold text-sm text-slate-900 font-sans uppercase tracking-wider mb-0.5">
@@ -109,17 +302,17 @@ function handlePrint() {
         <!-- Footer / Branding Notice -->
         <div class="text-center pt-2 font-sans space-y-1">
           <p class="text-[11px] font-semibold text-slate-700">Thank you for shopping with us!</p>
-          <div class="border-t border-slate-200 pt-2 text-[10px] font-mono text-slate-400 font-medium">
+          <div class="border-t border-slate-200 pt-2 text-[10px] font-mono text-slate-500 font-bold">
             Powered by KESB Tech
           </div>
         </div>
       </div>
 
-      <!-- Action Buttons (Screen Only) -->
-      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 no-print">
+      <!-- Action Buttons -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
         <button
           @click="handlePrint"
-          class="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm"
+          class="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
         >
           <Printer class="w-4 h-4" />
           Print Receipt
@@ -127,7 +320,7 @@ function handlePrint() {
 
         <button
           @click="handleClose"
-          class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm"
+          class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-98"
         >
           New Sale
         </button>
@@ -135,43 +328,3 @@ function handlePrint() {
     </div>
   </div>
 </template>
-
-<style>
-@media print {
-  /* Hide all app elements except #printable-receipt-content */
-  body * {
-    visibility: hidden !important;
-  }
-  
-  .no-print {
-    display: none !important;
-  }
-
-  .modal-container, .modal-card {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    position: static !important;
-    display: block !important;
-  }
-
-  #printable-receipt-content, #printable-receipt-content * {
-    visibility: visible !important;
-  }
-
-  #printable-receipt-content {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 80mm !important;
-    margin: 0 !important;
-    padding: 10px !important;
-    font-size: 11px !important;
-    font-family: monospace !important;
-    color: #000000 !important;
-    background: #ffffff !important;
-  }
-}
-</style>
