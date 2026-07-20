@@ -15,8 +15,12 @@ class TenantRoleSeeder extends Seeder
 
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        // Reset cached roles and permissions safely
+        try {
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            // Ignore cache error if cache driver (e.g. Redis) is unavailable
+        }
 
         // 1. Ensure every permission exists in the tenant DB
         $this->seedPermissions();

@@ -82,9 +82,13 @@ return new class extends Migration
             $table->primary(['permission_id', 'role_id']);
         });
 
-        app('cache')
-            ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
-            ->forget(config('permission.cache.key'));
+        try {
+            app('cache')
+                ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
+                ->forget(config('permission.cache.key'));
+        } catch (\Throwable $e) {
+            // Ignore cache clear error if cache driver (e.g. Redis) is unavailable during migration
+        }
     }
 
     public function down(): void

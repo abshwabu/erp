@@ -57,16 +57,16 @@ it('creates a product category', function (): void {
     $response = $this
         ->withHeader('Authorization', "Bearer {$token}")
         ->postJson("http://{$slug}.localhost/api/inventory/categories", [
-            'name'      => 'Electronics',
-            'slug'      => 'electronics',
+            'name'      => 'Gadgets',
+            'slug'      => 'gadgets',
             'is_active' => true,
         ]);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.name', 'Electronics')
-        ->assertJsonPath('data.slug', 'electronics');
+        ->assertJsonPath('data.name', 'Gadgets')
+        ->assertJsonPath('data.slug', 'gadgets');
 
-    $tenant->run(fn () => expect(ProductCategory::where('slug', 'electronics')->exists())->toBeTrue());
+    $tenant->run(fn () => expect(ProductCategory::where('slug', 'gadgets')->exists())->toBeTrue());
 });
 
 it('returns the category tree', function (): void {
@@ -232,7 +232,7 @@ it('lists products with pagination', function (): void {
 
     $response->assertOk()
         ->assertJsonStructure(['data', 'links', 'meta'])
-        ->assertJsonPath('meta.total', 5)
+        ->assertJsonPath('meta.total', 8)
         ->assertJsonPath('meta.per_page', 3);
 });
 

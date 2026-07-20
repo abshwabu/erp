@@ -119,8 +119,8 @@ class ApiInfrastructureTest extends TestCase
             User::forceCreate([
                 'id' => \Illuminate\Support\Str::uuid(),
                 'tenant_id' => $tenant->getKey(),
-                'name' => 'Gamma',
-                'email' => 'gamma@test.com',
+                'name' => 'Zeta',
+                'email' => 'zeta@test.com',
                 'password' => 'password',
                 'is_active' => true,
             ]);
@@ -130,7 +130,7 @@ class ApiInfrastructureTest extends TestCase
         $response = $this->getJson($this->tenantUrl . '/api/dummy?sort=-name');
         $response->assertStatus(200);
         $data = $response->json('data');
-        $this->assertEquals('Gamma', $data[0]['name']);
+        $this->assertEquals('Zeta', $data[0]['name']);
         
         // Test filtering
         $response = $this->getJson($this->tenantUrl . '/api/dummy?filter[name]=Beta');

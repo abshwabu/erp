@@ -19,39 +19,34 @@ beforeEach(function () {
     $this->artisan('tenants:migrate');
 
     // Setup basic accounting data
-    $this->debitType = AccountType::create([
-        'name' => 'Asset',
+    $this->debitType = AccountType::firstOrCreate(['name' => 'Asset'], [
         'normal_balance' => 'debit',
         'report_section' => 'Assets'
     ]);
 
-    $this->creditType = AccountType::create([
-        'name' => 'Revenue',
+    $this->creditType = AccountType::firstOrCreate(['name' => 'Revenue'], [
         'normal_balance' => 'credit',
         'report_section' => 'Revenue'
     ]);
 
-    $this->cashAccount = Account::create([
+    $this->cashAccount = Account::firstOrCreate(['code' => '1010'], [
         'name' => 'Cash',
-        'code' => '1010',
         'account_type_id' => $this->debitType->id,
         'currency_code' => 'USD'
     ]);
 
-    $this->salesAccount = Account::create([
+    $this->salesAccount = Account::firstOrCreate(['code' => '4100'], [
         'name' => 'Sales',
-        'code' => '4100',
         'account_type_id' => $this->creditType->id,
         'currency_code' => 'USD'
     ]);
 
-    $this->period = FiscalPeriod::create([
-        'year' => 2026,
-        'month' => 6,
+    $this->period = FiscalPeriod::firstOrCreate(['year' => 2026, 'month' => 6], [
         'start_date' => '2026-06-01',
         'end_date' => '2026-06-30',
         'status' => 'open'
     ]);
+    $this->period->update(['status' => 'open']);
 
     $this->service = new JournalService();
 });

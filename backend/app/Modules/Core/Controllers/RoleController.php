@@ -132,6 +132,10 @@ class RoleController extends Controller
 
     private function clearCache(): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        try {
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            // Ignore cache error if cache driver (e.g. Redis) is unavailable
+        }
     }
 }
