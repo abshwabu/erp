@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import type { Employee } from '@/types/hr'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -27,6 +28,7 @@ import {
 
 const route = useRoute()
 const employeeId = route.params.id as string
+const queryClient = useQueryClient()
 
 const { data: employee, isLoading: isLoadingEmployee } = useQuery({
   queryKey: ['hr', 'employees', employeeId],
@@ -330,7 +332,7 @@ const attendanceSummary = computed(() => {
                 <p class="text-sm font-medium text-slate-500">{{ balance.leave_type?.name }}</p>
                 <h3 class="text-2xl font-bold text-slate-900">{{ balance.remaining }} <span class="text-sm font-normal text-slate-400">Days</span></h3>
               </div>
-              <UiBadge variant="outline">{{ balance.entitled }} Total</UiBadge>
+              <UiBadge variant="default">{{ balance.entitled }} Total</UiBadge>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2">
               <div 
@@ -444,7 +446,7 @@ const attendanceSummary = computed(() => {
               {{ item.clock_out ? new Date(item.clock_out).toLocaleTimeString() : '-' }}
             </template>
             <template #cell(status)="{ item }">
-              <UiBadge :variant="item.status === 'present' ? 'success' : item.status === 'absent' ? 'error' : 'warning'">
+              <UiBadge :variant="item.status === 'present' ? 'success' : item.status === 'absent' ? 'danger' : 'warning'">
                 {{ item.status }}
               </UiBadge>
             </template>

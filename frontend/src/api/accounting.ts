@@ -2,10 +2,6 @@ import apiClient from './client'
 import type {
   Account,
   Journal,
-  FiscalPeriod,
-  TrialBalance,
-  ProfitLoss,
-  BalanceSheet,
 } from '@/types/accounting'
 
 export const accountingApi = {

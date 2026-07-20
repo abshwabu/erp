@@ -55,7 +55,7 @@ const workingDays = computed(() => {
   const start = new Date(form.value.start_date)
   const end = new Date(form.value.end_date)
   let count = 0
-  let cur = new Date(start)
+  const cur = new Date(start)
   
   while (cur <= end) {
     const day = cur.getDay()

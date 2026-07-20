@@ -59,8 +59,8 @@ const mapJournalFromBackend = (j: any): Journal => {
     currencyCode: l.currency_code || 'USD',
   }))
 
-  const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0)
-  const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0)
+  const totalDebit = lines.reduce((sum: number, line: any) => sum + line.debit, 0)
+  const totalCredit = lines.reduce((sum: number, line: any) => sum + line.credit, 0)
 
   return {
     id: j.id,
@@ -90,7 +90,8 @@ const loadAccounts = async () => {
 const loadJournals = async () => {
   try {
     const res = await accountingApi.getJournals()
-    const rawData = Array.isArray(res.data) ? res.data : res.data.data || []
+    const resData: any = res.data
+    const rawData = Array.isArray(resData) ? resData : resData?.data || []
     journals.value = rawData.map(mapJournalFromBackend)
   } catch (err) {
     console.error('Failed to load journals:', err)

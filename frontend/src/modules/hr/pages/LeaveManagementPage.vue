@@ -43,7 +43,7 @@ const approveMutation = useMutation({
 })
 
 const rejectMutation = useMutation({
-  mutationFn: ({ id, notes }: { id: string, notes: string }) => hrApi.rejectLeaveRequest(id, notes),
+  mutationFn: ({ id, notes }: { id: string, notes?: string }) => hrApi.rejectLeaveRequest(id, notes || ''),
   onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hr', 'leave-requests'] })
 })
 

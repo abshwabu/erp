@@ -32,7 +32,7 @@ const orgTree = computed(() => {
   if (!employees.value) return []
   
   const emps = employees.value
-  const buildNode = (emp: Employee) => {
+  const buildNode = (emp: Employee): any => {
     const children = emps.filter(e => e.manager_id === emp.id)
     return {
       ...emp,

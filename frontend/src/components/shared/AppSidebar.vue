@@ -177,7 +177,7 @@ const filteredGroups = navigationGroups.map(group => ({
                   :key="subItem.name"
                   :to="subItem.to"
                   class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors text-sm text-slate-400 hover:text-white"
-                  active-class="text-white font-medium"
+                  exact-active-class="bg-primary-600 text-white font-medium hover:bg-primary-700"
                 >
                   <UiIcon v-if="subItem.icon" :icon="subItem.icon" :size="16" class="shrink-0" />
                   <span class="ml-3 truncate">{{ subItem.name }}</span>
@@ -190,7 +190,7 @@ const filteredGroups = navigationGroups.map(group => ({
               v-else
               :to="item.to"
               class="flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors group relative"
-              active-class="bg-primary-600 text-white hover:bg-primary-700"
+              exact-active-class="bg-primary-600 text-white hover:bg-primary-700"
             >
               <UiIcon v-if="item.icon" :icon="item.icon" :size="20" class="shrink-0" />
               <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>

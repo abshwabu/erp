@@ -78,13 +78,13 @@ const loadTrialBalance = async () => {
     const mappedSections: any[] = []
     Object.keys(sectionsMap).forEach((key) => {
       const sect = sectionsMap[key]
-      if (sect.rows.length === 0) return
+      if (!sect || sect.rows.length === 0) return
 
       const subtotal = {
-        openingBalance: sect.rows.reduce((sum, r) => sum + r.openingBalance, 0),
-        debits: sect.rows.reduce((sum, r) => sum + r.debits, 0),
-        credits: sect.rows.reduce((sum, r) => sum + r.credits, 0),
-        closingBalance: sect.rows.reduce((sum, r) => sum + r.closingBalance, 0),
+        openingBalance: sect.rows.reduce((sum: number, r: any) => sum + r.openingBalance, 0),
+        debits: sect.rows.reduce((sum: number, r: any) => sum + r.debits, 0),
+        credits: sect.rows.reduce((sum: number, r: any) => sum + r.credits, 0),
+        closingBalance: sect.rows.reduce((sum: number, r: any) => sum + r.closingBalance, 0),
       }
 
       mappedSections.push({

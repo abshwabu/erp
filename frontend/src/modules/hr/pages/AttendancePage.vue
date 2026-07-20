@@ -118,7 +118,7 @@ const exportToCSV = () => {
       </template>
 
       <template #cell(status)="{ item }">
-        <UiBadge :variant="item.status === 'present' ? 'success' : item.status === 'absent' ? 'error' : 'warning'">
+        <UiBadge :variant="item.status === 'present' ? 'success' : item.status === 'absent' ? 'danger' : 'warning'">
           {{ item.status }}
         </UiBadge>
       </template>
