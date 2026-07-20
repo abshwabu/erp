@@ -10,7 +10,7 @@ export const usePosStore = defineStore('pos', () => {
   const offlineQueue = ref<any[]>([])
 
   const addToCart = (product: any, quantity = 1) => {
-    const existing = cart.value.find(item => item.id === product.id)
+    const existing = cart.value.find(item => String(item.id) === String(product.id))
     if (existing) {
       existing.quantity += quantity
     } else {
@@ -18,16 +18,16 @@ export const usePosStore = defineStore('pos', () => {
     }
   }
 
-  const removeFromCart = (productId: number) => {
-    cart.value = cart.value.filter(item => item.id !== productId)
+  const removeFromCart = (productId: number | string) => {
+    cart.value = cart.value.filter(item => String(item.id) !== String(productId))
   }
 
   const clearCart = () => {
     cart.value = []
   }
 
-  const updateQuantity = (productId: number, delta: number) => {
-    const item = cart.value.find(i => i.id === productId)
+  const updateQuantity = (productId: number | string, delta: number) => {
+    const item = cart.value.find(i => String(i.id) === String(productId))
     if (item) {
       item.quantity += delta
       if (item.quantity <= 0) {

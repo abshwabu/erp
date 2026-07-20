@@ -59,6 +59,8 @@ function setQuickAmount(amt: number) {
 function processPayment() {
   if (!isValid.value) return
 
+  const receiptNum = 'REC-' + Math.floor(100000 + Math.random() * 900000)
+
   lastOrderSummary.value = {
     items: [...posStore.cart],
     subtotal: subtotal.value,
@@ -66,7 +68,8 @@ function processPayment() {
     method: selectedMethod.value,
     tendered: amountTendered.value || grandTotal.value,
     change: changeDue.value,
-    date: new Date().toLocaleString()
+    date: new Date().toLocaleString(),
+    receiptNumber: receiptNum
   }
 
   showReceipt.value = true

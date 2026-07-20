@@ -69,19 +69,23 @@ const totalItems = computed(() => {
           </div>
 
           <!-- Quantity Controls -->
-          <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1">
+          <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
             <button
-              @click="posStore.updateQuantity(item.id, -1)"
-              class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              type="button"
+              @click.stop.prevent="posStore.updateQuantity(item.id, -1)"
+              class="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer active:scale-95 select-none"
+              title="Decrease quantity"
             >
-              <Minus class="w-3 h-3" />
+              <Minus class="w-3.5 h-3.5" />
             </button>
-            <span class="w-6 text-center text-xs font-bold text-slate-900 font-mono">{{ item.quantity }}</span>
+            <span class="w-7 text-center text-xs font-bold text-slate-900 font-mono select-none">{{ item.quantity }}</span>
             <button
-              @click="posStore.updateQuantity(item.id, 1)"
-              class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              type="button"
+              @click.stop.prevent="posStore.updateQuantity(item.id, 1)"
+              class="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer active:scale-95 select-none"
+              title="Increase quantity"
             >
-              <Plus class="w-3 h-3" />
+              <Plus class="w-3.5 h-3.5" />
             </button>
           </div>
 
