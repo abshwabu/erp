@@ -3,12 +3,12 @@ import { ref, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { usePosStore } from '../stores/posStore'
-import UiInput from '@/components/ui/UiInput.vue'
-import UiButton from '@/components/ui/UiButton.vue'
-import { Search } from '@lucide/vue'
+import { Search, Package, Check, Tag, Filter } from '@lucide/vue'
 
 const posStore = usePosStore()
 const searchQuery = ref('')
+const selectedCategoryId = ref<number | null>(null)
+const addedProductId = ref<number | null>(null)
 
 const { data: categories } = useQuery({
   queryKey: ['inventory', 'categories'],
@@ -20,62 +20,146 @@ const { data: products } = useQuery({
   queryFn: () => inventoryApi.getProducts({ status: 'active' }, 1).then(res => res.data.data)
 })
 
-const selectedCategoryId = ref<string | null>(null)
-
 const categoryList = computed(() => {
-  return [{ id: null, name: 'All' }, ...(Array.isArray(categories.value) ? categories.value : [])]
+  const list = Array.isArray(categories.value) ? categories.value : []
+  return [{ id: null, name: 'All Products' }, ...list]
 })
 
 const mappedProducts = computed(() => {
-  if (!products.value) return []
+  if (!products.value || !Array.isArray(products.value)) return []
   return products.value.map((p: any) => ({
     id: p.id,
     name: p.name,
-    price: p.selling_price / 100, // Convert cents to dollars
-    categoryId: p.category?.id || null,
-    sku: p.sku
+    price: typeof p.selling_price === 'number' ? (p.selling_price / 100) : 0, // Convert cents to dollars
+    categoryId: p.category_id || p.category?.id || null,
+    sku: p.sku || `SKU-${p.id}`
   }))
 })
 
-// Keep posStore.catalog updated with fetched products
+// Keep posStore.catalog updated
 watch(mappedProducts, (newVal) => {
   posStore.catalog = newVal
 }, { immediate: true })
 
 const filteredProducts = computed(() => {
-  return mappedProducts.value.filter(p => 
-    (selectedCategoryId.value === null || p.categoryId === selectedCategoryId.value) &&
-    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  return mappedProducts.value.filter(p => {
+    const matchesCategory = selectedCategoryId.value === null || p.categoryId === selectedCategoryId.value
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                          p.sku.toLowerCase().includes(searchQuery.value.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
 })
+
+function handleAddProduct(product: any) {
+  posStore.addToCart(product)
+  addedProductId.value = product.id
+  setTimeout(() => {
+    if (addedProductId.value === product.id) {
+      addedProductId.value = null
+    }
+  }, 600)
+}
 </script>
 
 <template>
-  <div class="flex flex-col h-full w-full p-6">
-    <div class="mb-6">
-      <UiInput v-model="searchQuery" placeholder="Search products..." class="w-full">
-        <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
-      </UiInput>
-    </div>
-    
-    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-      <UiButton v-for="cat in categoryList" :key="cat.id" 
-        @click="selectedCategoryId = cat.id" 
-        :variant="selectedCategoryId === cat.id ? 'primary' : 'outline'"
-        size="sm">
-        {{ cat.name }}
-      </UiButton>
+  <div class="flex flex-col h-full w-full p-4 md:p-6 overflow-hidden">
+    <!-- Header Bar: Search & Quick Info -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
+      <div class="relative flex-1">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <Search class="h-4 w-4" />
+        </div>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search products by name or SKU..."
+          class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+        />
+        <button
+          v-if="searchQuery"
+          @click="searchQuery = ''"
+          class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-semibold text-slate-400 hover:text-slate-600"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div class="text-xs text-slate-500 font-medium hidden sm:block shrink-0">
+        Showing <span class="font-bold text-slate-900">{{ filteredProducts.length }}</span> items
+      </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2">
-      <div v-for="product in filteredProducts" :key="product.id" 
-        @click="posStore.addToCart(product)"
-        class="bg-white p-4 rounded-lg border border-slate-200 hover:border-primary-500 hover:shadow-md cursor-pointer transition-all">
-        <div class="h-24 bg-slate-100 mb-3 rounded flex items-center justify-center text-slate-400">
-          <span class="text-xs">Image</span>
+    <!-- Category Chips Bar -->
+    <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-1 shrink-0 scrollbar-none">
+      <span class="text-slate-400 text-xs font-medium shrink-0 flex items-center gap-1">
+        <Filter class="w-3 h-3" />
+      </span>
+      <button
+        v-for="cat in categoryList"
+        :key="cat.id ?? 'all'"
+        @click="selectedCategoryId = cat.id"
+        class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border shrink-0"
+        :class="[
+          selectedCategoryId === cat.id
+            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+        ]"
+      >
+        {{ cat.name }}
+      </button>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="flex-1 overflow-y-auto pr-1">
+      <div
+        v-if="filteredProducts.length > 0"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4"
+      >
+        <div
+          v-for="product in filteredProducts"
+          :key="product.id"
+          @click="handleAddProduct(product)"
+          class="group bg-white p-3.5 rounded-2xl border border-slate-200/90 hover:border-blue-500 hover:shadow-md cursor-pointer transition-all duration-150 flex flex-col justify-between relative overflow-hidden"
+        >
+          <!-- Added Feedback Overlay -->
+          <div
+            v-if="addedProductId === product.id"
+            class="absolute inset-0 bg-blue-600/95 text-white flex items-center justify-center gap-1.5 font-bold text-xs z-10 animate-fade-in"
+          >
+            <Check class="w-4 h-4" /> Added to Order!
+          </div>
+
+          <div>
+            <!-- Product Placeholder Image Icon -->
+            <div class="h-24 bg-gradient-to-br from-slate-50 to-slate-100 mb-3 rounded-xl flex items-center justify-center border border-slate-100 group-hover:scale-98 transition-transform">
+              <Package class="w-8 h-8 text-slate-300 group-hover:text-blue-500 transition-colors" />
+            </div>
+
+            <div class="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 leading-tight mb-1">
+              {{ product.name }}
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 flex items-center gap-1 mb-2">
+              <Tag class="w-3 h-3 text-slate-300" />
+              {{ product.sku }}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+            <span class="text-sm font-bold text-blue-600">
+              ${{ product.price.toFixed(2) }}
+            </span>
+            <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 px-2 py-0.5 rounded-full transition-colors">
+              + Add
+            </span>
+          </div>
         </div>
-        <div class="font-medium text-slate-900 mb-1 truncate">{{ product.name }}</div>
-        <div class="text-primary-600 font-semibold">${{ product.price }}</div>
+      </div>
+
+      <!-- Empty Filter State -->
+      <div v-else class="h-64 flex flex-col items-center justify-center text-slate-400">
+        <Package class="w-12 h-12 stroke-[1.5] text-slate-300 mb-2" />
+        <p class="text-sm font-semibold text-slate-600">No products found</p>
+        <p class="text-xs text-slate-400">Try adjusting your search or category filter.</p>
       </div>
     </div>
   </div>

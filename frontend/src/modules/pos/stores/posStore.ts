@@ -26,6 +26,16 @@ export const usePosStore = defineStore('pos', () => {
     cart.value = []
   }
 
+  const updateQuantity = (productId: number, delta: number) => {
+    const item = cart.value.find(i => i.id === productId)
+    if (item) {
+      item.quantity += delta
+      if (item.quantity <= 0) {
+        removeFromCart(productId)
+      }
+    }
+  }
+
   const syncOfflineQueue = async () => {
     if (!isOnline.value || offlineQueue.value.length === 0) return
     // Logic to push queue to backend
@@ -40,6 +50,7 @@ export const usePosStore = defineStore('pos', () => {
     offlineQueue,
     addToCart,
     removeFromCart,
+    updateQuantity,
     clearCart,
     syncOfflineQueue
   }
