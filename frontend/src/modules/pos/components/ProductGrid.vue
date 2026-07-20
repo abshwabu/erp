@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { usePosStore } from '../stores/posStore'
@@ -15,15 +15,35 @@ const { data: categories } = useQuery({
   queryFn: () => inventoryApi.getCategories().then(res => res.data)
 })
 
-const selectedCategoryId = ref<number | null>(null)
+const { data: products } = useQuery({
+  queryKey: ['inventory', 'products-pos'],
+  queryFn: () => inventoryApi.getProducts({ status: 'active' }, 1).then(res => res.data.data)
+})
+
+const selectedCategoryId = ref<string | null>(null)
 
 const categoryList = computed(() => {
   return [{ id: null, name: 'All' }, ...(Array.isArray(categories.value) ? categories.value : [])]
 })
 
-// Mock products filter logic (will be updated when catalog API is finalized)
+const mappedProducts = computed(() => {
+  if (!products.value) return []
+  return products.value.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    price: p.selling_price / 100, // Convert cents to dollars
+    categoryId: p.category?.id || null,
+    sku: p.sku
+  }))
+})
+
+// Keep posStore.catalog updated with fetched products
+watch(mappedProducts, (newVal) => {
+  posStore.catalog = newVal
+}, { immediate: true })
+
 const filteredProducts = computed(() => {
-  return posStore.catalog.filter(p => 
+  return mappedProducts.value.filter(p => 
     (selectedCategoryId.value === null || p.categoryId === selectedCategoryId.value) &&
     p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   )

@@ -13,6 +13,8 @@ class POSCashMovement extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'pos_cash_movements';
+
     protected $fillable = [
         'session_id',
         'type',

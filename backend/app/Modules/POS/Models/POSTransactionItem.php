@@ -12,6 +12,8 @@ class POSTransactionItem extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'pos_transaction_items';
+
     protected $fillable = [
         'transaction_id',
         'product_id',

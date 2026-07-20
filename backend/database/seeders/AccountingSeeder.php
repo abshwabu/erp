@@ -92,7 +92,7 @@ class AccountingSeeder extends Seeder
                 [
                     'start_date' => $start->toDateString(),
                     'end_date' => $end->toDateString(),
-                    'status' => $m < Carbon::now()->month ? 'closed' : 'open'
+                    'status' => $m < Carbon::now()->month ? 'hard_closed' : 'open'
                 ]
             );
         }

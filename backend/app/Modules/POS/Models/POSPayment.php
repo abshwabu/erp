@@ -12,6 +12,8 @@ class POSPayment extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'pos_payments';
+
     protected $fillable = [
         'transaction_id',
         'method',

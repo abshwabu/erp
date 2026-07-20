@@ -91,7 +91,7 @@ return new class extends Migration
             $table->bigInteger('unit_cost')->default(0);
             $table->char('currency_code', 3)->default('USD');
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('user_id');
+            $table->uuid('user_id');
             $table->timestampTz('created_at')->useCurrent();
 
             $table->foreign('product_id')

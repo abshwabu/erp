@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             $this->call([
                 TenantRoleSeeder::class,
                 AccountingSeeder::class,
+                TenantDemoDataSeeder::class,
             ]);
         } else {
             $this->call([

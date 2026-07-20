@@ -14,6 +14,8 @@ class EmployeeSchedule extends Model
     protected $table = 'hr_employee_schedules';
 
     public $timestamps = false;
+    public $incrementing = false;
+    protected $primaryKey = null;
 
     protected $fillable = [
         'employee_id',

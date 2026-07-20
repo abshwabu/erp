@@ -12,6 +12,8 @@ class POSTransaction extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'pos_transactions';
+
     protected $fillable = [
         'session_id',
         'customer_id',
