@@ -92,36 +92,64 @@ class StockController extends BaseController
     public function adjust(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|uuid|exists:products,id',
+            'product_id'  => 'required|uuid|exists:products,id',
             'location_id' => 'required|uuid|exists:stock_locations,id',
-            'quantity' => 'required|integer',
-            'reason' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:500',
-            'variant_id' => 'nullable|uuid|exists:product_variants,id',
+            'quantity'    => 'required|integer',
+            'type'        => 'nullable|string|in:add,remove,set',
+            'reason'      => 'nullable|string|max:100',
+            'notes'       => 'nullable|string|max:500',
+            'variant_id'  => 'nullable|uuid|exists:product_variants,id',
         ]);
 
-        $movement = $this->stockService->adjustStock(
-            $validated['product_id'],
-            $validated['location_id'],
-            $validated['quantity'],
-            $validated['reason'] ?? null,
-            $validated['notes'] ?? null,
-            $validated['variant_id'] ?? null
-        );
+        $type = $validated['type'] ?? null;
+        $qty  = (int) $validated['quantity'];
+
+        if ($type === 'add') {
+            $movement = $this->stockService->receiveStock(
+                $validated['product_id'],
+                $validated['location_id'],
+                abs($qty),
+                0,
+                ['type' => $validated['reason'] ?? 'manual_adjustment'],
+                null,
+                null,
+                null,
+                $validated['variant_id'] ?? null
+            );
+        } elseif ($type === 'remove') {
+            $movement = $this->stockService->issueStock(
+                $validated['product_id'],
+                $validated['location_id'],
+                abs($qty),
+                ['type' => $validated['reason'] ?? 'manual_adjustment', 'movement_type' => 'adjustment'],
+                null,
+                null,
+                $validated['variant_id'] ?? null
+            );
+        } else {
+            $movement = $this->stockService->adjustStock(
+                $validated['product_id'],
+                $validated['location_id'],
+                $qty,
+                $validated['reason'] ?? null,
+                $validated['notes'] ?? null,
+                $validated['variant_id'] ?? null
+            );
+        }
 
         return response()->json([
             'message' => 'Stock adjusted successfully.',
             'data' => [
-                'id' => $movement->id,
-                'product_id' => $movement->product_id,
-                'variant_id' => $movement->variant_id,
+                'id'               => $movement->id,
+                'product_id'       => $movement->product_id,
+                'variant_id'       => $movement->variant_id,
                 'from_location_id' => $movement->from_location_id,
-                'to_location_id' => $movement->to_location_id,
-                'quantity' => $movement->quantity,
-                'type' => $movement->type,
-                'reference_type' => $movement->reference_type,
-                'notes' => $movement->notes,
-                'created_at' => $movement->created_at?->toIso8601String(),
+                'to_location_id'   => $movement->to_location_id,
+                'quantity'         => $movement->quantity,
+                'type'             => $movement->type,
+                'reference_type'   => $movement->reference_type,
+                'notes'            => $movement->notes,
+                'created_at'       => $movement->created_at?->toIso8601String(),
             ],
         ], 200);
     }

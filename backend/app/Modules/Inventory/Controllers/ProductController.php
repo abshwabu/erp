@@ -48,9 +48,19 @@ class ProductController extends BaseController
             }
 
             // Create initial stock level record for default main warehouse if none exists
+            $warehouse = \App\Modules\Inventory\Models\Warehouse::firstOrCreate(
+                ['code' => 'WH-MAIN'],
+                ['name' => 'Main Warehouse', 'type' => 'own', 'is_active' => true]
+            );
+
             $location = \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
                 ['code' => 'WH-MAIN'],
-                ['name' => 'Main Warehouse', 'type' => 'internal', 'is_active' => true]
+                [
+                    'warehouse_id' => $warehouse->id,
+                    'name' => 'Main Warehouse',
+                    'type' => 'storage',
+                    'is_active' => true
+                ]
             );
 
             \App\Modules\Inventory\Models\StockLevel::firstOrCreate([

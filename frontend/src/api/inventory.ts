@@ -56,7 +56,8 @@ export const inventoryApi = {
     const payload = {
       product_id: data.product_id || data.productId,
       location_id: data.location_id || data.locationId,
-      quantity: data.type === 'remove' ? -Math.abs(data.quantity) : Math.abs(data.quantity),
+      quantity: Math.abs(data.quantity),
+      type: data.type || 'add',
       reason: data.reason,
       notes: data.notes
     }

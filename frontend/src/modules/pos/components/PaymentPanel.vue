@@ -1,14 +1,23 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { inventoryApi } from '@/api/inventory'
 import { usePosStore } from '../stores/posStore'
 import ReceiptModal from './ReceiptModal.vue'
-import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone, Wallet } from '@lucide/vue'
+import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone } from '@lucide/vue'
 
 const posStore = usePosStore()
+const queryClient = useQueryClient()
 const emit = defineEmits(['back', 'completed'])
 
 const showReceipt = ref(false)
 const lastOrderSummary = ref<any>(null)
+const isProcessing = ref(false)
+
+const { data: locations } = useQuery({
+  queryKey: ['inventory', 'locations'],
+  queryFn: () => inventoryApi.getLocations().then(res => res.data)
+})
 
 const paymentMethods = [
   { id: 'cash', name: 'Cash', icon: DollarSign },
@@ -56,18 +65,49 @@ function setQuickAmount(amt: number) {
   amountTendered.value = amt
 }
 
-function processPayment() {
-  if (!isValid.value) return
+async function processPayment() {
+  if (!isValid.value || isProcessing.value) return
+  isProcessing.value = true
 
   const receiptNum = 'REC-' + Math.floor(100000 + Math.random() * 900000)
+  const cartItems = [...posStore.cart]
+  const defaultLocId = (Array.isArray(locations.value) && locations.value.length > 0)
+    ? locations.value[0].id
+    : null
 
-  // Deduct stock for all items sold in order by their quantity
-  posStore.cart.forEach(item => {
+  // 1. Deduct in local Pinia store immediately
+  cartItems.forEach(item => {
     posStore.deductStock(item.id, item.quantity)
   })
 
+  // 2. Persist stock reduction in backend DB for each sold item
+  if (defaultLocId) {
+    try {
+      await Promise.all(
+        cartItems.map(item =>
+          inventoryApi.createStockAdjustment({
+            product_id: item.id,
+            location_id: defaultLocId,
+            quantity: item.quantity,
+            type: 'remove',
+            reason: 'sale',
+            notes: `POS Sale Receipt ${receiptNum}`
+          })
+        )
+      )
+    } catch (err) {
+      console.error('Failed to persist POS stock reduction to backend:', err)
+    }
+  }
+
+  // 3. Invalidate Vue Query cache so page refreshes fetch updated stock levels
+  queryClient.invalidateQueries({ queryKey: ['inventory', 'stock'] })
+  queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
+  queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
+  queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+
   lastOrderSummary.value = {
-    items: [...posStore.cart],
+    items: cartItems,
     subtotal: subtotal.value,
     total: grandTotal.value,
     method: selectedMethod.value,
@@ -77,6 +117,7 @@ function processPayment() {
     receiptNumber: receiptNum
   }
 
+  isProcessing.value = false
   showReceipt.value = true
   posStore.clearCart()
 }
@@ -173,11 +214,12 @@ function handleReceiptClose() {
     <div class="border-t border-slate-200/80 p-4 bg-slate-50/80 shrink-0">
       <button
         @click="processPayment"
-        :disabled="!isValid"
+        :disabled="!isValid || isProcessing"
         class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-98"
       >
         <CheckCircle2 class="w-4 h-4" />
-        Complete Payment (${{ grandTotal.toFixed(2) }})
+        <span v-if="isProcessing">Processing...</span>
+        <span v-else>Complete Payment (${{ grandTotal.toFixed(2) }})</span>
       </button>
     </div>
 
