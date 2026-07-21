@@ -122,9 +122,9 @@ export interface ProductFilters {
 }
 
 export interface InventoryFilters {
-  productId?: number
-  locationId?: number
-  type?: MovementType
+  productId?: number | string
+  locationId?: number | string
+  type?: MovementType | string
   startDate?: string
   endDate?: string
 }
