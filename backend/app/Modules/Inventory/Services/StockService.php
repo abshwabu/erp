@@ -132,52 +132,84 @@ class StockService
         ?string $variantId = null
     ): StockMovement {
         $product = $this->resolveProduct($product);
-        $location = $this->resolveLocation($location);
+        $preferredLocation = $this->resolveLocation($location);
 
-        return DB::transaction(function () use ($product, $location, $qty, $ref, $lot, $serial, $variantId) {
-            $level = StockLevel::where('product_id', $product->id)
+        return DB::transaction(function () use ($product, $preferredLocation, $qty, $ref, $lot, $serial, $variantId) {
+            $allLevels = StockLevel::where('product_id', $product->id)
                 ->where('variant_id', $variantId)
-                ->where('location_id', $location->id)
                 ->lockForUpdate()
-                ->first();
+                ->get();
 
-            $onHand = $level ? $level->quantity_on_hand : 0;
-            if ($onHand < $qty) {
-                throw new InsufficientStockException("Insufficient stock to issue {$qty} units. On hand: {$onHand}.");
+            $totalOnHand = (int) $allLevels->sum('quantity_on_hand');
+            if ($totalOnHand < $qty) {
+                throw new InsufficientStockException("Insufficient stock to issue {$qty} units. Total stock across all locations: {$totalOnHand}.");
             }
 
+            $remainingQty = $qty;
             $userId = auth()->id() ?? User::first()?->id;
+            $lastMovement = null;
 
-            $movement = StockMovement::create([
-                'product_id' => $product->id,
-                'variant_id' => $variantId,
-                'from_location_id' => $location->id,
-                'to_location_id' => null,
-                'quantity' => $qty,
-                'type' => $ref['movement_type'] ?? 'sale',
-                'reference_type' => $ref['type'] ?? null,
-                'reference_id' => $ref['id'] ?? null,
-                'lot_number' => $lot,
-                'serial_number' => $serial,
-                'unit_cost' => (int) ($product->cost_price ?? 0),
-                'currency_code' => $product->currency_code ?: 'USD',
-                'user_id' => $userId,
-            ]);
+            // Sort locations: preferred location first, then locations with highest stock
+            $orderedLevels = $allLevels->sortBy(function ($lvl) use ($preferredLocation) {
+                if ($lvl->location_id === $preferredLocation->id) {
+                    return -999999;
+                }
+                return -$lvl->quantity_on_hand;
+            });
 
-            // Lot Tracking
-            if ($product->track_lots && $lot) {
-                $lotTracking = LotTracking::where('product_id', $product->id)
-                    ->where('lot_number', $lot)
-                    ->where('location_id', $location->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$lotTracking || $lotTracking->quantity_remaining < $qty) {
-                    throw new InsufficientStockException("Insufficient quantity in lot {$lot} at this location.");
+            foreach ($orderedLevels as $level) {
+                if ($remainingQty <= 0) {
+                    break;
                 }
 
-                $lotTracking->decrement('quantity_remaining', $qty);
+                $availableAtLoc = max(0, (int) $level->quantity_on_hand);
+                if ($availableAtLoc <= 0) {
+                    continue;
+                }
+
+                $deduct = min($remainingQty, $availableAtLoc);
+
+                $movement = StockMovement::create([
+                    'product_id'       => $product->id,
+                    'variant_id'       => $variantId,
+                    'from_location_id' => $level->location_id,
+                    'to_location_id'   => null,
+                    'quantity'         => $deduct,
+                    'type'             => $ref['movement_type'] ?? 'sale',
+                    'reference_type'   => $ref['type'] ?? null,
+                    'reference_id'     => $ref['id'] ?? null,
+                    'lot_number'       => $lot,
+                    'serial_number'    => $serial,
+                    'unit_cost'        => (int) ($product->cost_price ?? 0),
+                    'currency_code'    => $product->currency_code ?: 'USD',
+                    'user_id'          => $userId,
+                ]);
+
+                $remainingQty -= $deduct;
+                $lastMovement = $movement;
             }
+
+            if ($remainingQty > 0 || !$lastMovement) {
+                $lastMovement = StockMovement::create([
+                    'product_id'       => $product->id,
+                    'variant_id'       => $variantId,
+                    'from_location_id' => $preferredLocation->id,
+                    'to_location_id'   => null,
+                    'quantity'         => $remainingQty > 0 ? $remainingQty : $qty,
+                    'type'             => $ref['movement_type'] ?? 'sale',
+                    'reference_type'   => $ref['type'] ?? null,
+                    'reference_id'     => $ref['id'] ?? null,
+                    'lot_number'       => $lot,
+                    'serial_number'    => $serial,
+                    'unit_cost'        => (int) ($product->cost_price ?? 0),
+                    'currency_code'    => $product->currency_code ?: 'USD',
+                    'user_id'          => $userId,
+                ]);
+            }
+
+            return $lastMovement;
+        });
+    }
 
             // Serial Number Tracking
             if ($product->track_serial_numbers && $serial) {
