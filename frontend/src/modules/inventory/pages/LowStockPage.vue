@@ -3,79 +3,110 @@ import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { 
-  AlertCircle, 
-  ShoppingCart, 
+  AlertTriangle, 
   Package, 
-  ArrowRight,
+  Settings2,
   RefreshCw,
-  Search
+  Search,
+  Plus
 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiInput from '@/components/ui/UiInput.vue'
+import StockAdjustmentModal from '../components/StockAdjustmentModal.vue'
+
+const isAdjustmentModalOpen = ref(false)
+const selectedProductId = ref<string | number | undefined>(undefined)
+
+const openAdjustment = (productId?: string | number) => {
+  selectedProductId.value = productId
+  isAdjustmentModalOpen.value = true
+}
 
 const { data, isLoading, refetch } = useQuery({
   queryKey: ['inventory', 'low-stock'],
   queryFn: () => inventoryApi.getLowStockProducts().then(res => res.data)
 })
 
+const mappedLowStock = computed(() => {
+  const rawList = data.value
+  if (!Array.isArray(rawList)) return []
+
+  return rawList.map((item: any) => {
+    const minQty = typeof item.min_quantity === 'number' ? item.min_quantity : (item.minStock || 5)
+    const availQty = typeof item.available_quantity === 'number' ? item.available_quantity : (item.totalOnHand || 0)
+    const shortfall = Math.max(0, minQty - availQty)
+
+    return {
+      id: item.product_id || item.productId || item.id,
+      productId: item.product_id || item.productId || item.id,
+      productName: item.product_name || item.productName || 'Unnamed Product',
+      sku: item.sku || `SKU-${item.id}`,
+      locationName: item.location_name || item.locationName || 'All Locations',
+      minStock: minQty,
+      availableQuantity: availQty,
+      shortfall: shortfall,
+      reorderQuantity: item.reorder_quantity || 10
+    }
+  })
+})
+
 const search = ref('')
 const filteredData = computed(() => {
-  const items = Array.isArray(data.value) ? data.value : []
+  const items = mappedLowStock.value
   if (!search.value) return items
-  
+
+  const term = search.value.toLowerCase()
   return items.filter(item => 
-    item.productName?.toLowerCase().includes(search.value.toLowerCase()) ||
-    item.sku?.toLowerCase().includes(search.value.toLowerCase())
+    item.productName.toLowerCase().includes(term) ||
+    item.sku.toLowerCase().includes(term)
   )
 })
 
 const columns = [
   { key: 'product', label: 'Product' },
   { key: 'sku', label: 'SKU' },
-  { key: 'totalOnHand', label: 'Stock On Hand', align: 'center' as const },
+  { key: 'locationName', label: 'Location' },
+  { key: 'availableQuantity', label: 'Available Stock', align: 'center' as const },
   { key: 'minStock', label: 'Min. Level', align: 'center' as const },
   { key: 'shortfall', label: 'Shortfall', align: 'center' as const },
   { key: 'actions', label: '', align: 'right' as const }
 ]
 
-const selectedItems = ref<number[]>([])
+const selectedItems = ref<(string | number)[]>([])
 
-const toggleSelect = (id: number) => {
+const toggleSelect = (id: string | number) => {
   const index = selectedItems.value.indexOf(id)
   if (index > -1) selectedItems.value.splice(index, 1)
   else selectedItems.value.push(id)
-}
-
-const handleCreatePO = () => {
-  if (selectedItems.value.length === 0) return
-  alert(`Creating Purchase Orders for ${selectedItems.value.length} items...`)
-  selectedItems.value = []
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">Low Stock Alert</h1>
-      <p class="text-slate-500 text-sm">Products currently below their minimum stock levels.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Low Stock Alert</h1>
+        <p class="text-slate-500 text-sm">Products currently below their minimum required stock levels.</p>
+      </div>
+      <UiButton size="sm" @click="openAdjustment()">
+        <Plus class="h-4 w-4 mr-2" /> Adjust Stock
+      </UiButton>
     </div>
 
-    <UiAlert variant="warning" class="shadow-sm">
-      <span>You have {{ filteredData.length }} products that require replenishment.</span>
-      <template #action>
-        <UiButton v-if="selectedItems.length > 0" size="sm" variant="primary" @click="handleCreatePO">
-          <ShoppingCart class="h-4 w-4 mr-2" /> Create PO for {{ selectedItems.length }} items
-        </UiButton>
-      </template>
+    <UiAlert v-if="filteredData.length > 0" variant="warning" class="shadow-sm">
+      <div class="flex items-center gap-2">
+        <AlertTriangle class="h-4 w-4 text-amber-600 shrink-0" />
+        <span>You have <strong>{{ filteredData.length }}</strong> products currently requiring replenishment.</span>
+      </div>
     </UiAlert>
 
     <!-- Controls -->
-    <div class="flex items-center justify-between gap-4">
-      <div class="w-72">
-        <UiInput v-model="search" placeholder="Filter low stock items...">
+    <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+      <div class="w-80">
+        <UiInput v-model="search" placeholder="Search low stock items by name or SKU...">
           <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
         </UiInput>
       </div>
@@ -89,6 +120,8 @@ const handleCreatePO = () => {
       :columns="columns"
       :data="filteredData"
       :loading="isLoading"
+      empty-title="No low stock alerts"
+      empty-message="All product inventory levels are currently sufficient."
     >
       <template #cell(product)="{ item }">
         <div class="flex items-center">
@@ -96,26 +129,57 @@ const handleCreatePO = () => {
             type="checkbox" 
             :checked="selectedItems.includes(item.productId)"
             @change="toggleSelect(item.productId)"
-            class="mr-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+            class="mr-3 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
           />
           <div class="flex items-center">
-            <div class="h-8 w-8 rounded bg-red-50 flex items-center justify-center mr-3">
+            <div class="h-8 w-8 rounded bg-red-50 flex items-center justify-center mr-3 shrink-0">
               <Package class="h-4 w-4 text-red-500" />
             </div>
-            <span class="font-medium text-slate-900">{{ item.productName }}</span>
+            <span class="font-semibold text-slate-900">{{ item.productName }}</span>
           </div>
         </div>
       </template>
 
-      <template #cell(shortfall)="{ item }">
-        <span class="text-red-600 font-bold">{{ item.shortfall || (item.minStock - item.totalOnHand) }}</span>
+      <template #cell(sku)="{ value }">
+        <span class="font-mono text-xs text-slate-600">{{ value }}</span>
       </template>
 
-      <template #cell(actions)>
-        <UiButton size="sm" variant="ghost" class="text-primary-600 hover:text-primary-700 hover:bg-primary-50">
-          Reorder <ArrowRight class="ml-1 h-3.5 w-3.5" />
+      <template #cell(locationName)="{ value }">
+        <span class="text-xs text-slate-600 font-medium px-2 py-0.5 bg-slate-100 rounded border border-slate-200/60 inline-block">
+          {{ value }}
+        </span>
+      </template>
+
+      <template #cell(availableQuantity)="{ value }">
+        <UiBadge :variant="value <= 0 ? 'danger' : 'warning'">
+          {{ value }} units
+        </UiBadge>
+      </template>
+
+      <template #cell(minStock)="{ value }">
+        <span class="font-mono font-medium text-slate-700">{{ value }}</span>
+      </template>
+
+      <template #cell(shortfall)="{ item }">
+        <span class="text-red-600 font-bold font-mono">+{{ item.shortfall }}</span>
+      </template>
+
+      <template #cell(actions)="{ item }">
+        <UiButton 
+          size="sm" 
+          variant="outline" 
+          @click="openAdjustment(item.productId)"
+          class="text-xs"
+        >
+          <Settings2 class="mr-1.5 h-3.5 w-3.5" /> Adjust / Reorder
         </UiButton>
       </template>
     </UiTable>
+
+    <StockAdjustmentModal
+      v-model="isAdjustmentModalOpen"
+      :product-id="selectedProductId"
+      @saved="refetch"
+    />
   </div>
 </template>

@@ -79,7 +79,10 @@ export const inventoryApi = {
   },
 
   getLowStockProducts() {
-    return apiClient.get<StockSummary[]>('/inventory/stock/low')
+    return apiClient.get('/inventory/stock/low').then(res => {
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      return { ...res, data }
+    })
   },
 
   importProducts(file: File) {

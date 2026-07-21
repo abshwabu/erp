@@ -223,7 +223,7 @@ class StockController extends BaseController
     public function low(): JsonResponse
     {
         $settings = ReorderSetting::with(['product.stockLevels', 'location'])->get();
-        $lowStock = [];
+        $lowStockMap = [];
 
         foreach ($settings as $setting) {
             if (!$setting->product) {
@@ -233,22 +233,47 @@ class StockController extends BaseController
             $available = $this->stockService->getAvailableQty($setting->product, $setting->location);
 
             if ($available <= $setting->min_quantity) {
-                $lowStock[] = [
+                $key = $setting->product_id . '_' . ($setting->location_id ?? 'all');
+                $lowStockMap[$key] = [
                     'product_id' => $setting->product->id,
                     'product_name' => $setting->product->name,
                     'sku' => $setting->product->sku,
                     'location_id' => $setting->location_id,
                     'location_name' => $setting->location->name ?? 'All Locations',
-                    'min_quantity' => $setting->min_quantity,
-                    'max_quantity' => $setting->max_quantity,
-                    'reorder_quantity' => $setting->reorder_quantity,
-                    'available_quantity' => $available,
+                    'min_quantity' => (int) $setting->min_quantity,
+                    'max_quantity' => (int) $setting->max_quantity,
+                    'reorder_quantity' => (int) $setting->reorder_quantity,
+                    'available_quantity' => (int) $available,
                 ];
             }
         }
 
+        $products = Product::with('stockLevels')->get();
+        foreach ($products as $product) {
+            $available = $product->relationLoaded('stockLevels')
+                ? (int) ($product->stockLevels->sum('quantity_on_hand') - $product->stockLevels->sum('quantity_committed'))
+                : 0;
+
+            if ($available <= 5) {
+                $key = $product->id . '_all';
+                if (!isset($lowStockMap[$key])) {
+                    $lowStockMap[$key] = [
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'sku' => $product->sku,
+                        'location_id' => null,
+                        'location_name' => 'All Locations',
+                        'min_quantity' => 5,
+                        'max_quantity' => 20,
+                        'reorder_quantity' => 10,
+                        'available_quantity' => $available,
+                    ];
+                }
+            }
+        }
+
         return response()->json([
-            'data' => $lowStock,
+            'data' => array_values($lowStockMap),
         ]);
     }
 
