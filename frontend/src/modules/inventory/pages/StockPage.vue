@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { 
@@ -9,8 +9,6 @@ import {
   AlertTriangle, 
   TrendingDown, 
   Layers,
-  ChevronRight,
-  History,
   Settings2
 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -25,13 +23,29 @@ import StockAdjustmentModal from '../components/StockAdjustmentModal.vue'
 const page = ref(1)
 const filters = reactive({
   search: '',
-  locationId: undefined,
+  locationId: '' as string,
   lowStockOnly: false
 })
 
+// Reset to page 1 on filter changes
+watch([() => filters.search, () => filters.locationId, () => filters.lowStockOnly], () => {
+  page.value = 1
+})
+
+const queryParams = computed(() => ({
+  page: page.value,
+  search: filters.search,
+  locationId: filters.locationId,
+  lowStockOnly: filters.lowStockOnly
+}))
+
 const { data, isLoading } = useQuery({
-  queryKey: ['inventory', 'stock-summary', { page, ...filters }],
-  queryFn: () => inventoryApi.getStockSummary(filters, page.value).then(res => res.data)
+  queryKey: ['inventory', 'stock-summary', queryParams],
+  queryFn: () => inventoryApi.getStockSummary({
+    search: filters.search,
+    locationId: filters.locationId,
+    lowStockOnly: filters.lowStockOnly
+  }, page.value).then(res => res.data)
 })
 
 const { data: locations } = useQuery({
@@ -62,26 +76,27 @@ const mappedTableData = computed(() => {
   const rawList = data.value?.data
   if (!Array.isArray(rawList)) return []
   return rawList.map((p: any) => {
-    const qty = typeof p.available_quantity === 'number' ? p.available_quantity : (p.totalOnHand || 0)
+    const onHand = typeof p.quantity_on_hand === 'number' ? p.quantity_on_hand : 0
+    const committed = typeof p.quantity_committed === 'number' ? p.quantity_committed : 0
+    const available = typeof p.available_quantity === 'number' ? p.available_quantity : 0
     const price = typeof p.selling_price === 'number' ? (p.selling_price / 100) : 0
     return {
       id: p.id,
       productId: p.id,
-      productName: p.name || p.productName || 'Unnamed Product',
+      productName: p.name || 'Unnamed Product',
       sku: p.sku || `SKU-${p.id}`,
-      totalOnHand: qty,
-      totalCommitted: p.totalCommitted || 0,
-      totalAvailable: qty,
-      value: qty * price,
-      lowStock: qty <= 5
+      totalOnHand: onHand,
+      totalCommitted: committed,
+      totalAvailable: available,
+      value: available * price,
+      lowStock: available <= 5
     }
   })
 })
 
-// Define stats for summary display
 const stats = computed(() => {
   const list = mappedTableData.value
-  const totalProducts = list.length
+  const totalProducts = data.value?.meta?.total || list.length
   const totalVal = list.reduce((sum, item) => sum + (item.value || 0), 0)
   const lowStockCount = list.filter(item => item.totalAvailable > 0 && item.totalAvailable <= 5).length
   const outOfStockCount = list.filter(item => item.totalAvailable <= 0).length
@@ -149,6 +164,7 @@ const stats = computed(() => {
       :columns="columns"
       :data="mappedTableData"
       :loading="isLoading"
+      empty-title="No stock records found"
     >
       <template #cell(product)="{ item }">
         <div class="flex items-center">
@@ -185,7 +201,7 @@ const stats = computed(() => {
     <!-- Pagination -->
     <div v-if="data?.meta" class="flex justify-between items-center">
       <p class="text-sm text-slate-500">
-        Showing {{ mappedTableData.length }} products
+        Showing {{ mappedTableData.length }} of {{ data.meta.total }} products
       </p>
       <UiPagination
         :current-page="page"

@@ -35,14 +35,22 @@ export const inventoryApi = {
   },
 
   // Stock
-  getProductStock(id: number) {
-    return apiClient.get<StockLevel[]>(`/inventory/products/${id}/stock`)
+  getProductStock(id: string | number) {
+    return apiClient.get(`/inventory/stock/${id}`).then(res => {
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      return { ...res, data }
+    })
   },
 
   getStockSummary(filters: any = {}, page = 1) {
-    return apiClient.get<PaginatedResponse<StockSummary>>('/inventory/stock', {
-      params: { ...filters, page }
-    })
+    const params = {
+      page,
+      search: filters.search || undefined,
+      location_id: filters.locationId || filters.location_id || undefined,
+      low_stock: filters.lowStockOnly || filters.low_stock || undefined,
+      category_id: filters.categoryId || filters.category_id || undefined
+    }
+    return apiClient.get<PaginatedResponse<StockSummary>>('/inventory/stock', { params })
   },
 
   getLocations() {

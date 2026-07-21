@@ -6,6 +6,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
+import { Info } from '@lucide/vue'
 
 interface Props {
   modelValue: boolean
@@ -37,17 +38,40 @@ const { data: locations } = useQuery({
   queryFn: () => inventoryApi.getLocations().then(res => res.data)
 })
 
+const { data: productStockLevels } = useQuery({
+  queryKey: ['inventory', 'product-stock', computed(() => form.productId)],
+  queryFn: () => form.productId ? inventoryApi.getProductStock(form.productId).then(res => res.data) : Promise.resolve([]),
+  enabled: computed(() => !!form.productId)
+})
+
+const currentLocationStock = computed(() => {
+  if (!Array.isArray(productStockLevels.value) || !form.locationId) return 0
+  const match = productStockLevels.value.find((l: any) => String(l.location_id) === String(form.locationId))
+  return match ? (match.available_quantity ?? match.quantity_on_hand ?? 0) : 0
+})
+
+const totalStockAllLocations = computed(() => {
+  if (!Array.isArray(productStockLevels.value)) return 0
+  return productStockLevels.value.reduce((sum: number, l: any) => sum + (l.available_quantity ?? l.quantity_on_hand ?? 0), 0)
+})
+
 const locationOptions = computed(() => {
   if (Array.isArray(locations.value) && locations.value.length > 0) {
-    return locations.value.map((loc: any) => ({
-      label: `${loc.name} (${loc.code || 'LOC'})`,
-      value: loc.id
-    }))
+    return locations.value.map((loc: any) => {
+      const level = Array.isArray(productStockLevels.value)
+        ? productStockLevels.value.find((l: any) => String(l.location_id) === String(loc.id))
+        : null
+      const qty = level ? (level.available_quantity ?? level.quantity_on_hand ?? 0) : 0
+      return {
+        label: `${loc.name} (${qty} in stock)`,
+        value: loc.id
+      }
+    })
   }
   return [{ label: 'Main Warehouse (WH-MAIN)', value: '' }]
 })
 
-watch([products, locations, () => props.productId], () => {
+watch([products, locations, productStockLevels, () => props.productId], () => {
   if (props.productId) {
     form.productId = props.productId
   } else if (Array.isArray(products.value) && products.value.length > 0 && !form.productId) {
@@ -55,7 +79,15 @@ watch([products, locations, () => props.productId], () => {
     if (firstProd) form.productId = firstProd.id
   }
 
+  // Select location with highest stock by default if available
   if (Array.isArray(locations.value) && locations.value.length > 0 && !form.locationId) {
+    if (Array.isArray(productStockLevels.value) && productStockLevels.value.length > 0) {
+      const sorted = [...productStockLevels.value].sort((a: any, b: any) => (b.available_quantity || 0) - (a.available_quantity || 0))
+      if (sorted[0]?.location_id) {
+        form.locationId = sorted[0].location_id
+        return
+      }
+    }
     const firstLoc = locations.value[0]
     if (firstLoc) form.locationId = firstLoc.id
   }
@@ -68,6 +100,7 @@ const mutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'product-stock'] })
     emit('saved')
     emit('update:modelValue', false)
     errorMsg.value = ''
@@ -89,6 +122,11 @@ const handleSubmit = () => {
   }
   if (!form.quantity || form.quantity <= 0) {
     errorMsg.value = 'Quantity must be greater than 0.'
+    return
+  }
+
+  if (form.type === 'remove' && form.quantity > currentLocationStock.value) {
+    errorMsg.value = `Cannot remove ${form.quantity} units. Only ${currentLocationStock.value} unit(s) available at the selected location!`
     return
   }
 
@@ -116,12 +154,18 @@ const handleSubmit = () => {
         :disabled="!!productId"
       />
 
-      <UiSelect
-        v-model="form.locationId"
-        label="Location"
-        :options="locationOptions"
-        required
-      />
+      <div class="space-y-1">
+        <UiSelect
+          v-model="form.locationId"
+          label="Location"
+          :options="locationOptions"
+          required
+        />
+        <div v-if="form.locationId" class="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
+          <Info class="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          <span>Selected Location Stock: <strong class="text-slate-900 font-mono">{{ currentLocationStock }} units</strong> (Total across all locations: {{ totalStockAllLocations }} units)</span>
+        </div>
+      </div>
 
       <div class="grid grid-cols-2 gap-4">
         <UiSelect

@@ -26,25 +26,32 @@ class StockController extends BaseController
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Product::filter()
-            ->with(['category', 'stockLevels.location']);
+        $locationId = $request->input('location_id') ?: $request->input('locationId');
+        $search     = trim((string) $request->input('search'));
+        $lowStock   = $request->boolean('low_stock') || $request->boolean('lowStockOnly');
+
+        $query = Product::query()
+            ->with(['category', 'stockLevels' => function ($q) use ($locationId) {
+                if ($locationId) {
+                    $q->where('location_id', $locationId);
+                }
+            }, 'stockLevels.location']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->input('category_id'));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
+        if (!empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
-        if ($request->boolean('low_stock')) {
+        if ($lowStock) {
             $lowStockProductIds = ReorderSetting::all()
-                ->filter(function ($setting) {
-                    $available = $this->stockService->getAvailableQty($setting->product_id, $setting->location_id);
+                ->filter(function ($setting) use ($locationId) {
+                    $available = $this->stockService->getAvailableQty($setting->product_id, $locationId ?: $setting->location_id);
                     return $available <= $setting->min_quantity;
                 })
                 ->pluck('product_id')
@@ -104,37 +111,43 @@ class StockController extends BaseController
         $type = $validated['type'] ?? null;
         $qty  = (int) $validated['quantity'];
 
-        if ($type === 'add') {
-            $movement = $this->stockService->receiveStock(
-                $validated['product_id'],
-                $validated['location_id'],
-                abs($qty),
-                0,
-                ['type' => $validated['reason'] ?? 'manual_adjustment'],
-                null,
-                null,
-                null,
-                $validated['variant_id'] ?? null
-            );
-        } elseif ($type === 'remove') {
-            $movement = $this->stockService->issueStock(
-                $validated['product_id'],
-                $validated['location_id'],
-                abs($qty),
-                ['type' => $validated['reason'] ?? 'manual_adjustment', 'movement_type' => 'adjustment'],
-                null,
-                null,
-                $validated['variant_id'] ?? null
-            );
-        } else {
-            $movement = $this->stockService->adjustStock(
-                $validated['product_id'],
-                $validated['location_id'],
-                $qty,
-                $validated['reason'] ?? null,
-                $validated['notes'] ?? null,
-                $validated['variant_id'] ?? null
-            );
+        try {
+            if ($type === 'add') {
+                $movement = $this->stockService->receiveStock(
+                    $validated['product_id'],
+                    $validated['location_id'],
+                    abs($qty),
+                    0,
+                    ['type' => $validated['reason'] ?? 'manual_adjustment'],
+                    null,
+                    null,
+                    null,
+                    $validated['variant_id'] ?? null
+                );
+            } elseif ($type === 'remove') {
+                $movement = $this->stockService->issueStock(
+                    $validated['product_id'],
+                    $validated['location_id'],
+                    abs($qty),
+                    ['type' => $validated['reason'] ?? 'manual_adjustment', 'movement_type' => 'adjustment'],
+                    null,
+                    null,
+                    $validated['variant_id'] ?? null
+                );
+            } else {
+                $movement = $this->stockService->adjustStock(
+                    $validated['product_id'],
+                    $validated['location_id'],
+                    $qty,
+                    $validated['reason'] ?? null,
+                    $validated['notes'] ?? null,
+                    $validated['variant_id'] ?? null
+                );
+            }
+        } catch (\App\Modules\Inventory\Exceptions\InsufficientStockException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
         }
 
         return response()->json([

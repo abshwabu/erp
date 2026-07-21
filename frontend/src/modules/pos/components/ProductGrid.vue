@@ -29,10 +29,8 @@ const categoryList = computed(() => {
 watch(products, (newVal) => {
   if (Array.isArray(newVal)) {
     posStore.catalog = newVal.map((p: any) => {
-      // If available_quantity is defined, use it; if null/undefined default to 50
-      const rawStock = (p.available_quantity !== undefined && p.available_quantity !== null)
-        ? p.available_quantity
-        : 50
+      // Use real available_quantity from API; default to 0 if none
+      const rawStock = (typeof p.available_quantity === 'number') ? p.available_quantity : 0
       return {
         id: p.id,
         name: p.name,

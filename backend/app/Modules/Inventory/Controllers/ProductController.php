@@ -67,7 +67,7 @@ class ProductController extends BaseController
                 'product_id' => $product->id,
                 'location_id' => $location->id,
             ], [
-                'quantity_on_hand' => 50,
+                'quantity_on_hand' => 0,
                 'quantity_committed' => 0,
                 'quantity_on_order' => 0,
             ]);

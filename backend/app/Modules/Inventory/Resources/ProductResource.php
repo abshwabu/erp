@@ -30,6 +30,15 @@ class ProductResource extends BaseResource
             'category'             => new ProductCategoryResource($this->whenLoaded('category')),
             'variants'             => ProductVariantResource::collection($this->whenLoaded('variants')),
             'barcodes'             => ProductBarcodeResource::collection($this->whenLoaded('barcodes')),
+            'quantity_on_hand'   => $this->relationLoaded('stockLevels')
+                ? (int) $this->stockLevels->sum('quantity_on_hand')
+                : 0,
+            'quantity_committed' => $this->relationLoaded('stockLevels')
+                ? (int) $this->stockLevels->sum('quantity_committed')
+                : 0,
+            'quantity_on_order'  => $this->relationLoaded('stockLevels')
+                ? (int) $this->stockLevels->sum('quantity_on_order')
+                : 0,
             'available_quantity'   => $this->relationLoaded('stockLevels')
                 ? (int) ($this->stockLevels->sum('quantity_on_hand') - $this->stockLevels->sum('quantity_committed'))
                 : 0,
