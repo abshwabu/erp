@@ -14,9 +14,9 @@ const { data: categories, isLoading } = useQuery({
   queryFn: () => inventoryApi.getCategories().then(res => res.data)
 })
 
-const expandedIds = ref<Set<number>>(new Set())
+const expandedIds = ref<Set<string | number>>(new Set())
 
-const toggleExpand = (id: number) => {
+const toggleExpand = (id: string | number) => {
   if (expandedIds.value.has(id)) {
     expandedIds.value.delete(id)
   } else {
@@ -24,16 +24,38 @@ const toggleExpand = (id: number) => {
   }
 }
 
-// Mocking some functionality for the UI
 const isAdding = ref(false)
 const newCategoryName = ref('')
-const selectedCategoryId = ref<number | null>(null)
+const selectedCategoryId = ref<string | number | null>(null)
+
+const createMutation = useMutation({
+  mutationFn: (name: string) => {
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    return inventoryApi.createCategory({ name, slug })
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
+    isAdding.value = false
+    newCategoryName.value = ''
+  }
+})
+
+const deleteMutation = useMutation({
+  mutationFn: (id: string) => inventoryApi.deleteCategory(id),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
+  }
+})
 
 const handleAdd = () => {
-  if (!newCategoryName.value) return
-  // Implementation of add logic would go here
-  isAdding.value = false
-  newCategoryName.value = ''
+  if (!newCategoryName.value.trim()) return
+  createMutation.mutate(newCategoryName.value.trim())
+}
+
+const handleDelete = (id: string | number) => {
+  if (confirm('Are you sure you want to delete this category?')) {
+    deleteMutation.mutate(String(id))
+  }
 }
 </script>
 
@@ -51,7 +73,7 @@ const handleAdd = () => {
       <UiInput v-model="newCategoryName" label="Category Name" placeholder="e.g. Electronics" />
       <div class="flex justify-end space-x-2">
         <UiButton variant="ghost" size="sm" @click="isAdding = false">Cancel</UiButton>
-        <UiButton size="sm" @click="handleAdd">Save Category</UiButton>
+        <UiButton size="sm" @click="handleAdd" :loading="createMutation.isPending.value">Save Category</UiButton>
       </div>
     </div>
 
@@ -82,10 +104,11 @@ const handleAdd = () => {
               <span class="text-sm font-medium text-slate-700 flex-1">{{ category.name }}</span>
               
               <div class="hidden group-hover:flex items-center space-x-1">
-                <button class="p-1 text-slate-400 hover:text-primary-600 transition-colors">
-                  <Edit2 class="h-3.5 w-3.5" />
-                </button>
-                <button class="p-1 text-slate-400 hover:text-red-600 transition-colors">
+                <button
+                  @click.stop="handleDelete(category.id)"
+                  class="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                  title="Delete category"
+                >
                   <Trash2 class="h-3.5 w-3.5" />
                 </button>
               </div>

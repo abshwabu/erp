@@ -61,6 +61,11 @@ function processPayment() {
 
   const receiptNum = 'REC-' + Math.floor(100000 + Math.random() * 900000)
 
+  // Deduct stock for all items sold in order by their quantity
+  posStore.cart.forEach(item => {
+    posStore.deductStock(item.id, item.quantity)
+  })
+
   lastOrderSummary.value = {
     items: [...posStore.cart],
     subtotal: subtotal.value,

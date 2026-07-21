@@ -18,6 +18,21 @@ class ProductCategory extends InventoryModel
         'is_active' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (ProductCategory $category) {
+            if (empty($category->slug)) {
+                $category->slug = \Illuminate\Support\Str::slug($category->name);
+            }
+        });
+
+        static::updating(function (ProductCategory $category) {
+            if (empty($category->slug) && !empty($category->name)) {
+                $category->slug = \Illuminate\Support\Str::slug($category->name);
+            }
+        });
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(ProductCategory::class, 'parent_id');

@@ -9,6 +9,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import CreateCategoryModal from './CreateCategoryModal.vue'
 import type { Product, ProductCategory, ProductType, ProductStatus } from '@/types/inventory'
 
 interface Props {
@@ -22,6 +23,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 
 const queryClient = useQueryClient()
 const isEdit = computed(() => !!props.product)
+const isCreateCategoryModalOpen = ref(false)
 
 const form = reactive({
   name: '',
@@ -29,7 +31,7 @@ const form = reactive({
   sku: '',
   type: 'stockable' as ProductType,
   status: 'active' as ProductStatus,
-  categoryId: undefined as number | undefined,
+  categoryId: undefined as number | string | undefined,
   costPrice: 0,
   sellingPrice: 0,
   minSellingPrice: 0,
@@ -57,7 +59,7 @@ watch(() => props.product, (newProduct) => {
       sku: '',
       type: 'stockable',
       status: 'active',
-      categoryId: undefined,
+      categoryId: props.categories?.[0]?.id || undefined,
       costPrice: 0,
       sellingPrice: 0,
       minSellingPrice: 0,
@@ -115,6 +117,12 @@ const addVariant = () => {
 const removeVariant = (index: number) => {
   form.variants.splice(index, 1)
 }
+
+function handleCategoryCreated(newCat: any) {
+  if (newCat?.id) {
+    form.categoryId = newCat.id
+  }
+}
 </script>
 
 <template>
@@ -160,13 +168,25 @@ const removeVariant = (index: number) => {
                     :error="errors.name"
                     required
                   />
-                  <UiSelect
-                    v-model="form.categoryId"
-                    label="Category"
-                    :options="Array.isArray(categories) ? categories.map(c => ({ label: c.name, value: c.id })) : []"
-                    :error="errors.categoryId"
-                    required
-                  />
+                  
+                  <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                      <label class="block text-sm font-medium text-slate-700">Category <span class="text-red-500">*</span></label>
+                      <button
+                        type="button"
+                        @click="isCreateCategoryModalOpen = true"
+                        class="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-0.5"
+                      >
+                        <Plus class="w-3 h-3" /> Add Category
+                      </button>
+                    </div>
+                    <UiSelect
+                      v-model="form.categoryId"
+                      :options="Array.isArray(categories) ? categories.map(c => ({ label: c.name, value: c.id })) : []"
+                      :error="errors.categoryId"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -312,6 +332,7 @@ const removeVariant = (index: number) => {
         </div>
       </TabGroup>
     </form>
+    
     <template #footer>
       <UiButton variant="ghost" @click="emit('update:modelValue', false)" class="mr-2">Cancel</UiButton>
       <UiButton type="submit" form="productForm" :loading="mutation.isPending.value">
@@ -319,4 +340,10 @@ const removeVariant = (index: number) => {
       </UiButton>
     </template>
   </UiModal>
+
+  <!-- Create Category Quick Modal -->
+  <CreateCategoryModal
+    v-model="isCreateCategoryModalOpen"
+    @created="handleCategoryCreated"
+  />
 </template>

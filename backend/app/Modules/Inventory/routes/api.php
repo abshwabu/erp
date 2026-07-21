@@ -70,6 +70,9 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
     Route::get('stock/{productId}', [StockController::class, 'show'])
         ->middleware('permission:inventory.stock.view');
 
+    Route::get('locations', [\App\Modules\Inventory\Controllers\StockLocationController::class, 'index'])
+        ->middleware('permission:inventory.stock.view');
+
     Route::post('stock/adjustments', [StockController::class, 'adjust'])
         ->middleware('permission:inventory.stock.adjust');
 

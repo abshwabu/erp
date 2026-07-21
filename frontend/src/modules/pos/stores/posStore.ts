@@ -36,6 +36,13 @@ export const usePosStore = defineStore('pos', () => {
     }
   }
 
+  const deductStock = (productId: number | string, quantity: number) => {
+    const item = catalog.value.find(p => String(p.id) === String(productId))
+    if (item) {
+      item.stock = Math.max(0, (item.stock || 0) - quantity)
+    }
+  }
+
   const syncOfflineQueue = async () => {
     if (!isOnline.value || offlineQueue.value.length === 0) return
     // Logic to push queue to backend
@@ -51,6 +58,7 @@ export const usePosStore = defineStore('pos', () => {
     addToCart,
     removeFromCart,
     updateQuantity,
+    deductStock,
     clearCart,
     syncOfflineQueue
   }

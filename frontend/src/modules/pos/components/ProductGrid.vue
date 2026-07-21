@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { usePosStore } from '../stores/posStore'
-import { Search, Package, Check, Tag, Filter } from '@lucide/vue'
+import { Search, Package, Check, Tag, Filter, Layers } from '@lucide/vue'
 
 const posStore = usePosStore()
 const searchQuery = ref('')
@@ -25,32 +25,49 @@ const categoryList = computed(() => {
   return [{ id: null, name: 'All Products' }, ...list]
 })
 
-const mappedProducts = computed(() => {
-  if (!products.value || !Array.isArray(products.value)) return []
-  return products.value.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    price: typeof p.selling_price === 'number' ? (p.selling_price / 100) : 0, // Convert cents to dollars
-    categoryId: p.category_id || p.category?.id || null,
-    sku: p.sku || `SKU-${p.id}`
-  }))
-})
-
-// Keep posStore.catalog updated
-watch(mappedProducts, (newVal) => {
-  posStore.catalog = newVal
+// Initialize posStore.catalog when products are fetched
+watch(products, (newVal) => {
+  if (Array.isArray(newVal)) {
+    posStore.catalog = newVal.map((p: any) => {
+      // If available_quantity is defined, use it; if null/undefined default to 50
+      const rawStock = (p.available_quantity !== undefined && p.available_quantity !== null)
+        ? p.available_quantity
+        : 50
+      return {
+        id: p.id,
+        name: p.name,
+        price: typeof p.selling_price === 'number' ? (p.selling_price / 100) : (p.price || 0),
+        categoryId: p.category_id || p.category?.id || null,
+        sku: p.sku || `SKU-${p.id}`,
+        stock: rawStock
+      }
+    })
+  }
 }, { immediate: true })
 
+// Only show items with stock > 0
 const filteredProducts = computed(() => {
-  return mappedProducts.value.filter(p => {
+  return posStore.catalog.filter(p => {
+    const hasStock = typeof p.stock === 'number' ? p.stock > 0 : true
     const matchesCategory = selectedCategoryId.value === null || p.categoryId === selectedCategoryId.value
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                           p.sku.toLowerCase().includes(searchQuery.value.toLowerCase())
-    return matchesCategory && matchesSearch
+    return hasStock && matchesCategory && matchesSearch
   })
 })
 
 function handleAddProduct(product: any) {
+  if (product.stock <= 0) return
+
+  // Check how many of this item are already in cart
+  const cartItem = posStore.cart.find(item => String(item.id) === String(product.id))
+  const currentInCart = cartItem ? cartItem.quantity : 0
+
+  if (currentInCart >= product.stock) {
+    alert(`Cannot add more ${product.name}. Only ${product.stock} unit(s) available in stock!`)
+    return
+  }
+
   posStore.addToCart(product)
   addedProductId.value = product.id
   setTimeout(() => {
@@ -85,7 +102,7 @@ function handleAddProduct(product: any) {
       </div>
 
       <div class="text-xs text-slate-500 font-medium hidden sm:block shrink-0">
-        Showing <span class="font-bold text-slate-900">{{ filteredProducts.length }}</span> items
+        Available: <span class="font-bold text-emerald-600">{{ filteredProducts.length }}</span> items (Stock &gt; 0)
       </div>
     </div>
 
@@ -130,9 +147,21 @@ function handleAddProduct(product: any) {
           </div>
 
           <div>
-            <!-- Product Placeholder Image Icon -->
-            <div class="h-24 bg-gradient-to-br from-slate-50 to-slate-100 mb-3 rounded-xl flex items-center justify-center border border-slate-100 group-hover:scale-98 transition-transform">
+            <!-- Product Placeholder Image Icon & Stock Badge -->
+            <div class="h-24 bg-gradient-to-br from-slate-50 to-slate-100 mb-3 rounded-xl flex flex-col items-center justify-center border border-slate-100 group-hover:scale-98 transition-transform relative">
               <Package class="w-8 h-8 text-slate-300 group-hover:text-blue-500 transition-colors" />
+              
+              <!-- Stock Badge -->
+              <span
+                class="absolute bottom-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md border backdrop-blur-md shadow-2xs"
+                :class="[
+                  product.stock <= 5
+                    ? 'bg-amber-500/10 text-amber-700 border-amber-300'
+                    : 'bg-emerald-500/10 text-emerald-700 border-emerald-300'
+                ]"
+              >
+                {{ product.stock }} in stock
+              </span>
             </div>
 
             <div class="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 leading-tight mb-1">
@@ -148,7 +177,7 @@ function handleAddProduct(product: any) {
             <span class="text-sm font-bold text-blue-600">
               ${{ product.price.toFixed(2) }}
             </span>
-            <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 px-2 py-0.5 rounded-full transition-colors">
+            <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 px-2.5 py-1 rounded-lg transition-colors">
               + Add
             </span>
           </div>
@@ -158,8 +187,8 @@ function handleAddProduct(product: any) {
       <!-- Empty Filter State -->
       <div v-else class="h-64 flex flex-col items-center justify-center text-slate-400">
         <Package class="w-12 h-12 stroke-[1.5] text-slate-300 mb-2" />
-        <p class="text-sm font-semibold text-slate-600">No products found</p>
-        <p class="text-xs text-slate-400">Try adjusting your search or category filter.</p>
+        <p class="text-sm font-semibold text-slate-600">No in-stock products found</p>
+        <p class="text-xs text-slate-400">Items with 0 stock are automatically hidden from POS.</p>
       </div>
     </div>
   </div>

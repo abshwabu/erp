@@ -9,7 +9,6 @@ import {
   AlertTriangle, 
   TrendingDown, 
   Layers,
-  ChevronDown,
   ChevronRight,
   History,
   Settings2
@@ -35,10 +34,15 @@ const { data, isLoading } = useQuery({
   queryFn: () => inventoryApi.getStockSummary(filters, page.value).then(res => res.data)
 })
 
-const isAdjustmentModalOpen = ref(false)
-const selectedProductId = ref<number | undefined>(undefined)
+const { data: locations } = useQuery({
+  queryKey: ['inventory', 'locations'],
+  queryFn: () => inventoryApi.getLocations().then(res => res.data)
+})
 
-const openAdjustment = (productId?: number) => {
+const isAdjustmentModalOpen = ref(false)
+const selectedProductId = ref<string | number | undefined>(undefined)
+
+const openAdjustment = (productId?: string | number) => {
   selectedProductId.value = productId
   isAdjustmentModalOpen.value = true
 }
@@ -54,14 +58,39 @@ const columns = [
   { key: 'actions', label: '', align: 'right' as const }
 ]
 
+const mappedTableData = computed(() => {
+  const rawList = data.value?.data
+  if (!Array.isArray(rawList)) return []
+  return rawList.map((p: any) => {
+    const qty = typeof p.available_quantity === 'number' ? p.available_quantity : (p.totalOnHand || 0)
+    const price = typeof p.selling_price === 'number' ? (p.selling_price / 100) : 0
+    return {
+      id: p.id,
+      productId: p.id,
+      productName: p.name || p.productName || 'Unnamed Product',
+      sku: p.sku || `SKU-${p.id}`,
+      totalOnHand: qty,
+      totalCommitted: p.totalCommitted || 0,
+      totalAvailable: qty,
+      value: qty * price,
+      lowStock: qty <= 5
+    }
+  })
+})
+
 // Define stats for summary display
 const stats = computed(() => {
-  const summary = data.value
+  const list = mappedTableData.value
+  const totalProducts = list.length
+  const totalVal = list.reduce((sum, item) => sum + (item.value || 0), 0)
+  const lowStockCount = list.filter(item => item.totalAvailable > 0 && item.totalAvailable <= 5).length
+  const outOfStockCount = list.filter(item => item.totalAvailable <= 0).length
+
   return [
-    { label: 'Total Products', value: (summary as any)?.totalProducts || 0, icon: Package },
-    { label: 'Total Value', value: `$${((summary as any)?.totalValue || 0).toLocaleString()}`, icon: Layers },
-    { label: 'Low Stock Items', value: (summary as any)?.lowStockCount || 0, icon: AlertTriangle },
-    { label: 'Out of Stock', value: (summary as any)?.outOfStockCount || 0, icon: TrendingDown },
+    { label: 'Total Products', value: totalProducts, icon: Package },
+    { label: 'Total Value', value: `$${totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Layers },
+    { label: 'Low Stock Items', value: lowStockCount, icon: AlertTriangle },
+    { label: 'Out of Stock', value: outOfStockCount, icon: TrendingDown },
   ]
 })
 </script>
@@ -74,9 +103,6 @@ const stats = computed(() => {
         <p class="text-slate-500 text-sm">Monitor and manage stock levels across all locations.</p>
       </div>
       <div class="flex items-center space-x-2">
-        <UiButton variant="outline" size="sm">
-          <History class="h-4 w-4 mr-2" /> Stock Movements
-        </UiButton>
         <UiButton size="sm" @click="openAdjustment()">
           <Plus class="h-4 w-4 mr-2" /> Adjust Stock
         </UiButton>
@@ -103,13 +129,12 @@ const stats = computed(() => {
           </template>
         </UiInput>
       </div>
-      <div class="w-48">
+      <div class="w-56">
         <UiSelect
           v-model="filters.locationId"
           :options="[
             { label: 'All Locations', value: '' },
-            { label: 'Main Warehouse', value: 1 },
-            { label: 'Retail Store', value: 2 }
+            ...(Array.isArray(locations) ? locations.map((l: any) => ({ label: l.name, value: l.id })) : [])
           ]"
         />
       </div>
@@ -122,7 +147,7 @@ const stats = computed(() => {
     <!-- Table -->
     <UiTable
       :columns="columns"
-      :data="data?.data || []"
+      :data="mappedTableData"
       :loading="isLoading"
     >
       <template #cell(product)="{ item }">
@@ -135,7 +160,7 @@ const stats = computed(() => {
       </template>
 
       <template #cell(value)="{ value }">
-        <span class="text-slate-600">${{ value ? value.toLocaleString() : '0' }}</span>
+        <span class="text-slate-600 font-mono">${{ typeof value === 'number' ? value.toFixed(2) : '0.00' }}</span>
       </template>
 
       <template #cell(status)="{ item }">
@@ -148,13 +173,10 @@ const stats = computed(() => {
         <div class="flex items-center justify-end space-x-2">
           <button 
             @click="openAdjustment(item.productId)"
-            class="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+            class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
             title="Adjust Stock"
           >
             <Settings2 class="h-4 w-4" />
-          </button>
-          <button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors">
-            <ChevronRight class="h-4 w-4" />
           </button>
         </div>
       </template>
@@ -163,7 +185,7 @@ const stats = computed(() => {
     <!-- Pagination -->
     <div v-if="data?.meta" class="flex justify-between items-center">
       <p class="text-sm text-slate-500">
-        Showing {{ Array.isArray(data.data) ? data.data.length : 0 }} products
+        Showing {{ mappedTableData.length }} products
       </p>
       <UiPagination
         :current-page="page"

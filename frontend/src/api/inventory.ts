@@ -45,8 +45,22 @@ export const inventoryApi = {
     })
   },
 
-  createStockAdjustment(data: StockAdjustment) {
-    return apiClient.post<StockMovement>('/inventory/stock/adjustments', data)
+  getLocations() {
+    return apiClient.get('/inventory/locations').then(res => {
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      return { ...res, data }
+    })
+  },
+
+  createStockAdjustment(data: any) {
+    const payload = {
+      product_id: data.product_id || data.productId,
+      location_id: data.location_id || data.locationId,
+      quantity: data.type === 'remove' ? -Math.abs(data.quantity) : Math.abs(data.quantity),
+      reason: data.reason,
+      notes: data.notes
+    }
+    return apiClient.post<StockMovement>('/inventory/stock/adjustments', payload)
   },
 
   getStockMovements(filters: InventoryFilters = {}, page = 1) {
@@ -69,6 +83,21 @@ export const inventoryApi = {
 
   // Categories
   getCategories() {
-    return apiClient.get('/inventory/categories')
+    return apiClient.get('/inventory/categories').then(res => {
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      return { ...res, data }
+    })
+  },
+
+  createCategory(data: { name: string; slug?: string; description?: string; parent_id?: string }) {
+    return apiClient.post('/inventory/categories', data)
+  },
+
+  updateCategory(id: string, data: Partial<{ name: string; description?: string }>) {
+    return apiClient.put(`/inventory/categories/${id}`, data)
+  },
+
+  deleteCategory(id: string) {
+    return apiClient.delete(`/inventory/categories/${id}`)
   }
 }

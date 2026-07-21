@@ -26,7 +26,7 @@ class ProductController extends BaseController
     public function index(): JsonResponse
     {
         $query = Product::filter()
-            ->with(['category', 'barcodes']);
+            ->with(['category', 'barcodes', 'stockLevels']);
 
         return $this->paginatedResponse($query, ProductResource::class)->response();
     }
@@ -47,10 +47,25 @@ class ProductController extends BaseController
                 $product->barcodes()->create($barcode);
             }
 
+            // Create initial stock level record for default main warehouse if none exists
+            $location = \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
+                ['code' => 'WH-MAIN'],
+                ['name' => 'Main Warehouse', 'type' => 'internal', 'is_active' => true]
+            );
+
+            \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
+                'product_id' => $product->id,
+                'location_id' => $location->id,
+            ], [
+                'quantity_on_hand' => 50,
+                'quantity_committed' => 0,
+                'quantity_on_order' => 0,
+            ]);
+
             return $product;
         });
 
-        $product->load(['category', 'barcodes', 'variants']);
+        $product->load(['category', 'barcodes', 'variants', 'stockLevels']);
 
         return $this->createdResponse(new ProductResource($product));
     }

@@ -11,7 +11,8 @@ import {
   Eye, 
   Download, 
   Upload,
-  Package
+  Package,
+  Tag
 } from '@lucide/vue'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -21,6 +22,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import CreateEditProductModal from '../components/CreateEditProductModal.vue'
+import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
 import type { Product, ProductFilters, ProductStatus, ProductType } from '@/types/inventory'
 
@@ -46,6 +48,7 @@ const { data: categories } = useQuery({
 
 const isCreateModalOpen = ref(false)
 const isImportModalOpen = ref(false)
+const isCreateCategoryModalOpen = ref(false)
 const selectedProduct = ref<Product | null>(null)
 
 const columns = [
@@ -100,6 +103,9 @@ const getStatusVariant = (status: ProductStatus) => {
         <p class="text-slate-500 text-sm">Manage your inventory products and services.</p>
       </div>
       <div class="flex items-center space-x-2">
+        <UiButton variant="outline" size="sm" @click="isCreateCategoryModalOpen = true">
+          <Tag class="h-4 w-4 mr-2" /> Add Category
+        </UiButton>
         <UiButton variant="outline" size="sm" @click="isImportModalOpen = true">
           <Upload class="h-4 w-4 mr-2" /> Import
         </UiButton>
@@ -254,6 +260,11 @@ const getStatusVariant = (status: ProductStatus) => {
       v-model="isCreateModalOpen"
       :product="selectedProduct"
       :categories="categories || []"
+    />
+
+    <!-- Create Category Modal -->
+    <CreateCategoryModal
+      v-model="isCreateCategoryModalOpen"
     />
 
     <ImportModal

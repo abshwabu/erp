@@ -113,6 +113,18 @@ class StockService
                 ]);
             }
 
+            // Update stock_levels table
+            $stockLevel = StockLevel::firstOrCreate([
+                'product_id' => $product->id,
+                'variant_id' => $variantId,
+                'location_id' => $location->id,
+            ], [
+                'quantity_on_hand' => 0,
+                'quantity_committed' => 0,
+                'quantity_on_order' => 0,
+            ]);
+            $stockLevel->increment('quantity_on_hand', $qty);
+
             event(new StockMovementCreated($movement));
 
             return $movement;
@@ -163,6 +175,11 @@ class StockService
                 'currency_code' => $product->currency_code ?: 'USD',
                 'user_id' => $userId,
             ]);
+
+            // Update stock_levels table
+            if ($level) {
+                $level->decrement('quantity_on_hand', $qty);
+            }
 
             // Lot Tracking
             if ($product->track_lots && $lot) {
@@ -253,6 +270,22 @@ class StockService
                 'currency_code' => $product->currency_code ?: 'USD',
                 'user_id' => $userId,
             ]);
+
+            // Update stock_levels table
+            if ($fromLevel) {
+                $fromLevel->decrement('quantity_on_hand', $qty);
+            }
+
+            $toLevel = StockLevel::firstOrCreate([
+                'product_id' => $product->id,
+                'variant_id' => $variantId,
+                'location_id' => $toLocation->id,
+            ], [
+                'quantity_on_hand' => 0,
+                'quantity_committed' => 0,
+                'quantity_on_order' => 0,
+            ]);
+            $toLevel->increment('quantity_on_hand', $qty);
 
             $lot = $ref['lot_number'] ?? null;
             $serial = $ref['serial_number'] ?? null;
@@ -360,6 +393,15 @@ class StockService
             }
 
             $movement = StockMovement::create($movementData);
+
+            // Update stock_levels table row
+            StockLevel::updateOrCreate([
+                'product_id' => $product->id,
+                'variant_id' => $variantId,
+                'location_id' => $location->id,
+            ], [
+                'quantity_on_hand' => $qty,
+            ]);
 
             event(new StockMovementCreated($movement));
 
