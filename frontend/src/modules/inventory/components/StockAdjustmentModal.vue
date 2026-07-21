@@ -21,6 +21,7 @@ const errorMsg = ref('')
 
 const form = reactive({
   productId: props.productId || '' as string | number,
+  variantId: '' as string | number,
   locationId: '' as string | number,
   quantity: 1,
   type: 'add' as 'add' | 'remove',
@@ -44,22 +45,65 @@ const { data: productStockLevels } = useQuery({
   enabled: computed(() => !!form.productId)
 })
 
+const selectedProduct = computed(() => {
+  if (!Array.isArray(products.value) || !form.productId) return null
+  return products.value.find((p: any) => String(p.id) === String(form.productId))
+})
+
+const hasVariants = computed(() => {
+  const prod = selectedProduct.value as any
+  return !!(prod?.has_variants || prod?.hasVariants)
+})
+
+const variantOptions = computed(() => {
+  const prod = selectedProduct.value as any
+  if (!prod || !Array.isArray(prod.variants)) return []
+  return prod.variants.map((v: any) => ({
+    label: `${v.name || v.sku || `Variant ${v.id}`}`,
+    value: v.id
+  }))
+})
+
+// Auto-select first variant on product select
+watch(selectedProduct, (newProduct: any) => {
+  if (newProduct && Array.isArray(newProduct.variants) && newProduct.variants.length > 0) {
+    // only change if current variant is not in list
+    const exists = newProduct.variants.some((v: any) => String(v.id) === String(form.variantId))
+    if (!exists && newProduct.variants[0]) {
+      form.variantId = newProduct.variants[0].id
+    }
+  } else {
+    form.variantId = ''
+  }
+})
+
 const currentLocationStock = computed(() => {
   if (!Array.isArray(productStockLevels.value) || !form.locationId) return 0
-  const match = productStockLevels.value.find((l: any) => String(l.location_id) === String(form.locationId))
+  const match = productStockLevels.value.find((l: any) => {
+    const locMatch = String(l.location_id) === String(form.locationId)
+    const varMatch = form.variantId ? String(l.variant_id) === String(form.variantId) : true
+    return locMatch && varMatch
+  })
   return match ? (match.available_quantity ?? match.quantity_on_hand ?? 0) : 0
 })
 
 const totalStockAllLocations = computed(() => {
   if (!Array.isArray(productStockLevels.value)) return 0
-  return productStockLevels.value.reduce((sum: number, l: any) => sum + (l.available_quantity ?? l.quantity_on_hand ?? 0), 0)
+  const filtered = form.variantId 
+    ? productStockLevels.value.filter((l: any) => String(l.variant_id) === String(form.variantId))
+    : productStockLevels.value
+  return filtered.reduce((sum: number, l: any) => sum + (l.available_quantity ?? l.quantity_on_hand ?? 0), 0)
 })
 
 const locationOptions = computed(() => {
   if (Array.isArray(locations.value) && locations.value.length > 0) {
     return locations.value.map((loc: any) => {
       const level = Array.isArray(productStockLevels.value)
-        ? productStockLevels.value.find((l: any) => String(l.location_id) === String(loc.id))
+        ? productStockLevels.value.find((l: any) => {
+            const locMatch = String(l.location_id) === String(loc.id)
+            const varMatch = form.variantId ? String(l.variant_id) === String(form.variantId) : true
+            return locMatch && varMatch
+          })
         : null
       const qty = level ? (level.available_quantity ?? level.quantity_on_hand ?? 0) : 0
       return {
@@ -116,6 +160,10 @@ const handleSubmit = () => {
     errorMsg.value = 'Please select a product.'
     return
   }
+  if (hasVariants.value && !form.variantId) {
+    errorMsg.value = 'Please select a product variant.'
+    return
+  }
   if (!form.locationId) {
     errorMsg.value = 'Please select a location.'
     return
@@ -152,6 +200,15 @@ const handleSubmit = () => {
         :options="Array.isArray(products) ? products.map((p: any) => ({ label: p.name, value: p.id })) : []"
         required
         :disabled="!!productId"
+      />
+
+      <UiSelect
+        v-slot:default
+        v-if="hasVariants"
+        v-model="form.variantId"
+        label="Variant"
+        :options="variantOptions"
+        required
       />
 
       <div class="space-y-1">

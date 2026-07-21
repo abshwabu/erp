@@ -19,6 +19,7 @@ class ProductVariantResource extends BaseResource
             'selling_price'       => $this->selling_price,
             'attribute_value_ids' => $this->attribute_value_ids,
             'is_active'           => $this->is_active,
+            'stock'               => (int) ($this->relationLoaded('stockLevels') ? $this->stockLevels->sum('quantity_on_hand') : \App\Modules\Inventory\Models\StockLevel::where('variant_id', $this->id)->sum('quantity_on_hand')),
             'created_at'          => $this->created_at?->toIso8601String(),
         ];
     }

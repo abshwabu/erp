@@ -26,7 +26,7 @@ class ProductController extends BaseController
     public function index(): JsonResponse
     {
         $query = Product::filter()
-            ->with(['category', 'barcodes', 'stockLevels']);
+            ->with(['category', 'barcodes', 'variants.stockLevels', 'stockLevels']);
 
         return $this->paginatedResponse($query, ProductResource::class)->response();
     }
@@ -39,7 +39,8 @@ class ProductController extends BaseController
         $product = DB::transaction(function () use ($request) {
             $validated = $request->validated();
             $barcodes  = $validated['barcodes'] ?? [];
-            unset($validated['barcodes']);
+            $variants  = $validated['variants'] ?? [];
+            unset($validated['barcodes'], $validated['variants']);
 
             $product = Product::create($validated);
 
@@ -72,10 +73,46 @@ class ProductController extends BaseController
                 'quantity_on_order' => 0,
             ]);
 
+            // Create variants
+            foreach ($variants as $variant) {
+                $createdVariant = $product->variants()->create([
+                    'sku' => $variant['sku'],
+                    'name' => $variant['name'],
+                    'cost_price' => $variant['cost_price'] ?? 0,
+                    'selling_price' => $variant['selling_price'],
+                    'attribute_value_ids' => $variant['attribute_value_ids'] ?? [],
+                    'is_active' => $variant['is_active'] ?? true,
+                ]);
+
+                // Create initial stock level record for variant if stock is set
+                if (isset($variant['stock']) && $variant['stock'] > 0) {
+                    \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
+                        'product_id' => $product->id,
+                        'variant_id' => $createdVariant->id,
+                        'location_id' => $location->id,
+                    ], [
+                        'quantity_on_hand' => $variant['stock'],
+                        'quantity_committed' => 0,
+                        'quantity_on_order' => 0,
+                    ]);
+
+                    \App\Modules\Inventory\Models\StockMovement::create([
+                        'product_id' => $product->id,
+                        'variant_id' => $createdVariant->id,
+                        'to_location_id' => $location->id,
+                        'quantity' => $variant['stock'],
+                        'type' => 'opening',
+                        'reference_type' => 'InitialStock',
+                        'unit_cost' => (int) ($variant['cost_price'] ?? 0),
+                        'user_id' => auth()->id() ?? \App\Models\User::first()?->id,
+                    ]);
+                }
+            }
+
             return $product;
         });
 
-        $product->load(['category', 'barcodes', 'variants', 'stockLevels']);
+        $product->load(['category', 'barcodes', 'variants.stockLevels', 'stockLevels']);
 
         return $this->createdResponse(new ProductResource($product));
     }
@@ -85,7 +122,7 @@ class ProductController extends BaseController
      */
     public function show(Product $product): JsonResponse
     {
-        $product->load(['category', 'barcodes', 'variants', 'images', 'uoms']);
+        $product->load(['category', 'barcodes', 'variants.stockLevels', 'images', 'uoms']);
 
         return $this->successResponse(new ProductResource($product));
     }
@@ -95,8 +132,82 @@ class ProductController extends BaseController
      */
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
-        $product->update($request->validated());
-        $product->load(['category', 'barcodes', 'variants']);
+        DB::transaction(function () use ($request, $product) {
+            $validated = $request->validated();
+            $variants  = $validated['variants'] ?? null;
+            unset($validated['variants']);
+
+            $product->update($validated);
+
+            if ($variants !== null) {
+                $incomingVariantIds = [];
+
+                foreach ($variants as $variant) {
+                    $variantData = [
+                        'sku' => $variant['sku'],
+                        'name' => $variant['name'],
+                        'cost_price' => $variant['cost_price'] ?? 0,
+                        'selling_price' => $variant['selling_price'],
+                        'attribute_value_ids' => $variant['attribute_value_ids'] ?? [],
+                        'is_active' => $variant['is_active'] ?? true,
+                    ];
+
+                    if (isset($variant['id']) && !empty($variant['id'])) {
+                        $existingVariant = $product->variants()->findOrFail($variant['id']);
+                        $existingVariant->update($variantData);
+                        $incomingVariantIds[] = $existingVariant->id;
+                        $targetVariant = $existingVariant;
+                    } else {
+                        $newVariant = $product->variants()->create($variantData);
+                        $incomingVariantIds[] = $newVariant->id;
+                        $targetVariant = $newVariant;
+                    }
+
+                    // Handle variant stock update if specified
+                    if (isset($variant['stock'])) {
+                        $warehouse = \App\Modules\Inventory\Models\Warehouse::firstOrCreate(
+                            ['code' => 'WH-MAIN'],
+                            ['name' => 'Main Warehouse', 'type' => 'own', 'is_active' => true]
+                        );
+
+                        $location = \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
+                            ['code' => 'WH-MAIN'],
+                            [
+                                'warehouse_id' => $warehouse->id,
+                                'name' => 'Main Warehouse',
+                                'type' => 'storage',
+                                'is_active' => true
+                            ]
+                        );
+
+                        $stockLevel = \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
+                            'product_id' => $product->id,
+                            'variant_id' => $targetVariant->id,
+                            'location_id' => $location->id,
+                        ], [
+                            'quantity_on_hand' => 0,
+                            'quantity_committed' => 0,
+                            'quantity_on_order' => 0,
+                        ]);
+
+                        $diff = $variant['stock'] - $stockLevel->quantity_on_hand;
+                        if ($diff != 0) {
+                            $stockService = app(\App\Modules\Inventory\Services\StockService::class);
+                            if ($diff > 0) {
+                                $stockService->receiveStock($product->id, $location->id, $diff, 0, ['type' => 'correction'], null, null, null, $targetVariant->id);
+                            } else {
+                                $stockService->issueStock($product->id, $location->id, abs($diff), ['type' => 'correction', 'movement_type' => 'adjustment'], null, null, $targetVariant->id);
+                            }
+                        }
+                    }
+                }
+
+                // Delete variants that were removed in the frontend payload
+                $product->variants()->whereNotIn('id', $incomingVariantIds)->delete();
+            }
+        });
+
+        $product->load(['category', 'barcodes', 'variants.stockLevels']);
 
         return $this->successResponse(new ProductResource($product));
     }

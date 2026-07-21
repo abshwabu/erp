@@ -24,4 +24,9 @@ class ProductVariant extends InventoryModel
     {
         return $this->belongsTo(Product::class, 'product_id');
     }
+
+    public function stockLevels(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StockLevel::class, 'variant_id');
+    }
 }

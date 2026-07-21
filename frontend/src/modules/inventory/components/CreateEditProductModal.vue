@@ -3,12 +3,11 @@ import { ref, reactive, watch, computed } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
-import { X, Plus, Trash2, Image as ImageIcon, Loader2 } from '@lucide/vue'
+import { X, Plus, Trash2, Image as ImageIcon, Sparkles, Check, AlertCircle } from '@lucide/vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import UiBadge from '@/components/ui/UiBadge.vue'
 import CreateCategoryModal from './CreateCategoryModal.vue'
 import type { Product, ProductCategory, ProductType, ProductStatus } from '@/types/inventory'
 
@@ -45,10 +44,37 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 
+// local attributes for variant generator
+const optionTemplates = ref([
+  { name: 'Size', values: '' },
+  { name: 'Color', values: '' }
+])
+
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
+    const rawProd = newProduct as any
+    const mappedVariants = Array.isArray(rawProd.variants)
+      ? rawProd.variants.map((v: any) => ({
+          id: v.id,
+          sku: v.sku,
+          name: v.name,
+          costPrice: typeof v.cost_price === 'number' ? (v.cost_price / 100) : (typeof v.costPrice === 'number' ? v.costPrice : 0),
+          sellingPrice: typeof v.selling_price === 'number' ? (v.selling_price / 100) : (typeof v.sellingPrice === 'number' ? v.sellingPrice : 0),
+          attribute_value_ids: v.attribute_value_ids || [],
+          is_active: v.is_active !== false,
+          stock: v.stock || 0
+        }))
+      : []
+
     Object.assign(form, {
       ...newProduct,
+      categoryId: newProduct.category?.id || newProduct.categoryId || undefined,
+      costPrice: typeof rawProd.cost_price === 'number' ? (rawProd.cost_price / 100) : (typeof rawProd.costPrice === 'number' ? rawProd.costPrice : 0),
+      sellingPrice: typeof rawProd.selling_price === 'number' ? (rawProd.selling_price / 100) : (typeof rawProd.sellingPrice === 'number' ? rawProd.sellingPrice : 0),
+      minSellingPrice: typeof rawProd.min_selling_price === 'number' ? (rawProd.min_selling_price / 100) : (typeof rawProd.minSellingPrice === 'number' ? rawProd.minSellingPrice : 0),
+      maxSellingPrice: typeof rawProd.max_selling_price === 'number' ? (rawProd.max_selling_price / 100) : (typeof rawProd.maxSellingPrice === 'number' ? rawProd.maxSellingPrice : 0),
+      variants: mappedVariants,
+      hasVariants: !!(rawProd.has_variants ?? newProduct.hasVariants),
       autoGenerateSku: false
     })
   } else {
@@ -70,6 +96,10 @@ watch(() => props.product, (newProduct) => {
       tags: [],
       autoGenerateSku: true
     })
+    optionTemplates.value = [
+      { name: 'Size', values: '' },
+      { name: 'Color', values: '' }
+    ]
   }
 }, { immediate: true })
 
@@ -81,15 +111,108 @@ const validate = () => {
   if (!form.categoryId) errors.categoryId = 'Category is required'
   if (form.sellingPrice <= 0) errors.sellingPrice = 'Selling price must be greater than 0'
   
+  if (form.hasVariants && form.variants.length === 0) {
+    errors.variants = 'Please add at least one variant configuration.'
+  }
+  
   return Object.keys(errors).length === 0
+}
+
+const addOptionTemplate = () => {
+  optionTemplates.value.push({ name: '', values: '' })
+}
+
+const removeOptionTemplate = (idx: number) => {
+  optionTemplates.value.splice(idx, 1)
+}
+
+const generateVariants = () => {
+  // Filter options that have a name and non-empty values
+  const activeOptions = optionTemplates.value.filter(o => o.name.trim() && o.values.trim())
+  if (activeOptions.length === 0) return
+
+  // cartesian helper
+  const cartesian = (sets: string[][]): string[][] => {
+    return sets.reduce<string[][]>((acc, set) => {
+      return acc.flatMap(x => set.map(y => [...x, y]))
+    }, [[]])
+  }
+
+  const optionSets = activeOptions.map(o => 
+    o.values.split(',').map(v => v.trim()).filter(Boolean)
+  )
+
+  if (optionSets.some(s => s.length === 0)) return
+
+  const combos = cartesian(optionSets)
+  const baseSku = form.sku || form.name.substring(0, 3).toUpperCase().replace(/\s+/g, '')
+
+  const generated = combos.map((combo) => {
+    const nameSuffix = combo.join(' / ')
+    const skuSuffix = combo.join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '')
+    const generatedSku = `${baseSku}-${skuSuffix}`
+    
+    return {
+      sku: generatedSku,
+      name: `${form.name} - ${nameSuffix}`,
+      costPrice: form.costPrice,
+      sellingPrice: form.sellingPrice,
+      is_active: true,
+      stock: 0,
+      attribute_value_ids: combo
+    }
+  })
+
+  // Merge or replace
+  form.variants = [...form.variants, ...generated]
+}
+
+const addVariantManually = () => {
+  const baseSku = form.sku || form.name.substring(0, 3).toUpperCase().replace(/\s+/g, '')
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase()
+  form.variants.push({
+    sku: `${baseSku}-${randomSuffix}`,
+    name: `${form.name} - Custom`,
+    costPrice: form.costPrice,
+    sellingPrice: form.sellingPrice,
+    is_active: true,
+    stock: 0,
+    attribute_value_ids: []
+  })
+}
+
+const removeVariant = (index: number) => {
+  form.variants.splice(index, 1)
 }
 
 const mutation = useMutation({
   mutationFn: (data: any) => {
-    if (isEdit.value && props.product) {
-      return inventoryApi.updateProduct(props.product.id, data)
+    // Convert decimal pricing to cents
+    const payload = {
+      ...data,
+      sku: data.sku || undefined, // let backend autogenerate if empty
+      cost_price: Math.round(data.costPrice * 100),
+      selling_price: Math.round(data.sellingPrice * 100),
+      min_selling_price: Math.round((data.minSellingPrice || 0) * 100),
+      max_selling_price: Math.round((data.maxSellingPrice || 0) * 100),
+      variants: data.hasVariants
+        ? data.variants.map((v: any) => ({
+            id: v.id || undefined,
+            sku: v.sku,
+            name: v.name,
+            cost_price: Math.round((v.costPrice || 0) * 100),
+            selling_price: Math.round((v.sellingPrice || 0) * 100),
+            is_active: v.is_active !== false,
+            stock: v.stock || 0,
+            attribute_value_ids: v.attribute_value_ids || []
+          }))
+        : []
     }
-    return inventoryApi.createProduct(data)
+
+    if (isEdit.value && props.product) {
+      return inventoryApi.updateProduct(props.product.id, payload)
+    }
+    return inventoryApi.createProduct(payload)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
@@ -104,19 +227,6 @@ const handleSubmit = () => {
 }
 
 const tabs = ['General', 'Pricing', 'Variants', 'Images']
-
-const addVariant = () => {
-  form.variants.push({
-    sku: '',
-    attributes: {},
-    price: form.sellingPrice,
-    stock: 0
-  })
-}
-
-const removeVariant = (index: number) => {
-  form.variants.splice(index, 1)
-}
 
 function handleCategoryCreated(newCat: any) {
   if (newCat?.id) {
@@ -134,8 +244,8 @@ function handleCategoryCreated(newCat: any) {
   >
     <form id="productForm" @submit.prevent="handleSubmit">
       <TabGroup>
-        <div class="flex flex-col h-[600px]">
-          <TabList class="flex space-x-1 rounded-xl bg-slate-100 p-1 mb-6">
+        <div class="flex flex-col h-[620px]">
+          <TabList class="flex space-x-1 rounded-xl bg-slate-100 p-1 mb-6 shrink-0">
             <Tab
               v-for="tab in tabs"
               :key="tab"
@@ -143,12 +253,12 @@ function handleCategoryCreated(newCat: any) {
               as="template"
             >
               <button
+                type="button"
                 :class="[
-                  'w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all',
-                  'ring-white ring-opacity-60 ring-offset-2 ring-offset-primary-400 focus:outline-none focus:ring-2',
+                  'w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 outline-none',
                   selected
-                    ? 'bg-white text-primary-700 shadow'
-                    : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800'
+                    ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
+                    : 'text-slate-500 hover:text-slate-800'
                 ]"
               >
                 {{ tab }}
@@ -198,7 +308,7 @@ function handleCategoryCreated(newCat: any) {
                       :disabled="form.autoGenerateSku"
                       :error="errors.sku"
                     />
-                    <label class="flex items-center text-xs text-slate-500">
+                    <label class="flex items-center text-xs text-slate-500 cursor-pointer">
                       <input type="checkbox" v-model="form.autoGenerateSku" class="mr-2 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                       Auto-generate SKU
                     </label>
@@ -272,34 +382,105 @@ function handleCategoryCreated(newCat: any) {
               </TabPanel>
 
               <!-- Variants Tab -->
-              <TabPanel class="space-y-4 outline-none">
-                <div class="flex items-center justify-between">
+              <TabPanel class="space-y-6 outline-none">
+                <div class="flex items-center justify-between border-b pb-4">
                   <div class="flex items-center space-x-2">
-                    <input type="checkbox" v-model="form.hasVariants" id="hasVariants" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-                    <label for="hasVariants" class="text-sm font-medium text-slate-700">This product has variants</label>
+                    <input type="checkbox" v-model="form.hasVariants" id="hasVariants" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
+                    <label for="hasVariants" class="text-sm font-semibold text-slate-800 cursor-pointer">This product has variants</label>
                   </div>
-                  <UiButton v-if="form.hasVariants" type="button" size="sm" variant="outline" @click="addVariant">
-                    <Plus class="h-4 w-4 mr-1" /> Add Variant
-                  </UiButton>
+                  <div v-if="form.hasVariants" class="flex items-center gap-2">
+                    <UiButton type="button" size="sm" variant="ghost" @click="addVariantManually">
+                      <Plus class="h-4 w-4 mr-1" /> Add Manually
+                    </UiButton>
+                  </div>
                 </div>
 
-                <div v-if="form.hasVariants" class="space-y-3">
-                  <div v-for="(variant, index) in form.variants" :key="index" class="p-4 border rounded-lg bg-slate-50 relative group">
-                    <button @click="removeVariant(index)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 class="h-4 w-4" />
-                    </button>
-                    <div class="grid grid-cols-3 gap-4">
-                      <UiInput v-model="variant.sku" label="Variant SKU" size="sm" />
-                      <UiInput v-model.number="variant.price" type="number" label="Price Override" size="sm" />
-                      <UiInput v-model.number="variant.stock" type="number" label="Initial Stock" size="sm" />
+                <div v-if="errors.variants" class="p-3 bg-red-50 text-red-700 text-xs font-semibold rounded-lg border border-red-200 flex items-center gap-1.5">
+                  <AlertCircle class="w-4 h-4 shrink-0" />
+                  {{ errors.variants }}
+                </div>
+
+                <div v-if="form.hasVariants" class="space-y-6">
+                  <!-- Variant Configurator / Generator -->
+                  <div class="p-4 border border-slate-200 rounded-xl bg-slate-50/50 space-y-4">
+                    <div class="flex justify-between items-center">
+                      <h4 class="text-xs font-bold text-slate-700 tracking-wide uppercase">Variant Option Generator</h4>
+                      <UiButton type="button" size="sm" variant="outline" @click="addOptionTemplate">
+                        <Plus class="w-3.5 h-3.5 mr-1" /> Add Option
+                      </UiButton>
+                    </div>
+
+                    <div class="space-y-3">
+                      <div v-for="(opt, idx) in optionTemplates" :key="idx" class="flex gap-4 items-end">
+                        <div class="w-1/3">
+                          <UiInput v-model="opt.name" label="Option Name" placeholder="e.g. Size" size="sm" />
+                        </div>
+                        <div class="flex-1">
+                          <UiInput v-model="opt.values" label="Values (separated by comma)" placeholder="e.g. S, M, L" size="sm" />
+                        </div>
+                        <button type="button" @click="removeOptionTemplate(idx)" class="p-2 text-slate-400 hover:text-red-500">
+                          <Trash2 class="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                      <UiButton type="button" size="sm" variant="secondary" @click="generateVariants" class="shadow-sm">
+                        <Sparkles class="w-4 h-4 mr-1.5 text-blue-500" /> Generate Combinations
+                      </UiButton>
                     </div>
                   </div>
-                  <div v-if="form.variants.length === 0" class="text-center py-8 text-slate-500 border border-dashed rounded-lg">
-                    No variants added yet.
+
+                  <!-- Variants Grid List -->
+                  <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between">
+                      <span class="text-xs font-bold text-slate-700 tracking-wide uppercase">Variants Configuration ({{ form.variants.length }})</span>
+                    </div>
+
+                    <div class="divide-y divide-slate-100 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <div v-for="(v, index) in form.variants" :key="index" class="p-4 flex flex-col md:flex-row gap-4 items-start md:items-end relative group hover:bg-slate-50/40">
+                        <button type="button" @click="removeVariant(index)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500">
+                          <Trash2 class="h-4 w-4" />
+                        </button>
+                        
+                        <div class="w-full md:w-1/3 space-y-1">
+                          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Variant Details</label>
+                          <input type="text" v-model="v.name" class="block w-full border border-slate-300 rounded-md py-1.5 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" placeholder="Name" required />
+                        </div>
+                        <div class="w-full md:flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div class="space-y-1">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">SKU</label>
+                            <input type="text" v-model="v.sku" class="block w-full border border-slate-300 rounded-md py-1.5 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white font-mono" placeholder="SKU" required />
+                          </div>
+                          <div class="space-y-1">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Cost Price</label>
+                            <input type="number" v-model.number="v.costPrice" step="0.01" class="block w-full border border-slate-300 rounded-md py-1.5 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" placeholder="0.00" />
+                          </div>
+                          <div class="space-y-1">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Sale Price</label>
+                            <input type="number" v-model.number="v.sellingPrice" step="0.01" class="block w-full border border-slate-300 rounded-md py-1.5 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" placeholder="0.00" required />
+                          </div>
+                          <div class="space-y-1">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Initial Stock</label>
+                            <input type="number" v-model.number="v.stock" class="block w-full border border-slate-300 rounded-md py-1.5 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" placeholder="0" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div v-if="form.variants.length === 0" class="text-center py-12 text-slate-400">
+                        <Sparkles class="w-8 h-8 mx-auto mb-2 text-slate-300 animate-pulse" />
+                        <span class="text-sm font-medium">No variants configured yet. Generate combinations or add manually!</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div v-else class="bg-blue-50 p-4 rounded-lg text-sm text-blue-700">
-                  Variants allow you to offer different versions of the same product, such as different sizes or colors.
+
+                <div v-else class="bg-blue-50/50 p-4 border border-blue-100 rounded-xl flex items-start gap-3">
+                  <Sparkles class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div class="text-sm text-blue-800">
+                    <p class="font-semibold">Looking to configure variants?</p>
+                    <p class="text-xs text-blue-700/80 mt-1">Variants enable you to track inventory for different attributes of this item (e.g. Size, Color, Weight, Material) with independent SKUs, pricing overrides, and stock levels.</p>
+                  </div>
                 </div>
               </TabPanel>
 

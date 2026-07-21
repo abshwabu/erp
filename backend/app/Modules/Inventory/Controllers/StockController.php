@@ -78,6 +78,7 @@ class StockController extends BaseController
             ->map(function ($level) {
                 return [
                     'location_id' => $level->location_id,
+                    'variant_id' => $level->variant_id,
                     'location_name' => $level->location->name ?? null,
                     'location_code' => $level->location->code ?? null,
                     'quantity_on_hand' => $level->quantity_on_hand,

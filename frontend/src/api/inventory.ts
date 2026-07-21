@@ -63,6 +63,7 @@ export const inventoryApi = {
   createStockAdjustment(data: any) {
     const payload = {
       product_id: data.product_id || data.productId,
+      variant_id: data.variant_id || data.variantId || undefined,
       location_id: data.location_id || data.locationId,
       quantity: Math.abs(data.quantity),
       type: data.type || 'add',

@@ -185,17 +185,50 @@ class StockService
                     'user_id'          => $userId,
                 ]);
 
+                // Lot Tracking
+                if ($product->track_lots && $lot) {
+                    $lotTracking = LotTracking::where('product_id', $product->id)
+                        ->where('lot_number', $lot)
+                        ->where('location_id', $level->location_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($lotTracking && $lotTracking->quantity_remaining >= $deduct) {
+                        $lotTracking->decrement('quantity_remaining', $deduct);
+                    }
+                }
+
+                // Serial Number Tracking
+                if ($product->track_serial_numbers && $serial) {
+                    $serialNum = SerialNumber::where('product_id', $product->id)
+                        ->where('serial_number', $serial)
+                        ->where('location_id', $level->location_id)
+                        ->where('status', 'in_stock')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($serialNum) {
+                        $serialNum->update([
+                            'status' => 'sold',
+                            'sold_at' => Carbon::now(),
+                            'location_id' => null,
+                        ]);
+                    }
+                }
+
+                event(new StockMovementCreated($movement));
                 $remainingQty -= $deduct;
                 $lastMovement = $movement;
             }
 
             if ($remainingQty > 0 || !$lastMovement) {
+                $deduct = $remainingQty > 0 ? $remainingQty : $qty;
                 $lastMovement = StockMovement::create([
                     'product_id'       => $product->id,
                     'variant_id'       => $variantId,
                     'from_location_id' => $preferredLocation->id,
                     'to_location_id'   => null,
-                    'quantity'         => $remainingQty > 0 ? $remainingQty : $qty,
+                    'quantity'         => $deduct,
                     'type'             => $ref['movement_type'] ?? 'sale',
                     'reference_type'   => $ref['type'] ?? null,
                     'reference_id'     => $ref['id'] ?? null,
@@ -205,35 +238,42 @@ class StockService
                     'currency_code'    => $product->currency_code ?: 'USD',
                     'user_id'          => $userId,
                 ]);
+
+                // Lot Tracking
+                if ($product->track_lots && $lot) {
+                    $lotTracking = LotTracking::where('product_id', $product->id)
+                        ->where('lot_number', $lot)
+                        ->where('location_id', $preferredLocation->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($lotTracking && $lotTracking->quantity_remaining >= $deduct) {
+                        $lotTracking->decrement('quantity_remaining', $deduct);
+                    }
+                }
+
+                // Serial Number Tracking
+                if ($product->track_serial_numbers && $serial) {
+                    $serialNum = SerialNumber::where('product_id', $product->id)
+                        ->where('serial_number', $serial)
+                        ->where('location_id', $preferredLocation->id)
+                        ->where('status', 'in_stock')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($serialNum) {
+                        $serialNum->update([
+                            'status' => 'sold',
+                            'sold_at' => Carbon::now(),
+                            'location_id' => null,
+                        ]);
+                    }
+                }
+
+                event(new StockMovementCreated($lastMovement));
             }
 
             return $lastMovement;
-        });
-    }
-
-            // Serial Number Tracking
-            if ($product->track_serial_numbers && $serial) {
-                $serialNum = SerialNumber::where('product_id', $product->id)
-                    ->where('serial_number', $serial)
-                    ->where('location_id', $location->id)
-                    ->where('status', 'in_stock')
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$serialNum) {
-                    throw new InsufficientStockException("Serial number {$serial} is not in stock at this location.");
-                }
-
-                $serialNum->update([
-                    'status' => 'sold',
-                    'sold_at' => Carbon::now(),
-                    'location_id' => null,
-                ]);
-            }
-
-            event(new StockMovementCreated($movement));
-
-            return $movement;
         });
     }
 
