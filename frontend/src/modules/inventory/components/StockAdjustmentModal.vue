@@ -10,7 +10,7 @@ import { Info } from '@lucide/vue'
 
 interface Props {
   modelValue: boolean
-  productId?: string | number
+  productId?: string
 }
 
 const props = defineProps<Props>()
@@ -20,9 +20,9 @@ const queryClient = useQueryClient()
 const errorMsg = ref('')
 
 const form = reactive({
-  productId: props.productId || '' as string | number,
-  variantId: '' as string | number,
-  locationId: '' as string | number,
+  productId: props.productId || '' as string,
+  variantId: '' as string,
+  locationId: '' as string,
   quantity: 1,
   type: 'add' as 'add' | 'remove',
   reason: 'stock_take',
@@ -138,19 +138,23 @@ watch([products, locations, productStockLevels, () => props.productId], () => {
 }, { immediate: true })
 
 const mutation = useMutation({
-  mutationFn: (data: any) => inventoryApi.createStockAdjustment(data),
+  mutationFn: () => inventoryApi.createStockAdjustment({
+    product_id: String(form.productId),
+    location_id: String(form.locationId),
+    quantity: Math.abs(Number(form.quantity)),
+    type: form.type,
+    reason: form.reason,
+    notes: form.notes || undefined,
+    variant_id: form.variantId ? String(form.variantId) : undefined,
+  }),
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'product-stock'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory'] })
     emit('saved')
     emit('update:modelValue', false)
     errorMsg.value = ''
   },
   onError: (err: any) => {
-    errorMsg.value = err.response?.data?.message || 'Failed to apply stock adjustment.'
+    errorMsg.value = err?.message || err.response?.data?.message || 'Failed to apply stock adjustment.'
   }
 })
 
@@ -178,7 +182,7 @@ const handleSubmit = () => {
     return
   }
 
-  mutation.mutate(form)
+  mutation.mutate()
 }
 </script>
 

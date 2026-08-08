@@ -43,8 +43,8 @@ class StockController extends BaseController
 
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('sku', 'ilike', "%{$search}%");
             });
         }
 
@@ -176,12 +176,13 @@ class StockController extends BaseController
     {
         $query = StockMovement::query()->with(['product', 'fromLocation', 'toLocation', 'user']);
 
-        if ($request->filled('product_id')) {
-            $query->where('product_id', $request->input('product_id'));
+        $productId = $request->input('product_id', $request->input('productId'));
+        if (! empty($productId)) {
+            $query->where('product_id', $productId);
         }
 
-        if ($request->filled('location_id')) {
-            $locationId = $request->input('location_id');
+        $locationId = $request->input('location_id', $request->input('locationId'));
+        if (! empty($locationId)) {
             $query->where(function ($q) use ($locationId) {
                 $q->where('from_location_id', $locationId)
                   ->orWhere('to_location_id', $locationId);
@@ -192,16 +193,61 @@ class StockController extends BaseController
             $query->where('type', $request->input('type'));
         }
 
-        // Sort by created_at descending (latest movements first)
+        $startDate = $request->input('start_date', $request->input('startDate'));
+        if (! empty($startDate)) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        $endDate = $request->input('end_date', $request->input('endDate'));
+        if (! empty($endDate)) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        if ($search = trim((string) $request->input('search', ''))) {
+            $query->whereHas('product', function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('sku', 'ilike', "%{$search}%");
+            });
+        }
+
         $query->orderBy('created_at', 'desc');
 
-        // Since paginatedResponse returns PaginatedCollection, we can use it or wrap it
-        // To be safe, we can manually paginate and return a paginated collection response
         $perPage = (int) $request->input('per_page', 25);
         $paginator = $query->paginate($perPage);
 
+        $items = collect($paginator->items())->map(function (StockMovement $movement) {
+            $direction = 'in';
+            if ($movement->from_location_id && ! $movement->to_location_id) {
+                $direction = 'out';
+            } elseif ($movement->from_location_id && $movement->to_location_id) {
+                $direction = 'transfer';
+            }
+
+            return [
+                'id' => $movement->id,
+                'product_id' => $movement->product_id,
+                'product_name' => $movement->product?->name,
+                'product_sku' => $movement->product?->sku,
+                'variant_id' => $movement->variant_id,
+                'type' => $movement->type,
+                'direction' => $direction,
+                'quantity' => (int) $movement->quantity,
+                'from_location_id' => $movement->from_location_id,
+                'from_location_name' => $movement->fromLocation?->name,
+                'to_location_id' => $movement->to_location_id,
+                'to_location_name' => $movement->toLocation?->name,
+                'reference_type' => $movement->reference_type,
+                'reference_id' => $movement->reference_id,
+                'unit_cost' => (int) $movement->unit_cost,
+                'notes' => $movement->notes,
+                'user_id' => $movement->user_id,
+                'user_name' => $movement->user?->name,
+                'created_at' => $movement->created_at?->toIso8601String(),
+            ];
+        });
+
         return response()->json([
-            'data' => $paginator->items(),
+            'data' => $items,
             'links' => [
                 'first' => $paginator->url(1),
                 'last' => $paginator->url($paginator->lastPage()),
@@ -213,7 +259,7 @@ class StockController extends BaseController
                 'last_page' => $paginator->lastPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
-            ]
+            ],
         ]);
     }
 
@@ -251,25 +297,29 @@ class StockController extends BaseController
 
         $products = Product::with('stockLevels')->get();
         foreach ($products as $product) {
+            $hasSetting = $settings->contains(fn ($s) => $s->product_id === $product->id);
+            if ($hasSetting) {
+                continue;
+            }
+
             $available = $product->relationLoaded('stockLevels')
                 ? (int) ($product->stockLevels->sum('quantity_on_hand') - $product->stockLevels->sum('quantity_committed'))
                 : 0;
 
-            if ($available <= 5) {
+            // Only flag zero/out-of-stock when no reorder setting exists (no magic "5" threshold)
+            if ($available <= 0) {
                 $key = $product->id . '_all';
-                if (!isset($lowStockMap[$key])) {
-                    $lowStockMap[$key] = [
-                        'product_id' => $product->id,
-                        'product_name' => $product->name,
-                        'sku' => $product->sku,
-                        'location_id' => null,
-                        'location_name' => 'All Locations',
-                        'min_quantity' => 5,
-                        'max_quantity' => 20,
-                        'reorder_quantity' => 10,
-                        'available_quantity' => $available,
-                    ];
-                }
+                $lowStockMap[$key] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'sku' => $product->sku,
+                    'location_id' => null,
+                    'location_name' => 'All Locations',
+                    'min_quantity' => 0,
+                    'max_quantity' => null,
+                    'reorder_quantity' => null,
+                    'available_quantity' => $available,
+                ];
             }
         }
 

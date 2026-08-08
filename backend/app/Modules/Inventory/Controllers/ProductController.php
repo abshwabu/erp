@@ -23,10 +23,34 @@ class ProductController extends BaseController
     /**
      * GET /api/inventory/products
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $query = Product::filter()
+        $query = Product::query()
             ->with(['category', 'barcodes', 'variants.stockLevels', 'stockLevels']);
+
+        if ($search = trim((string) $request->input('search', $request->input('filter.search', '')))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('sku', 'ilike', "%{$search}%");
+            });
+        }
+
+        $categoryId = $request->input('category_id', $request->input('filter.category_id'));
+        if (! empty($categoryId)) {
+            $query->where('category_id', $categoryId);
+        }
+
+        $status = $request->input('status', $request->input('filter.status'));
+        if (! empty($status)) {
+            $query->where('status', $status);
+        }
+
+        $type = $request->input('type', $request->input('filter.type'));
+        if (! empty($type)) {
+            $query->where('type', $type);
+        }
+
+        $query->orderBy('name');
 
         return $this->paginatedResponse($query, ProductResource::class)->response();
     }
@@ -40,7 +64,19 @@ class ProductController extends BaseController
             $validated = $request->validated();
             $barcodes  = $validated['barcodes'] ?? [];
             $variants  = $validated['variants'] ?? [];
-            unset($validated['barcodes'], $validated['variants']);
+            $initialStock = (int) ($validated['initial_stock'] ?? 0);
+            $requestedLocationId = $validated['location_id'] ?? null;
+            unset(
+                $validated['barcodes'],
+                $validated['variants'],
+                $validated['initial_stock'],
+                $validated['location_id']
+            );
+
+            if (empty($validated['sku'])) {
+                $validated['sku'] = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $validated['name']) ?: 'PRD', 0, 6))
+                    . '-' . strtoupper(substr(uniqid(), -5));
+            }
 
             $product = Product::create($validated);
 
@@ -54,24 +90,40 @@ class ProductController extends BaseController
                 ['name' => 'Main Warehouse', 'type' => 'own', 'is_active' => true]
             );
 
-            $location = \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
-                ['code' => 'WH-MAIN'],
-                [
-                    'warehouse_id' => $warehouse->id,
-                    'name' => 'Main Warehouse',
-                    'type' => 'storage',
-                    'is_active' => true
-                ]
-            );
+            $location = $requestedLocationId
+                ? \App\Modules\Inventory\Models\StockLocation::findOrFail($requestedLocationId)
+                : \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
+                    ['code' => 'WH-MAIN'],
+                    [
+                        'warehouse_id' => $warehouse->id,
+                        'name' => 'Main Warehouse',
+                        'type' => 'storage',
+                        'is_active' => true
+                    ]
+                );
 
             \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
                 'product_id' => $product->id,
                 'location_id' => $location->id,
+                'variant_id' => null,
             ], [
                 'quantity_on_hand' => 0,
                 'quantity_committed' => 0,
                 'quantity_on_order' => 0,
             ]);
+
+            if ($initialStock > 0 && empty($variants)) {
+                \App\Modules\Inventory\Models\StockMovement::create([
+                    'product_id' => $product->id,
+                    'to_location_id' => $location->id,
+                    'quantity' => $initialStock,
+                    'type' => 'opening',
+                    'reference_type' => 'InitialStock',
+                    'unit_cost' => (int) ($validated['cost_price'] ?? 0),
+                    'currency_code' => $product->currency_code ?: 'USD',
+                    'user_id' => auth()->id(),
+                ]);
+            }
 
             // Create variants
             foreach ($variants as $variant) {
@@ -84,18 +136,8 @@ class ProductController extends BaseController
                     'is_active' => $variant['is_active'] ?? true,
                 ]);
 
-                // Create initial stock level record for variant if stock is set
+                // Opening stock via movement only (observer updates levels — avoid double count)
                 if (isset($variant['stock']) && $variant['stock'] > 0) {
-                    \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
-                        'product_id' => $product->id,
-                        'variant_id' => $createdVariant->id,
-                        'location_id' => $location->id,
-                    ], [
-                        'quantity_on_hand' => $variant['stock'],
-                        'quantity_committed' => 0,
-                        'quantity_on_order' => 0,
-                    ]);
-
                     \App\Modules\Inventory\Models\StockMovement::create([
                         'product_id' => $product->id,
                         'variant_id' => $createdVariant->id,
@@ -104,7 +146,18 @@ class ProductController extends BaseController
                         'type' => 'opening',
                         'reference_type' => 'InitialStock',
                         'unit_cost' => (int) ($variant['cost_price'] ?? 0),
-                        'user_id' => auth()->id() ?? \App\Models\User::first()?->id,
+                        'currency_code' => $product->currency_code ?: 'USD',
+                        'user_id' => auth()->id(),
+                    ]);
+                } else {
+                    \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
+                        'product_id' => $product->id,
+                        'variant_id' => $createdVariant->id,
+                        'location_id' => $location->id,
+                    ], [
+                        'quantity_on_hand' => 0,
+                        'quantity_committed' => 0,
+                        'quantity_on_order' => 0,
                     ]);
                 }
             }

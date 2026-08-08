@@ -30,11 +30,12 @@ const form = reactive({
   sku: '',
   type: 'stockable' as ProductType,
   status: 'active' as ProductStatus,
-  categoryId: undefined as number | string | undefined,
+  categoryId: undefined as string | undefined,
   costPrice: 0,
   sellingPrice: 0,
   minSellingPrice: 0,
   maxSellingPrice: 0,
+  initialStock: 0,
   hasVariants: false,
   variants: [] as any[],
   images: [] as any[],
@@ -67,14 +68,21 @@ watch(() => props.product, (newProduct) => {
       : []
 
     Object.assign(form, {
-      ...newProduct,
-      categoryId: newProduct.category?.id || newProduct.categoryId || undefined,
-      costPrice: typeof rawProd.cost_price === 'number' ? (rawProd.cost_price / 100) : (typeof rawProd.costPrice === 'number' ? rawProd.costPrice : 0),
-      sellingPrice: typeof rawProd.selling_price === 'number' ? (rawProd.selling_price / 100) : (typeof rawProd.sellingPrice === 'number' ? rawProd.sellingPrice : 0),
-      minSellingPrice: typeof rawProd.min_selling_price === 'number' ? (rawProd.min_selling_price / 100) : (typeof rawProd.minSellingPrice === 'number' ? rawProd.minSellingPrice : 0),
-      maxSellingPrice: typeof rawProd.max_selling_price === 'number' ? (rawProd.max_selling_price / 100) : (typeof rawProd.maxSellingPrice === 'number' ? rawProd.maxSellingPrice : 0),
+      name: newProduct.name || '',
+      description: newProduct.description || '',
+      sku: newProduct.sku || '',
+      type: newProduct.type || 'stockable',
+      status: newProduct.status || 'active',
+      categoryId: newProduct.category?.id || undefined,
+      costPrice: typeof rawProd.cost_price === 'number' ? (rawProd.cost_price / 100) : 0,
+      sellingPrice: typeof rawProd.selling_price === 'number' ? (rawProd.selling_price / 100) : 0,
+      minSellingPrice: 0,
+      maxSellingPrice: 0,
+      initialStock: 0,
       variants: mappedVariants,
-      hasVariants: !!(rawProd.has_variants ?? newProduct.hasVariants),
+      hasVariants: !!(rawProd.has_variants ?? newProduct.has_variants),
+      images: [],
+      tags: [],
       autoGenerateSku: false
     })
   } else {
@@ -90,6 +98,7 @@ watch(() => props.product, (newProduct) => {
       sellingPrice: 0,
       minSellingPrice: 0,
       maxSellingPrice: 0,
+      initialStock: 0,
       hasVariants: false,
       variants: [],
       images: [],
@@ -108,8 +117,8 @@ const validate = () => {
   
   if (!form.name) errors.name = 'Name is required'
   if (!form.sku && !form.autoGenerateSku) errors.sku = 'SKU is required'
-  if (!form.categoryId) errors.categoryId = 'Category is required'
   if (form.sellingPrice <= 0) errors.sellingPrice = 'Selling price must be greater than 0'
+  if (form.initialStock < 0) errors.initialStock = 'Initial stock cannot be negative'
   
   if (form.hasVariants && form.variants.length === 0) {
     errors.variants = 'Please add at least one variant configuration.'
@@ -186,24 +195,27 @@ const removeVariant = (index: number) => {
 }
 
 const mutation = useMutation({
-  mutationFn: (data: any) => {
-    // Convert decimal pricing to cents
+  mutationFn: () => {
     const payload = {
-      ...data,
-      sku: data.sku || undefined, // let backend autogenerate if empty
-      cost_price: Math.round(data.costPrice * 100),
-      selling_price: Math.round(data.sellingPrice * 100),
-      min_selling_price: Math.round((data.minSellingPrice || 0) * 100),
-      max_selling_price: Math.round((data.maxSellingPrice || 0) * 100),
-      variants: data.hasVariants
-        ? data.variants.map((v: any) => ({
+      name: form.name,
+      description: form.description || undefined,
+      sku: form.autoGenerateSku ? undefined : (form.sku || undefined),
+      type: form.type,
+      status: form.status,
+      category_id: form.categoryId || null,
+      cost_price: Math.round(form.costPrice * 100),
+      selling_price: Math.round(form.sellingPrice * 100),
+      has_variants: form.hasVariants,
+      initial_stock: !form.hasVariants && !isEdit.value ? Math.max(0, Math.floor(form.initialStock || 0)) : undefined,
+      variants: form.hasVariants
+        ? form.variants.map((v: any) => ({
             id: v.id || undefined,
             sku: v.sku,
             name: v.name,
             cost_price: Math.round((v.costPrice || 0) * 100),
             selling_price: Math.round((v.sellingPrice || 0) * 100),
             is_active: v.is_active !== false,
-            stock: v.stock || 0,
+            stock: isEdit.value ? undefined : (v.stock || 0),
             attribute_value_ids: v.attribute_value_ids || []
           }))
         : []
@@ -215,7 +227,7 @@ const mutation = useMutation({
     return inventoryApi.createProduct(payload)
   },
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory'] })
     emit('saved')
     emit('update:modelValue', false)
   }
@@ -223,7 +235,7 @@ const mutation = useMutation({
 
 const handleSubmit = () => {
   if (!validate()) return
-  mutation.mutate(form)
+  mutation.mutate()
 }
 
 const tabs = ['General', 'Pricing', 'Variants', 'Images']
@@ -281,7 +293,7 @@ function handleCategoryCreated(newCat: any) {
                   
                   <div class="space-y-1">
                     <div class="flex justify-between items-center">
-                      <label class="block text-sm font-medium text-slate-700">Category <span class="text-red-500">*</span></label>
+                      <label class="block text-sm font-medium text-slate-700">Category</label>
                       <button
                         type="button"
                         @click="isCreateCategoryModalOpen = true"
@@ -292,9 +304,10 @@ function handleCategoryCreated(newCat: any) {
                     </div>
                     <UiSelect
                       v-model="form.categoryId"
-                      :options="Array.isArray(categories) ? categories.map(c => ({ label: c.name, value: c.id })) : []"
-                      :error="errors.categoryId"
-                      required
+                      :options="[
+                        { label: 'Uncategorized', value: '' },
+                        ...(Array.isArray(categories) ? categories.map(c => ({ label: c.name, value: c.id })) : [])
+                      ]"
                     />
                   </div>
                 </div>
@@ -379,6 +392,16 @@ function handleCategoryCreated(newCat: any) {
                     label="Max Selling Price"
                   />
                 </div>
+                <UiInput
+                  v-if="!isEdit && !form.hasVariants"
+                  v-model.number="form.initialStock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  label="Opening Stock"
+                  placeholder="0"
+                  :error="errors.initialStock"
+                />
               </TabPanel>
 
               <!-- Variants Tab -->

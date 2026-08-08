@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Edit2, 
-  Trash2, 
-  Eye, 
-  Download, 
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Edit2,
+  Trash2,
   Upload,
   Package,
-  Tag
+  Tag,
 } from '@lucide/vue'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -24,26 +22,34 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import CreateEditProductModal from '../components/CreateEditProductModal.vue'
 import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
-import type { Product, ProductFilters, ProductStatus, ProductType } from '@/types/inventory'
+import { formatCurrency } from '@/utils/format'
+import type { Product, ProductFilters, ProductStatus } from '@/types/inventory'
 
 const queryClient = useQueryClient()
 const page = ref(1)
 
 const filters = reactive<ProductFilters>({
   search: '',
-  categoryId: undefined,
+  category_id: undefined,
   status: undefined,
-  type: undefined
+  type: undefined,
 })
 
+watch(
+  () => [filters.search, filters.category_id, filters.status, filters.type],
+  () => {
+    page.value = 1
+  }
+)
+
 const { data, isLoading } = useQuery({
-  queryKey: ['inventory', 'products', { page, ...filters }],
-  queryFn: () => inventoryApi.getProducts(filters, page.value).then(res => res.data)
+  queryKey: ['inventory', 'products', page, filters],
+  queryFn: () => inventoryApi.getProducts(filters, page.value).then((res) => res.data),
 })
 
 const { data: categories } = useQuery({
   queryKey: ['inventory', 'categories'],
-  queryFn: () => inventoryApi.getCategories().then(res => res.data)
+  queryFn: () => inventoryApi.getCategories().then((res) => res.data),
 })
 
 const isCreateModalOpen = ref(false)
@@ -56,10 +62,10 @@ const columns = [
   { key: 'name', label: 'Product', sortable: true },
   { key: 'sku', label: 'SKU', sortable: true },
   { key: 'category', label: 'Category' },
-  { key: 'sellingPrice', label: 'Price', align: 'right' as const },
-  { key: 'stock', label: 'Stock', align: 'center' as const },
+  { key: 'selling_price', label: 'Price', align: 'right' as const },
+  { key: 'available_quantity', label: 'Available', align: 'center' as const },
   { key: 'status', label: 'Status' },
-  { key: 'actions', label: '', align: 'right' as const }
+  { key: 'actions', label: '', align: 'right' as const },
 ]
 
 const openCreateModal = () => {
@@ -73,13 +79,14 @@ const handleEdit = (product: Product) => {
 }
 
 const deleteMutation = useMutation({
-  mutationFn: (id: number) => inventoryApi.deleteProduct(id),
+  mutationFn: (id: string) => inventoryApi.deleteProduct(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
-  }
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
+  },
 })
 
-const handleDelete = (id: number) => {
+const handleDelete = (id: string) => {
   if (confirm('Are you sure you want to delete this product?')) {
     deleteMutation.mutate(id)
   }
@@ -87,12 +94,18 @@ const handleDelete = (id: number) => {
 
 const getStatusVariant = (status: ProductStatus) => {
   switch (status) {
-    case 'active': return 'success'
-    case 'inactive': return 'warning'
-    case 'archived': return 'danger'
-    default: return 'default'
+    case 'active':
+      return 'success'
+    case 'inactive':
+      return 'warning'
+    case 'archived':
+      return 'danger'
+    default:
+      return 'default'
   }
 }
+
+const money = (cents: number) => formatCurrency((cents || 0) / 100)
 </script>
 
 <template>
@@ -100,7 +113,7 @@ const getStatusVariant = (status: ProductStatus) => {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-slate-900">Products</h1>
-        <p class="text-slate-500 text-sm">Manage your inventory products and services.</p>
+        <p class="text-slate-500 text-sm">Manage your catalog and stocked items.</p>
       </div>
       <div class="flex items-center space-x-2">
         <UiButton variant="outline" size="sm" @click="isCreateCategoryModalOpen = true">
@@ -109,19 +122,15 @@ const getStatusVariant = (status: ProductStatus) => {
         <UiButton variant="outline" size="sm" @click="isImportModalOpen = true">
           <Upload class="h-4 w-4 mr-2" /> Import
         </UiButton>
-        <UiButton variant="outline" size="sm">
-          <Download class="h-4 w-4 mr-2" /> Export
-        </UiButton>
         <UiButton size="sm" @click="openCreateModal">
           <Plus class="h-4 w-4 mr-2" /> Add Product
         </UiButton>
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-4">
       <div class="flex-1 min-w-[240px]">
-        <UiInput v-model="filters.search" placeholder="Search products..." class="w-full">
+        <UiInput v-model="filters.search" placeholder="Search by name or SKU..." class="w-full">
           <template #prefix>
             <Search class="h-4 w-4 text-slate-400" />
           </template>
@@ -129,10 +138,10 @@ const getStatusVariant = (status: ProductStatus) => {
       </div>
       <div class="w-48">
         <UiSelect
-          v-model="filters.categoryId"
+          v-model="filters.category_id"
           :options="[
             { label: 'All Categories', value: '' },
-            ...(Array.isArray(categories) ? categories.map((c: any) => ({ label: c.name, value: c.id })) : [])
+            ...(Array.isArray(categories) ? categories.map((c) => ({ label: c.name, value: c.id })) : []),
           ]"
         />
       </div>
@@ -143,7 +152,7 @@ const getStatusVariant = (status: ProductStatus) => {
             { label: 'All Status', value: '' },
             { label: 'Active', value: 'active' },
             { label: 'Inactive', value: 'inactive' },
-            { label: 'Archived', value: 'archived' }
+            { label: 'Archived', value: 'archived' },
           ]"
         />
       </div>
@@ -154,48 +163,54 @@ const getStatusVariant = (status: ProductStatus) => {
             { label: 'All Types', value: '' },
             { label: 'Stockable', value: 'stockable' },
             { label: 'Consumable', value: 'consumable' },
-            { label: 'Service', value: 'service' }
+            { label: 'Service', value: 'service' },
           ]"
         />
       </div>
     </div>
 
-    <!-- Table -->
     <UiTable
       :columns="columns"
       :data="data?.data || []"
       :loading="isLoading"
-      empty-title="No products found"
-      empty-description="Try adjusting your filters or create a new product."
+      empty-title="No products yet"
+      empty-description="Create your first product to start tracking inventory."
     >
       <template #cell(image)="{ item }">
         <div class="h-10 w-10 rounded bg-slate-100 flex items-center justify-center overflow-hidden">
-          <img v-if="item.images?.[0]" :src="item.images[0].url" :alt="item.name" class="h-full w-full object-cover" />
+          <img
+            v-if="item.primary_image_url"
+            :src="item.primary_image_url"
+            :alt="item.name"
+            class="h-full w-full object-cover"
+          />
           <Package v-else :size="20" class="h-5 w-5 text-slate-400" />
         </div>
       </template>
-      
+
       <template #cell(name)="{ item }">
         <div>
           <div class="font-medium text-slate-900">{{ item.name }}</div>
-          <div class="text-xs text-slate-500">{{ item.type }}</div>
+          <div class="text-xs text-slate-500 capitalize">{{ item.type }}</div>
         </div>
+      </template>
+
+      <template #cell(sku)="{ value }">
+        <span class="font-mono text-xs text-slate-600">{{ value }}</span>
       </template>
 
       <template #cell(category)="{ item }">
         <span class="text-slate-600">{{ item.category?.name || 'Uncategorized' }}</span>
       </template>
 
-      <template #cell(sellingPrice)="{ value }">
-        <span class="font-medium">${{ value?.toFixed(2) || '0.00' }}</span>
+      <template #cell(selling_price)="{ value }">
+        <span class="font-medium">{{ money(value) }}</span>
       </template>
 
-      <template #cell(stock)="{ item }">
-        <div class="text-center">
-          <span :class="item.stock <= 5 ? 'text-red-600 font-bold' : 'text-slate-600'">
-            {{ item.stock || 0 }}
-          </span>
-        </div>
+      <template #cell(available_quantity)="{ item }">
+        <span :class="item.available_quantity <= 0 ? 'text-red-600 font-semibold' : 'text-slate-700'">
+          {{ item.available_quantity ?? 0 }}
+        </span>
       </template>
 
       <template #cell(status)="{ value }">
@@ -207,68 +222,63 @@ const getStatusVariant = (status: ProductStatus) => {
           <MenuButton class="p-2 hover:bg-slate-100 rounded-full transition-colors">
             <MoreHorizontal :size="16" class="h-4 w-4 text-slate-500" />
           </MenuButton>
-          <transition
-            enter-active-class="transition duration-100 ease-out"
-            enter-from-class="transform scale-95 opacity-0"
-            enter-to-class="transform scale-100 opacity-100"
-            leave-active-class="transition duration-75 ease-in"
-            leave-from-class="transform scale-100 opacity-100"
-            leave-to-class="transform scale-95 opacity-0"
+          <MenuItems
+            class="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-slate-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
           >
-            <MenuItems class="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-slate-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-              <div class="px-1 py-1">
-                <MenuItem v-slot="{ active }">
-                  <button :class="[active ? 'bg-primary-50 text-primary-700' : 'text-slate-700', 'group flex w-full items-center rounded-md px-2 py-2 text-sm']">
-                    <Eye :size="16" class="mr-2 h-4 w-4 text-slate-400" /> View Details
-                  </button>
-                </MenuItem>
-                <MenuItem v-slot="{ active }">
-                  <button @click="handleEdit(item)" :class="[active ? 'bg-primary-50 text-primary-700' : 'text-slate-700', 'group flex w-full items-center rounded-md px-2 py-2 text-sm']">
-                    <Edit2 :size="16" class="mr-2 h-4 w-4 text-slate-400" /> Edit Product
-                  </button>
-                </MenuItem>
-              </div>
-              <div class="px-1 py-1">
-                <MenuItem v-slot="{ active }">
-                  <button @click="handleDelete(item.id)" :class="[active ? 'bg-red-50 text-red-700' : 'text-slate-700', 'group flex w-full items-center rounded-md px-2 py-2 text-sm']">
-                    <Trash2 :size="16" class="mr-2 h-4 w-4 text-slate-400 group-hover:text-red-500" /> Delete
-                  </button>
-                </MenuItem>
-              </div>
-            </MenuItems>
-          </transition>
+            <div class="px-1 py-1">
+              <MenuItem v-slot="{ active }">
+                <button
+                  type="button"
+                  @click="handleEdit(item)"
+                  :class="[
+                    active ? 'bg-primary-50 text-primary-700' : 'text-slate-700',
+                    'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                  ]"
+                >
+                  <Edit2 :size="16" class="mr-2 h-4 w-4 text-slate-400" /> Edit Product
+                </button>
+              </MenuItem>
+            </div>
+            <div class="px-1 py-1">
+              <MenuItem v-slot="{ active }">
+                <button
+                  type="button"
+                  @click="handleDelete(item.id)"
+                  :class="[
+                    active ? 'bg-red-50 text-red-700' : 'text-slate-700',
+                    'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                  ]"
+                >
+                  <Trash2 :size="16" class="mr-2 h-4 w-4 text-slate-400 group-hover:text-red-500" /> Delete
+                </button>
+              </MenuItem>
+            </div>
+          </MenuItems>
         </Menu>
       </template>
     </UiTable>
 
-    <!-- Pagination -->
     <div v-if="data?.meta" class="flex justify-between items-center">
       <p class="text-sm text-slate-500">
-        Showing {{ (data.meta.currentPage - 1) * data.meta.perPage + 1 }} to {{ Math.min(data.meta.currentPage * data.meta.perPage, data.meta.total) }} of {{ data.meta.total }} products
+        Showing {{ data.meta.from ?? 0 }}–{{ data.meta.to ?? 0 }} of {{ data.meta.total }} products
       </p>
       <UiPagination
         :current-page="page"
         @update:current-page="page = $event"
-        :total-pages="data.meta.lastPage"
-        :has-next-page="data.meta.currentPage < data.meta.lastPage"
-        :has-prev-page="data.meta.currentPage > 1"
+        :total-pages="data.meta.last_page"
+        :has-next-page="data.meta.current_page < data.meta.last_page"
+        :has-prev-page="data.meta.current_page > 1"
       />
     </div>
 
-    <!-- Create/Edit Modal -->
     <CreateEditProductModal
       v-model="isCreateModalOpen"
       :product="selectedProduct"
       :categories="categories || []"
     />
 
-    <!-- Create Category Modal -->
-    <CreateCategoryModal
-      v-model="isCreateCategoryModalOpen"
-    />
+    <CreateCategoryModal v-model="isCreateCategoryModalOpen" />
 
-    <ImportModal
-      v-model="isImportModalOpen"
-    />
+    <ImportModal v-model="isImportModalOpen" />
   </div>
 </template>

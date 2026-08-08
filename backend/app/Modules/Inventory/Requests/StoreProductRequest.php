@@ -19,7 +19,7 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'sku'                  => ['required', 'string', 'max:100', 'unique:products,sku'],
+            'sku'                  => ['nullable', 'string', 'max:100', 'unique:products,sku'],
             'name'                 => ['required', 'string', 'max:255'],
             'description'          => ['nullable', 'string'],
             'type'                 => ['required', Rule::enum(ProductType::class)],
@@ -30,6 +30,8 @@ class StoreProductRequest extends FormRequest
             'has_variants'         => ['boolean'],
             'track_serial_numbers' => ['boolean'],
             'track_lots'           => ['boolean'],
+            'initial_stock'        => ['nullable', 'integer', 'min:0'],
+            'location_id'          => ['nullable', 'uuid', 'exists:stock_locations,id'],
 
             // Barcodes
             'barcodes'             => ['nullable', 'array'],
