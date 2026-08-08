@@ -184,7 +184,7 @@ class AuthController extends Controller
     {
         try {
             auth('api')->logout();
-        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+        } catch (\Throwable $e) {
             // Token might be already invalid or missing, continue
         }
 

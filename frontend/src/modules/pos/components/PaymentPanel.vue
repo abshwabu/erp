@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
-import { inventoryApi } from '@/api/inventory'
+import { useQueryClient } from '@tanstack/vue-query'
+import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
+import { useToast } from '@/composables/useToast'
 import ReceiptModal from './ReceiptModal.vue'
 import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone } from '@lucide/vue'
 
 const posStore = usePosStore()
 const queryClient = useQueryClient()
+const toast = useToast()
 const emit = defineEmits(['back', 'completed'])
 
 const showReceipt = ref(false)
 const lastOrderSummary = ref<any>(null)
 const isProcessing = ref(false)
-
-const { data: locations } = useQuery({
-  queryKey: ['inventory', 'locations'],
-  queryFn: () => inventoryApi.getLocations().then(res => res.data)
-})
+const paymentError = ref('')
 
 const paymentMethods = [
   { id: 'cash', name: 'Cash', icon: DollarSign },
@@ -68,58 +66,68 @@ function setQuickAmount(amt: number) {
 async function processPayment() {
   if (!isValid.value || isProcessing.value) return
   isProcessing.value = true
+  paymentError.value = ''
 
-  const receiptNum = 'REC-' + Math.floor(100000 + Math.random() * 900000)
-  const cartItems = [...posStore.cart]
-  const defaultLocId = (Array.isArray(locations.value) && locations.value.length > 0)
-    ? locations.value[0].id
-    : null
-
-  // 1. Deduct in local Pinia store immediately
-  cartItems.forEach(item => {
-    posStore.deductStock(item.id, item.quantity)
-  })
-
-  // 2. Persist stock reduction in backend DB for each sold item
-  if (defaultLocId) {
-    try {
-      await Promise.all(
-        cartItems.map(item =>
-          inventoryApi.createStockAdjustment({
-            product_id: item.id,
-            location_id: defaultLocId,
-            quantity: item.quantity,
-            type: 'remove',
-            reason: 'sale',
-            notes: `POS Sale Receipt ${receiptNum}`
-          })
-        )
-      )
-    } catch (err) {
-      console.error('Failed to persist POS stock reduction to backend:', err)
+  try {
+    const session = await posStore.ensureSession()
+    if (!session?.id) {
+      throw new Error('No open POS session')
     }
+
+    const cartItems = [...posStore.cart]
+    const tenderedCents = Math.round((amountTendered.value ?? grandTotal.value) * 100)
+    const totalCents = Math.round(grandTotal.value * 100)
+    const changeCents = Math.max(0, tenderedCents - totalCents)
+
+    const response = await posApi.checkout({
+      session_id: session.id,
+      location_id: session.terminal?.location_id ?? null,
+      items: cartItems.map(item => ({
+        product_id: String(item.id),
+        quantity: item.quantity,
+        unit_price_cents: Math.round((item.price || 0) * 100),
+      })),
+      payments: [{
+        method: selectedMethod.value,
+        amount_cents: selectedMethod.value === 'cash' ? tenderedCents : totalCents,
+        change_cents: selectedMethod.value === 'cash' ? changeCents : 0,
+      }],
+    })
+
+    const transaction = response.data.data
+
+    cartItems.forEach(item => {
+      posStore.deductStock(item.id, item.quantity)
+    })
+
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+
+    lastOrderSummary.value = {
+      items: cartItems,
+      subtotal: (transaction.subtotal_cents ?? Math.round(subtotal.value * 100)) / 100,
+      total: (transaction.total_cents ?? totalCents) / 100,
+      method: selectedMethod.value,
+      tendered: (amountTendered.value || grandTotal.value),
+      change: changeDue.value,
+      date: new Date().toLocaleString(),
+      receiptNumber: transaction.receipt_number,
+    }
+
+    showReceipt.value = true
+    posStore.clearCart()
+  } catch (err: any) {
+    const message = err?.errors?.items?.[0]
+      || err?.response?.data?.message
+      || err?.message
+      || 'Checkout failed'
+    paymentError.value = message
+    toast.error(message)
+  } finally {
+    isProcessing.value = false
   }
-
-  // 3. Invalidate Vue Query cache so page refreshes fetch updated stock levels
-  queryClient.invalidateQueries({ queryKey: ['inventory', 'stock'] })
-  queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
-  queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
-  queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
-
-  lastOrderSummary.value = {
-    items: cartItems,
-    subtotal: subtotal.value,
-    total: grandTotal.value,
-    method: selectedMethod.value,
-    tendered: amountTendered.value || grandTotal.value,
-    change: changeDue.value,
-    date: new Date().toLocaleString(),
-    receiptNumber: receiptNum
-  }
-
-  isProcessing.value = false
-  showReceipt.value = true
-  posStore.clearCart()
 }
 
 function handleReceiptClose() {
@@ -145,6 +153,13 @@ function handleReceiptClose() {
 
     <!-- Payment Body -->
     <div class="flex-1 overflow-y-auto p-4 space-y-5">
+      <div
+        v-if="paymentError"
+        class="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+      >
+        {{ paymentError }}
+      </div>
+
       <!-- Total Banner -->
       <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-lg shadow-blue-600/15 text-center">
         <span class="text-xs font-medium text-blue-200 uppercase tracking-wider block mb-1">Total Amount Due</span>

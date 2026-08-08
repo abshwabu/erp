@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProductGrid from '../components/ProductGrid.vue'
 import POSCart from '../components/POSCart.vue'
 import PaymentPanel from '../components/PaymentPanel.vue'
 import { usePosStore } from '../stores/posStore'
-import { ShoppingCart, Grid, ArrowLeft } from '@lucide/vue'
+import { ShoppingCart, Grid } from '@lucide/vue'
 
 const posStore = usePosStore()
 const showPayment = ref(false)
 const activeTab = ref<'catalog' | 'cart'>('catalog')
+const sessionError = ref('')
 
 const totalCartItems = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -16,6 +17,14 @@ const totalCartItems = computed(() => {
 
 const cartTotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+})
+
+onMounted(async () => {
+  try {
+    await posStore.ensureSession()
+  } catch (err: any) {
+    sessionError.value = err?.message || err?.response?.data?.message || 'Failed to open POS session'
+  }
 })
 
 function handleCheckout() {
@@ -35,13 +44,18 @@ function handlePaymentComplete() {
 
 <template>
   <div class="h-[calc(100vh-5rem)] w-full flex flex-col md:flex-row overflow-hidden bg-slate-100 rounded-xl border border-slate-200/80 shadow-sm relative">
-    
-    <!-- Mobile Header Navigation Tabs (Visible on screens < 768px) -->
+    <div
+      v-if="sessionError"
+      class="absolute inset-x-0 top-0 z-40 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm px-4 py-2"
+    >
+      {{ sessionError }}
+    </div>
+
     <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 shrink-0 z-20">
       <div class="flex items-center gap-2">
         <span class="font-bold text-sm tracking-tight">POS Terminal</span>
         <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
-          Online
+          {{ posStore.session ? 'Session Open' : 'Starting…' }}
         </span>
       </div>
 
@@ -72,7 +86,6 @@ function handlePaymentComplete() {
       </div>
     </div>
 
-    <!-- Left Column: Product Selection Grid -->
     <div
       class="flex-1 h-full overflow-hidden border-r border-slate-200/80 bg-slate-50 transition-all duration-200"
       :class="[activeTab === 'catalog' ? 'flex' : 'hidden md:flex']"
@@ -80,7 +93,6 @@ function handlePaymentComplete() {
       <ProductGrid />
     </div>
 
-    <!-- Right Column: Cart & Payment Checkout Panel -->
     <div
       class="w-full md:w-[380px] lg:w-[420px] xl:w-[460px] h-full bg-white border-l border-slate-200/80 shrink-0 flex flex-col transition-all duration-200"
       :class="[activeTab === 'cart' ? 'flex' : 'hidden md:flex']"
@@ -97,7 +109,6 @@ function handlePaymentComplete() {
       />
     </div>
 
-    <!-- Mobile Floating Checkout Footer Bar (Visible on mobile when in catalog tab with items in cart) -->
     <div
       v-if="activeTab === 'catalog' && totalCartItems > 0 && !showPayment"
       class="md:hidden absolute bottom-3 left-3 right-3 bg-slate-900 text-white p-3 rounded-2xl shadow-xl flex items-center justify-between z-30 border border-slate-700 animate-slide-up"
@@ -115,6 +126,5 @@ function handlePaymentComplete() {
         View Order
       </button>
     </div>
-
   </div>
 </template>

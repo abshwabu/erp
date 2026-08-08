@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { posApi, type PosSession } from '@/api/pos'
 
 export const usePosStore = defineStore('pos', () => {
   const catalog = ref<any[]>([])
   const cart = ref<any[]>([])
   const heldTransactions = ref<any[]>([])
   const isOnline = ref(true)
-  const session = ref<any | null>(null)
+  const session = ref<PosSession | null>(null)
+  const sessionLoading = ref(false)
   const offlineQueue = ref<any[]>([])
 
   const addToCart = (product: any, quantity = 1) => {
@@ -43,9 +45,36 @@ export const usePosStore = defineStore('pos', () => {
     }
   }
 
+  const ensureSession = async () => {
+    if (session.value?.status === 'open') return session.value
+
+    sessionLoading.value = true
+    try {
+      const current = await posApi.getCurrentSession()
+      if (current.data.data) {
+        session.value = current.data.data
+        return session.value
+      }
+
+      const terminals = await posApi.getTerminals()
+      const terminal = terminals.data.data?.[0]
+      if (!terminal) {
+        throw new Error('No POS terminal available. Create a stock location first.')
+      }
+
+      const opened = await posApi.openSession({
+        terminal_id: terminal.id,
+        opening_cash_cents: 0,
+      })
+      session.value = opened.data.data
+      return session.value
+    } finally {
+      sessionLoading.value = false
+    }
+  }
+
   const syncOfflineQueue = async () => {
     if (!isOnline.value || offlineQueue.value.length === 0) return
-    // Logic to push queue to backend
   }
 
   return {
@@ -54,12 +83,14 @@ export const usePosStore = defineStore('pos', () => {
     heldTransactions,
     isOnline,
     session,
+    sessionLoading,
     offlineQueue,
     addToCart,
     removeFromCart,
     updateQuantity,
     deductStock,
     clearCart,
+    ensureSession,
     syncOfflineQueue
   }
 })

@@ -151,7 +151,13 @@ const sendReminders = () => {
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
+      <div v-if="rows.length === 0" class="px-6 py-16 text-center">
+        <p class="text-base font-medium text-slate-900">No outstanding balances</p>
+        <p class="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+          Aging will appear here once invoices or bills with open balances exist. Until Sales/AP data is available, this report stays empty.
+        </p>
+      </div>
+      <table v-else class="min-w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"></th>

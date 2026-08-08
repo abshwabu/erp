@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import { ChevronDown, ChevronRight, Filter, Plus, Search, Upload, Pencil, Trash2 } from '@lucide/vue'
+import { ChevronDown, ChevronRight, Filter, Plus, Search, Pencil, Trash2 } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -25,8 +25,6 @@ const searchQuery = ref('')
 const expandedIds = ref<string[]>([])
 const isAccountModalOpen = ref(false)
 const selectedAccount = ref<Account | null>(null)
-const importFileName = ref('')
-const importInput = ref<HTMLInputElement | null>(null)
 
 const nameMapFromBackend: Record<string, string> = {
   'Asset': 'asset',
@@ -252,21 +250,6 @@ const handleDeleteAccount = async (id: string) => {
   }
 }
 
-const handleImport = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  if (input.files && input.files[0]) {
-    const file = input.files[0]
-    importFileName.value = file.name
-    try {
-      await accountingApi.importAccountsCsv(file)
-      await loadAccounts()
-      alert('CSV imported successfully!')
-    } catch (err) {
-      console.error('CSV import failed:', err)
-      alert('CSV import failed.')
-    }
-  }
-}
 </script>
 
 <template>
@@ -277,9 +260,6 @@ const handleImport = async (event: Event) => {
         <p class="text-sm text-slate-500">Browse the full account hierarchy and manage account definitions.</p>
       </div>
       <div class="flex flex-wrap gap-3">
-        <UiButton variant="outline" @click="importInput?.click()">
-          <Upload class="mr-2 h-4 w-4" /> Import CSV
-        </UiButton>
         <UiButton @click="openCreateAccount">
           <Plus class="mr-2 h-4 w-4" /> New Account
         </UiButton>
@@ -312,7 +292,6 @@ const handleImport = async (event: Event) => {
           </button>
         </div>
       </div>
-      <p v-if="importFileName" class="mt-3 text-sm text-slate-500">Selected file: {{ importFileName }}</p>
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -382,6 +361,5 @@ const handleImport = async (event: Event) => {
       @save="handleSaveAccount"
     />
 
-    <input ref="importInput" type="file" accept=".csv" class="hidden" @change="handleImport" />
   </div>
 </template>

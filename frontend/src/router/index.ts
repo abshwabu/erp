@@ -79,6 +79,18 @@ const router = createRouter({
           component: () => import('@/modules/inventory/pages/LowStockPage.vue'),
           meta: { title: 'Low Stock Alerts', permission: 'inventory.products.view' }
         },
+        {
+          path: 'warehouse',
+          name: 'warehouse',
+          component: () => import('@/modules/warehouse/pages/WarehousePage.vue'),
+          meta: { title: 'Warehouse', permission: 'warehouse.receive' }
+        },
+        {
+          path: 'procurement',
+          name: 'procurement',
+          component: () => import('@/modules/procurement/pages/PurchaseOrdersPage.vue'),
+          meta: { title: 'Procurement', permission: 'procurement.purchase_orders.view' }
+        },
         // HR Module
         {
           path: 'hr',
@@ -119,6 +131,41 @@ const router = createRouter({
           name: 'hr-org-chart',
           component: () => import('@/modules/hr/pages/OrgChartPage.vue'),
           meta: { title: 'Org Chart', permission: 'hr.employees.view' }
+        },
+        // Sales Module
+        {
+          path: 'sales',
+          redirect: 'sales/invoices',
+        },
+        {
+          path: 'sales/invoices',
+          name: 'sales-invoices',
+          component: () => import('@/modules/sales/pages/InvoicesPage.vue'),
+          meta: { title: 'Sales & Invoicing', permission: 'sales.invoices.create' }
+        },
+        {
+          path: 'payroll',
+          name: 'payroll',
+          component: () => import('@/modules/payroll/pages/PayrollPage.vue'),
+          meta: { title: 'Payroll', permission: 'payroll.runs.view' }
+        },
+        {
+          path: 'crm',
+          name: 'crm',
+          component: () => import('@/modules/crm/pages/CrmPage.vue'),
+          meta: { title: 'CRM', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'reporting',
+          name: 'reporting',
+          component: () => import('@/modules/reporting/pages/ReportingPage.vue'),
+          meta: { title: 'Reporting', permission: 'accounting.reports.view' }
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/modules/core/pages/SettingsPage.vue'),
+          meta: { title: 'Settings', permission: 'core.settings.view' }
         },
         // Accounting Module
         {
@@ -167,13 +214,19 @@ const router = createRouter({
           component: () => import('@/modules/accounting/pages/APAgingPage.vue'),
           meta: { title: 'AP Aging', permission: 'accounting.reports.view' }
         },
-        // Add more module routes here...
+        {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('@/modules/core/pages/RolesPage.vue'),
+          meta: { title: 'Users & Roles', permission: 'core.roles.view' }
+        },
       ]
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
-      component: () => import('@/views/dashboard/DashboardView.vue') // Placeholder for 404
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { title: 'Not Found', requiresAuth: false }
     }
   ]
 })

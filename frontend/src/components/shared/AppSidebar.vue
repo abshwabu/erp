@@ -15,7 +15,6 @@ import {
   Calculator,
   BarChart2,
   Calendar,
-  Settings,
   Shield,
   ChevronLeft,
   ChevronDown,
@@ -23,7 +22,8 @@ import {
   Box,
   ArrowRightLeft,
   AlertTriangle,
-  LogOut
+  LogOut,
+  Settings,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -38,6 +38,7 @@ const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
   'Human Resources': true,
   Accounting: true,
+  'Sales & Invoicing': true,
 })
 
 const toggleExpand = (name: string) => {
@@ -49,6 +50,7 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+// Modules with working routes
 const navigationGroups = [
   {
     title: 'OPERATIONS',
@@ -73,6 +75,12 @@ const navigationGroups = [
   {
     title: 'PEOPLE & CUSTOMERS',
     items: [
+      {
+        name: 'Sales & Invoicing',
+        to: '/sales/invoices',
+        icon: markRaw(FileText),
+        permission: 'sales.invoices.create',
+      },
       { 
         name: 'Human Resources', 
         icon: markRaw(Users), 
@@ -86,13 +94,12 @@ const navigationGroups = [
         ]
       },
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
-      { name: 'CRM', to: '/crm', icon: markRaw(UserCheck), permission: 'sales.orders.view' },
+      { name: 'CRM', to: '/crm', icon: markRaw(UserCheck), permission: 'crm.contacts.view' },
     ]
   },
   {
     title: 'FINANCE',
     items: [
-      { name: 'Sales & Invoicing', to: '/sales', icon: markRaw(FileText), permission: 'sales.invoices.create' },
       {
         name: 'Accounting',
         icon: markRaw(Calculator),
@@ -116,7 +123,7 @@ const navigationGroups = [
       { name: 'Settings', to: '/settings', icon: markRaw(Settings), permission: 'core.settings.view' },
       { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
     ]
-  }
+  },
 ]
 
 const filteredGroups = navigationGroups.map(group => ({

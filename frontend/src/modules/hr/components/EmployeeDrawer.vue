@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiDrawer from '@/components/ui/UiDrawer.vue'
@@ -20,6 +20,18 @@ const { data: positions } = useQuery({
   queryKey: ['hr', 'positions'],
   queryFn: () => hrApi.getPositions().then(res => res.data)
 })
+
+const { data: employees } = useQuery({
+  queryKey: ['hr', 'employees'],
+  queryFn: () => hrApi.getEmployees().then(res => res.data)
+})
+
+const managerOptions = computed(() =>
+  (Array.isArray(employees.value) ? employees.value : (employees.value as any)?.data || []).map((e: any) => ({
+    label: `${e.first_name} ${e.last_name}`,
+    value: e.id,
+  }))
+)
 
 const form = ref({
   first_name: '',
@@ -164,7 +176,7 @@ const genders = [
           <UiSelect 
             v-model="form.manager_id" 
             label="Direct Manager" 
-            :options="[]" 
+            :options="managerOptions" 
             placeholder="Search manager..."
           />
         </div>

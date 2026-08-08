@@ -14,10 +14,40 @@ const dateRange = ref({
   start: new Date().toISOString().split('T')[0],
   end: new Date().toISOString().split('T')[0]
 })
+const searchQuery = ref('')
+const departmentFilter = ref('')
+const statusFilter = ref('')
+
+const { data: departments } = useQuery({
+  queryKey: ['hr', 'departments'],
+  queryFn: () => hrApi.getDepartments().then(res => res.data)
+})
 
 const { data: attendance, isLoading } = useQuery({
   queryKey: ['hr', 'attendance', dateRange],
   queryFn: () => hrApi.getAttendance({ ...dateRange.value }).then(res => res.data)
+})
+
+const departmentOptions = computed(() =>
+  (departments.value || []).map((d: any) => ({ label: d.name, value: d.id }))
+)
+
+const filteredAttendance = computed(() => {
+  let rows = attendance.value || []
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    rows = rows.filter((item: any) => {
+      const name = `${item.employee?.first_name || ''} ${item.employee?.last_name || ''}`.toLowerCase()
+      return name.includes(q)
+    })
+  }
+  if (departmentFilter.value) {
+    rows = rows.filter((item: any) => item.employee?.department_id === departmentFilter.value)
+  }
+  if (statusFilter.value) {
+    rows = rows.filter((item: any) => item.status === statusFilter.value)
+  }
+  return rows
 })
 
 const columns = computed(() => {
@@ -88,16 +118,28 @@ const exportToCSV = () => {
       </div>
 
       <div class="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-100">
-        <UiInput placeholder="Search employee..." size="sm" class="w-full max-w-xs">
+        <UiInput v-model="searchQuery" placeholder="Search employee..." size="sm" class="w-full max-w-xs">
           <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
         </UiInput>
-        <UiSelect placeholder="Department" size="sm" :options="[]" class="w-48" />
-        <UiSelect placeholder="Status" size="sm" :options="[{label:'Present', value:'present'}, {label:'Absent', value:'absent'}, {label:'Late', value:'late'}]" class="w-40" />
+        <UiSelect
+          v-model="departmentFilter"
+          placeholder="Department"
+          size="sm"
+          :options="departmentOptions"
+          class="w-48"
+        />
+        <UiSelect
+          v-model="statusFilter"
+          placeholder="Status"
+          size="sm"
+          :options="[{label:'Present', value:'present'}, {label:'Absent', value:'absent'}, {label:'Late', value:'late'}]"
+          class="w-40"
+        />
       </div>
     </div>
 
     <!-- Attendance Table -->
-    <UiTable :columns="columns" :data="attendance || []" :loading="isLoading">
+    <UiTable :columns="columns" :data="filteredAttendance" :loading="isLoading">
       <template #cell(employee)="{ item }">
         <div class="flex items-center gap-3">
           <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold">

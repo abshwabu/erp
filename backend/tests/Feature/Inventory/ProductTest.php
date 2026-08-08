@@ -270,17 +270,38 @@ it('returns product variants', function (): void {
         ->assertJsonPath('data.0.sku', 'VAR-001-S');
 });
 
-it('returns stubbed stock endpoint', function (): void {
+it('returns real stock levels for a product', function (): void {
     [$tenant, $slug, $token] = makeInventoryUser();
 
-    $productId = $tenant->run(fn () => Product::create([
-        'sku'           => 'STK-001',
-        'name'          => 'Stockable',
-        'type'          => 'stockable',
-        'status'        => 'active',
-        'cost_price'    => 100,
-        'selling_price' => 200,
-    ])->id);
+    $productId = $tenant->run(function () {
+        $location = \App\Modules\Inventory\Models\StockLocation::query()->first()
+            ?? \App\Modules\Inventory\Models\StockLocation::create([
+                'name' => 'Main',
+                'code' => 'MAIN',
+                'type' => 'warehouse',
+                'is_active' => true,
+            ]);
+
+        $product = Product::create([
+            'sku'           => 'STK-001',
+            'name'          => 'Stockable',
+            'type'          => 'stockable',
+            'status'        => 'active',
+            'cost_price'    => 100,
+            'selling_price' => 200,
+        ]);
+
+        \App\Modules\Inventory\Models\StockLevel::create([
+            'product_id' => $product->id,
+            'variant_id' => null,
+            'location_id' => $location->id,
+            'quantity_on_hand' => 25,
+            'quantity_committed' => 5,
+            'quantity_on_order' => 0,
+        ]);
+
+        return $product->id;
+    });
 
     $response = $this
         ->withHeader('Authorization', "Bearer {$token}")
@@ -288,5 +309,7 @@ it('returns stubbed stock endpoint', function (): void {
 
     $response->assertOk()
         ->assertJsonStructure(['data' => ['product_id', 'available_quantity', 'reserved_quantity', 'locations']])
-        ->assertJsonPath('data.available_quantity', 0);
+        ->assertJsonPath('data.available_quantity', 20)
+        ->assertJsonPath('data.reserved_quantity', 5)
+        ->assertJsonCount(1, 'data.locations');
 });

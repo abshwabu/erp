@@ -6,7 +6,9 @@ namespace App\Services\Accounting;
 
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalLine;
+use App\Modules\Sales\Models\Invoice;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class ReportingService
@@ -270,20 +272,180 @@ class ReportingService
 
     /**
      * Accounts Receivable Aging.
+     * Pulls open sales invoices (sent with outstanding balance) when Sales tables exist.
      */
     public function arAging()
     {
-        // Simplistic version using journal lines linked to customers
-        // In a full implementation, we'd need an Invoice model and track payments
-        // Here we'll just look at the AR account movements
-        return []; 
+        if (! Schema::hasTable('invoices') || ! Schema::hasTable('customers')) {
+            return [];
+        }
+
+        $invoices = Invoice::query()
+            ->with('customer')
+            ->where('status', 'sent')
+            ->whereColumn('amount_paid_cents', '<', 'total_cents')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return [];
+        }
+
+        $today = Carbon::today();
+        $totalOutstandingCents = $invoices->sum(fn (Invoice $invoice) => $invoice->outstandingCents());
+        $grouped = $invoices->groupBy('customer_id');
+        $rows = [];
+
+        foreach ($grouped as $customerId => $customerInvoices) {
+            $customer = $customerInvoices->first()->customer;
+            $bucket0 = 0;
+            $bucket31 = 0;
+            $bucket61 = 0;
+            $bucket90 = 0;
+            $invoiceRows = [];
+
+            foreach ($customerInvoices as $invoice) {
+                $outstandingCents = $invoice->outstandingCents();
+                $outstanding = $outstandingCents / 100;
+                $daysOverdue = max(0, (int) Carbon::parse($invoice->due_date)->startOfDay()->diffInDays($today, false));
+
+                if ($daysOverdue <= 30) {
+                    $bucket = '0-30';
+                    $bucket0 += $outstandingCents;
+                } elseif ($daysOverdue <= 60) {
+                    $bucket = '31-60';
+                    $bucket31 += $outstandingCents;
+                } elseif ($daysOverdue <= 90) {
+                    $bucket = '61-90';
+                    $bucket61 += $outstandingCents;
+                } else {
+                    $bucket = '90+';
+                    $bucket90 += $outstandingCents;
+                }
+
+                $invoiceRows[] = [
+                    'id' => $invoice->id,
+                    'reference' => $invoice->number,
+                    'dueDate' => $invoice->due_date->toDateString(),
+                    'invoiceDate' => $invoice->issue_date->toDateString(),
+                    'amount' => $outstanding,
+                    'bucket' => $bucket,
+                    'daysOverdue' => $daysOverdue,
+                ];
+            }
+
+            $outstandingCents = $bucket0 + $bucket31 + $bucket61 + $bucket90;
+
+            $rows[] = [
+                'id' => (string) $customerId,
+                'customerName' => $customer?->name ?? 'Unknown customer',
+                'invoiceCount' => $customerInvoices->count(),
+                'outstanding' => $outstandingCents / 100,
+                'bucket0_30' => $bucket0 / 100,
+                'bucket31_60' => $bucket31 / 100,
+                'bucket61_90' => $bucket61 / 100,
+                'bucket90_plus' => $bucket90 / 100,
+                'percentage' => $totalOutstandingCents > 0
+                    ? (int) round(($outstandingCents / $totalOutstandingCents) * 100)
+                    : 0,
+                'invoices' => $invoiceRows,
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b) => $b['outstanding'] <=> $a['outstanding']);
+
+        return $rows;
     }
 
     /**
      * Accounts Payable Aging.
+     * Uses open purchase orders (ordered, not fully received conceptually as unpaid) when present.
      */
     public function apAging()
     {
-        return [];
+        if (! Schema::hasTable('purchase_orders') || ! Schema::hasTable('suppliers')) {
+            return [];
+        }
+
+        $orders = DB::table('purchase_orders as po')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->where('po.status', 'ordered')
+            ->where('po.total_cents', '>', 0)
+            ->select(
+                'po.id',
+                'po.number as reference',
+                'po.order_date',
+                'po.supplier_id',
+                's.name as supplier_name',
+                'po.total_cents'
+            )
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return [];
+        }
+
+        $today = Carbon::today();
+        $totalOutstanding = $orders->sum('total_cents');
+        $grouped = $orders->groupBy('supplier_id');
+        $rows = [];
+
+        foreach ($grouped as $supplierId => $supplierOrders) {
+            $bucket0 = 0;
+            $bucket31 = 0;
+            $bucket61 = 0;
+            $bucket90 = 0;
+            $invoiceRows = [];
+
+            foreach ($supplierOrders as $order) {
+                $outstandingCents = (int) $order->total_cents;
+                $outstanding = $outstandingCents / 100;
+                $daysOverdue = max(0, (int) Carbon::parse($order->order_date)->startOfDay()->diffInDays($today, false));
+
+                if ($daysOverdue <= 30) {
+                    $bucket = '0-30';
+                    $bucket0 += $outstandingCents;
+                } elseif ($daysOverdue <= 60) {
+                    $bucket = '31-60';
+                    $bucket31 += $outstandingCents;
+                } elseif ($daysOverdue <= 90) {
+                    $bucket = '61-90';
+                    $bucket61 += $outstandingCents;
+                } else {
+                    $bucket = '90+';
+                    $bucket90 += $outstandingCents;
+                }
+
+                $invoiceRows[] = [
+                    'id' => $order->id,
+                    'reference' => $order->reference,
+                    'dueDate' => $order->order_date,
+                    'invoiceDate' => $order->order_date,
+                    'amount' => $outstanding,
+                    'bucket' => $bucket,
+                    'daysOverdue' => $daysOverdue,
+                ];
+            }
+
+            $outstandingCents = $bucket0 + $bucket31 + $bucket61 + $bucket90;
+
+            $rows[] = [
+                'id' => (string) $supplierId,
+                'supplierName' => $supplierOrders->first()->supplier_name ?? 'Unknown supplier',
+                'invoiceCount' => $supplierOrders->count(),
+                'outstanding' => $outstandingCents / 100,
+                'bucket0_30' => $bucket0 / 100,
+                'bucket31_60' => $bucket31 / 100,
+                'bucket61_90' => $bucket61 / 100,
+                'bucket90_plus' => $bucket90 / 100,
+                'percentage' => $totalOutstanding > 0
+                    ? (int) round(($outstandingCents / $totalOutstanding) * 100)
+                    : 0,
+                'invoices' => $invoiceRows,
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b) => $b['outstanding'] <=> $a['outstanding']);
+
+        return $rows;
     }
 }

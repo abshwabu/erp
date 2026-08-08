@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Core\Controllers\AuthController;
 use App\Modules\Core\Controllers\RoleController;
+use App\Modules\Core\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -52,4 +53,11 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
 
     Route::delete('users/{user}/roles/{role}', [RoleController::class, 'revokeRole'])
         ->middleware('permission:core.roles.edit');
+
+    // Tenant settings
+    Route::get('core/settings', [SettingsController::class, 'show'])
+        ->middleware('permission:core.settings.view');
+
+    Route::post('core/settings', [SettingsController::class, 'update'])
+        ->middleware('permission:core.settings.edit');
 });

@@ -51,6 +51,7 @@ enum Permission: string
     case HrEmployeesEdit       = 'hr.employees.edit';
     case HrEmployeesViewSalary = 'hr.employees.view_salary';
     case HrLeaveApprove        = 'hr.leave.approve';
+    case HrLeaveView           = 'hr.leave.view';
     case HrAttendanceView      = 'hr.attendance.view';
 
     // ─── Accounting ───────────────────────────────────────────────────────────
@@ -64,6 +65,10 @@ enum Permission: string
     case SalesOrdersCreate  = 'sales.orders.create';
     case SalesInvoicesCreate = 'sales.invoices.create';
     case SalesInvoicesSend   = 'sales.invoices.send';
+
+    // ─── CRM ─────────────────────────────────────────────────────────────────
+    case CrmContactsView   = 'crm.contacts.view';
+    case CrmContactsManage = 'crm.contacts.manage';
 
     // ─── Payroll ─────────────────────────────────────────────────────────────
     case PayrollRunsView     = 'payroll.runs.view';
