@@ -19,7 +19,17 @@ final class PermissionMiddleware
             return new JsonResponse(['message' => 'Unauthenticated.'], 401);
         }
 
-        if ($user->cannot($permission)) {
+        $required = array_values(array_filter(array_map('trim', explode('|', $permission))));
+
+        $allowed = false;
+        foreach ($required as $perm) {
+            if ($user->can($perm)) {
+                $allowed = true;
+                break;
+            }
+        }
+
+        if (! $allowed) {
             return new JsonResponse([
                 'message' => 'Forbidden. You do not have the required permission.',
                 'required_permission' => $permission,

@@ -17,6 +17,7 @@ class POSSession extends Model
 
     protected $fillable = [
         'terminal_id',
+        'shop_id',
         'cashier_id',
         'opened_at',
         'closed_at',
@@ -37,6 +38,11 @@ class POSSession extends Model
     public function terminal()
     {
         return $this->belongsTo(POSTerminal::class, 'terminal_id');
+    }
+
+    public function shop()
+    {
+        return $this->belongsTo(\App\Modules\Shops\Models\Shop::class, 'shop_id');
     }
 
     public function cashier()

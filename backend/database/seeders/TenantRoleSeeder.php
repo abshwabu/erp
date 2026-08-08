@@ -31,6 +31,7 @@ class TenantRoleSeeder extends Seeder
         $this->createAccountant();
         $this->createSalesManager();
         $this->createCashier();
+        $this->createShopKeeper();
         $this->createWarehouseStaff();
         $this->createHrOfficer();
         $this->createReadOnly();
@@ -111,6 +112,22 @@ class TenantRoleSeeder extends Seeder
         $this->syncPermissions(
             $this->role('Cashier'),
             [
+                Permission::PosSessionsOpen->value,
+                Permission::PosSessionsClose->value,
+                Permission::PosTransactionsCreate->value,
+                Permission::ShopsView->value,
+            ]
+        );
+    }
+
+    private function createShopKeeper(): void
+    {
+        $this->syncPermissions(
+            $this->role('Shop Keeper'),
+            [
+                Permission::ShopsView->value,
+                Permission::InventoryStockView->value,
+                Permission::InventoryStockAdjust->value,
                 Permission::PosSessionsOpen->value,
                 Permission::PosSessionsClose->value,
                 Permission::PosTransactionsCreate->value,

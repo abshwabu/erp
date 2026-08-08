@@ -121,6 +121,8 @@ class StockService
 
     /**
      * Issue stock out of a location.
+     *
+     * @param  bool  $strictLocation  When true, only deduct from the preferred location (no spill).
      */
     public function issueStock(
         Product|string $product,
@@ -129,20 +131,23 @@ class StockService
         ?array $ref = null,
         ?string $lot = null,
         ?string $serial = null,
-        ?string $variantId = null
+        ?string $variantId = null,
+        bool $strictLocation = false
     ): StockMovement {
         $product = $this->resolveProduct($product);
         $preferredLocation = $this->resolveLocation($location);
 
-        return DB::transaction(function () use ($product, $preferredLocation, $qty, $ref, $lot, $serial, $variantId) {
+        return DB::transaction(function () use ($product, $preferredLocation, $qty, $ref, $lot, $serial, $variantId, $strictLocation) {
             $allLevels = StockLevel::where('product_id', $product->id)
                 ->where('variant_id', $variantId)
+                ->when($strictLocation, fn ($q) => $q->where('location_id', $preferredLocation->id))
                 ->lockForUpdate()
                 ->get();
 
             $totalOnHand = (int) $allLevels->sum('quantity_on_hand');
             if ($totalOnHand < $qty) {
-                throw new InsufficientStockException("Insufficient stock to issue {$qty} units. Total stock across all locations: {$totalOnHand}.");
+                $scope = $strictLocation ? 'at this location' : 'across all locations';
+                throw new InsufficientStockException("Insufficient stock to issue {$qty} units. Total stock {$scope}: {$totalOnHand}.");
             }
 
             $remainingQty = $qty;
@@ -222,6 +227,10 @@ class StockService
             }
 
             if ($remainingQty > 0 || !$lastMovement) {
+                if ($strictLocation) {
+                    throw new InsufficientStockException("Insufficient stock to issue {$qty} units at this location.");
+                }
+
                 $deduct = $remainingQty > 0 ? $remainingQty : $qty;
                 $lastMovement = StockMovement::create([
                     'product_id'       => $product->id,

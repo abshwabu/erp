@@ -4,12 +4,14 @@ export interface PosTerminal {
   id: string
   name: string
   location_id: string
+  shop_id?: string | null
   is_active: boolean
 }
 
 export interface PosSession {
   id: string
   terminal_id: string
+  shop_id?: string | null
   cashier_id: string
   status: string
   opening_cash_cents: number
@@ -40,15 +42,17 @@ export interface CheckoutPayload {
 }
 
 export const posApi = {
-  getTerminals() {
-    return apiClient.get<{ data: PosTerminal[] }>('/pos/terminals')
+  getTerminals(shopId?: string) {
+    return apiClient.get<{ data: PosTerminal[] }>('/pos/terminals', {
+      params: shopId ? { shop_id: shopId } : undefined,
+    })
   },
 
   getCurrentSession() {
     return apiClient.get<{ data: PosSession | null }>('/pos/sessions/current')
   },
 
-  openSession(payload: { terminal_id: string; opening_cash_cents?: number }) {
+  openSession(payload: { terminal_id: string; shop_id?: string; opening_cash_cents?: number }) {
     return apiClient.post<{ data: PosSession }>('/pos/sessions/open', payload)
   },
 

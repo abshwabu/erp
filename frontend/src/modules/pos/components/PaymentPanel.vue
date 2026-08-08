@@ -81,7 +81,9 @@ async function processPayment() {
 
     const response = await posApi.checkout({
       session_id: session.id,
-      location_id: session.terminal?.location_id ?? null,
+      location_id: posStore.selectedShop()?.stock_location_id
+        ?? session.terminal?.location_id
+        ?? null,
       items: cartItems.map(item => ({
         product_id: String(item.id),
         quantity: item.quantity,
@@ -104,6 +106,7 @@ async function processPayment() {
     queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+    queryClient.invalidateQueries({ queryKey: ['shops'] })
 
     lastOrderSummary.value = {
       items: cartItems,

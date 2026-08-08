@@ -80,6 +80,10 @@ enum Permission: string
     case WarehousePick    = 'warehouse.pick';
     case WarehouseShip    = 'warehouse.ship';
 
+    // ─── Shops ────────────────────────────────────────────────────────────────
+    case ShopsView   = 'shops.view';
+    case ShopsManage = 'shops.manage';
+
     // ─── Manufacturing ────────────────────────────────────────────────────────
     case ManufacturingWorkOrdersView   = 'manufacturing.work_orders.view';
     case ManufacturingWorkOrdersCreate = 'manufacturing.work_orders.create';

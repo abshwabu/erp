@@ -4,12 +4,14 @@ import ProductGrid from '../components/ProductGrid.vue'
 import POSCart from '../components/POSCart.vue'
 import PaymentPanel from '../components/PaymentPanel.vue'
 import { usePosStore } from '../stores/posStore'
-import { ShoppingCart, Grid } from '@lucide/vue'
+import { ShoppingCart, Grid, Store } from '@lucide/vue'
+import UiButton from '@/components/ui/UiButton.vue'
 
 const posStore = usePosStore()
 const showPayment = ref(false)
 const activeTab = ref<'catalog' | 'cart'>('catalog')
 const sessionError = ref('')
+const selectingShop = ref(false)
 
 const totalCartItems = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -19,13 +21,34 @@ const cartTotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-onMounted(async () => {
+const shopName = computed(() => posStore.selectedShop()?.name || '')
+
+async function bootstrapSession() {
+  sessionError.value = ''
   try {
     await posStore.ensureSession()
   } catch (err: any) {
+    if (posStore.needsShopSelection) {
+      selectingShop.value = true
+      sessionError.value = ''
+      return
+    }
     sessionError.value = err?.message || err?.response?.data?.message || 'Failed to open POS session'
   }
-})
+}
+
+async function chooseShop(shopId: string) {
+  selectingShop.value = false
+  sessionError.value = ''
+  try {
+    await posStore.selectShop(shopId)
+  } catch (err: any) {
+    sessionError.value = err?.message || 'Failed to open shop session'
+    if (posStore.needsShopSelection) selectingShop.value = true
+  }
+}
+
+onMounted(bootstrapSession)
 
 function handleCheckout() {
   showPayment.value = true
@@ -45,6 +68,31 @@ function handlePaymentComplete() {
 <template>
   <div class="h-[calc(100vh-5rem)] w-full flex flex-col md:flex-row overflow-hidden bg-slate-100 rounded-xl border border-slate-200/80 shadow-sm relative">
     <div
+      v-if="selectingShop"
+      class="absolute inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <div class="flex items-center gap-2">
+          <Store class="h-5 w-5 text-blue-600" />
+          <h2 class="text-lg font-bold text-slate-900">Choose a shop</h2>
+        </div>
+        <p class="text-sm text-slate-600">You have access to multiple shops. Select which shop to sell from.</p>
+        <div class="space-y-2">
+          <button
+            v-for="shop in posStore.availableShops"
+            :key="shop.id"
+            type="button"
+            class="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            @click="chooseShop(shop.id)"
+          >
+            <div class="font-semibold text-slate-900">{{ shop.name }}</div>
+            <div class="text-xs text-slate-500 font-mono">{{ shop.code }} · {{ shop.stock_location?.name || 'Stock location' }}</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
       v-if="sessionError"
       class="absolute inset-x-0 top-0 z-40 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm px-4 py-2"
     >
@@ -53,7 +101,7 @@ function handlePaymentComplete() {
 
     <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 shrink-0 z-20">
       <div class="flex items-center gap-2">
-        <span class="font-bold text-sm tracking-tight">POS Terminal</span>
+        <span class="font-bold text-sm tracking-tight">{{ shopName || 'POS Terminal' }}</span>
         <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
           {{ posStore.session ? 'Session Open' : 'Starting…' }}
         </span>
@@ -84,6 +132,26 @@ function handlePaymentComplete() {
           </span>
         </button>
       </div>
+    </div>
+
+    <div
+      class="hidden md:flex absolute top-3 left-3 z-30 items-center gap-2"
+    >
+      <span
+        v-if="shopName"
+        class="text-xs font-semibold bg-white/90 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full shadow-sm"
+      >
+        {{ shopName }}
+      </span>
+      <UiButton
+        v-if="posStore.availableShops.length > 1"
+        size="sm"
+        variant="outline"
+        class="text-xs"
+        @click="selectingShop = true; posStore.needsShopSelection = true"
+      >
+        Switch shop
+      </UiButton>
     </div>
 
     <div

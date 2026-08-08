@@ -17,6 +17,7 @@ class POSTerminal extends Model
     protected $fillable = [
         'name',
         'location_id',
+        'shop_id',
         'receipt_printer_settings',
         'cash_drawer_settings',
         'is_active',

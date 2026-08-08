@@ -86,6 +86,18 @@ const router = createRouter({
           meta: { title: 'Warehouse', permission: 'warehouse.receive' }
         },
         {
+          path: 'shops',
+          name: 'shops',
+          component: () => import('@/modules/shops/pages/ShopsPage.vue'),
+          meta: { title: 'Shops', permission: 'shops.view' }
+        },
+        {
+          path: 'shops/:id',
+          name: 'shop-detail',
+          component: () => import('@/modules/shops/pages/ShopDetailPage.vue'),
+          meta: { title: 'Shop', permission: 'shops.view' }
+        },
+        {
           path: 'procurement',
           name: 'procurement',
           component: () => import('@/modules/procurement/pages/PurchaseOrdersPage.vue'),

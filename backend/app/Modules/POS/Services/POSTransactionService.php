@@ -47,7 +47,19 @@ class POSTransactionService
 
             $locationId = $locationId
                 ?? $session->terminal?->location_id
-                ?? StockLocation::query()->where('is_active', true)->value('id');
+                ?? null;
+
+            // Prefer shop stock location when session is bound to a shop
+            if ($session->shop_id) {
+                $shop = \App\Modules\Shops\Models\Shop::find($session->shop_id);
+                if ($shop) {
+                    $locationId = $shop->stock_location_id;
+                }
+            }
+
+            if (!$locationId) {
+                $locationId = StockLocation::query()->where('is_active', true)->value('id');
+            }
 
             if (!$locationId) {
                 throw ValidationException::withMessages([
@@ -101,7 +113,8 @@ class POSTransactionService
                     ],
                     null,
                     null,
-                    $item['variant_id'] ?? null
+                    $item['variant_id'] ?? null,
+                    true // strict shop/terminal location — no cross-location spill
                 );
             }
 

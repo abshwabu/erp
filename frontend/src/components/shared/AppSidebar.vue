@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   LogOut,
   Settings,
+  Store,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -69,6 +70,7 @@ const navigationGroups = [
         ]
       },
       { name: 'Warehouse', to: '/warehouse', icon: markRaw(Warehouse), permission: 'warehouse.receive' },
+      { name: 'Shops', to: '/shops', icon: markRaw(Store), permission: 'shops.view' },
       { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view' },
     ]
   },
