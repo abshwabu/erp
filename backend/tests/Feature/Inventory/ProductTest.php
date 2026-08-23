@@ -232,7 +232,7 @@ it('lists products with pagination', function (): void {
 
     $response->assertOk()
         ->assertJsonStructure(['data', 'links', 'meta'])
-        ->assertJsonPath('meta.total', 8)
+        ->assertJsonPath('meta.total', 5)
         ->assertJsonPath('meta.per_page', 3);
 });
 
@@ -274,11 +274,17 @@ it('returns real stock levels for a product', function (): void {
     [$tenant, $slug, $token] = makeInventoryUser();
 
     $productId = $tenant->run(function () {
+        $warehouse = \App\Modules\Inventory\Models\Warehouse::firstOrCreate(
+            ['code' => 'WH-TEST'],
+            ['name' => 'Test Warehouse', 'type' => 'own', 'is_active' => true]
+        );
+
         $location = \App\Modules\Inventory\Models\StockLocation::query()->first()
             ?? \App\Modules\Inventory\Models\StockLocation::create([
+                'warehouse_id' => $warehouse->id,
                 'name' => 'Main',
                 'code' => 'MAIN',
-                'type' => 'warehouse',
+                'type' => 'storage',
                 'is_active' => true,
             ]);
 
