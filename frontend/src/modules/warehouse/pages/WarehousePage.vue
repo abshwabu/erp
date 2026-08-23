@@ -226,7 +226,7 @@ const typeOptions = [
           <UiInput v-model="locationForm.name" label="Name" required placeholder="Receiving dock" />
           <UiInput v-model="locationForm.code" label="Code" required placeholder="RECV-01" />
           <UiSelect v-model="locationForm.type" label="Type" :options="typeOptions" />
-          <UiButton type="submit" :disabled="createLocationMutation.isPending">
+          <UiButton type="submit" :disabled="createLocationMutation.isPending.value">
             <Plus class="h-4 w-4 mr-2" />
             Add location
           </UiButton>
@@ -289,7 +289,7 @@ const typeOptions = [
               help-text="Optional; defaults to product cost"
             />
           </div>
-          <UiButton type="submit" :disabled="receiveMutation.isPending">
+          <UiButton type="submit" :disabled="receiveMutation.isPending.value">
             <PackagePlus class="h-4 w-4 mr-2" />
             Receive stock
           </UiButton>
@@ -326,7 +326,7 @@ const typeOptions = [
             min="1"
             required
           />
-          <UiButton type="submit" :disabled="transferMutation.isPending">
+          <UiButton type="submit" :disabled="transferMutation.isPending.value">
             <ArrowRightLeft class="h-4 w-4 mr-2" />
             Transfer stock
           </UiButton>

@@ -8,7 +8,6 @@ use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\POS\Models\POSTerminal;
 use App\Modules\Shops\Models\Shop;
-use App\Modules\Shops\Models\ShopUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -116,7 +115,7 @@ class ShopService
 
     public function syncKeepers(Shop $shop, array $keepers): Shop
     {
-        $shop->users()->detach();
+        $sync = [];
 
         foreach ($keepers as $keeper) {
             $userId = $keeper['user_id'] ?? $keeper['id'] ?? null;
@@ -124,12 +123,10 @@ class ShopService
                 continue;
             }
 
-            ShopUser::create([
-                'shop_id' => $shop->id,
-                'user_id' => $userId,
-                'role' => $keeper['role'] ?? 'keeper',
-            ]);
+            $sync[$userId] = ['role' => $keeper['role'] ?? 'keeper'];
         }
+
+        $shop->users()->sync($sync);
 
         return $shop->load(['warehouse', 'stockLocation', 'users']);
     }

@@ -37,7 +37,7 @@ const { data: suppliers } = useQuery({
 
 const { data: locations } = useQuery({
   queryKey: ['inventory', 'locations'],
-  queryFn: () => inventoryApi.getLocations().then(r => r.data?.data ?? r.data),
+  queryFn: () => inventoryApi.getLocations().then(r => r.data),
 })
 
 const supplierOptions = computed(() =>
@@ -76,7 +76,7 @@ const createSupplierMutation = useMutation({
 
 async function receive(id: string) {
   try {
-    const locId = Array.isArray(locations.value) ? locations.value[0]?.id : null
+    const locId = Array.isArray(locations.value) ? locations.value[0]?.id : undefined
     await procurementApi.receivePurchaseOrder(id, locId)
     queryClient.invalidateQueries({ queryKey: ['procurement', 'orders'] })
     toast.success('PO received into stock')

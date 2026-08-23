@@ -13,7 +13,7 @@ use App\Modules\Core\Models\Tenant;
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
-    use RefreshDatabase;
+    use \Illuminate\Foundation\Testing\DatabaseMigrations;
 
     protected function createTenant(array $attributes = []): Tenant
     {

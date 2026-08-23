@@ -40,7 +40,8 @@ class Shop extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'shop_user', 'shop_id', 'user_id')
-            ->withPivot(['id', 'role'])
+            ->using(ShopUser::class)
+            ->withPivot(['role'])
             ->withTimestamps();
     }
 

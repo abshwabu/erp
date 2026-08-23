@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ArrowLeft, Package, Settings2, Users } from '@lucide/vue'
 import { shopsApi } from '@/api/shops'
 import { usePermission } from '@/composables/usePermission'
+import { useToast } from '@/composables/useToast'
 import { formatCurrency } from '@/utils/format'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -17,6 +18,7 @@ const route = useRoute()
 const router = useRouter()
 const queryClient = useQueryClient()
 const { hasPermission } = usePermission()
+const toast = useToast()
 
 const shopId = computed(() => String(route.params.id))
 const canManage = computed(() => hasPermission('shops.manage'))
@@ -117,7 +119,9 @@ const syncKeepersMutation = useMutation({
     ),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['shops', shopId.value] })
+    queryClient.invalidateQueries({ queryKey: ['shops'] })
     errorMessage.value = ''
+    toast.success('Shop keepers updated')
   },
   onError: (err: any) => {
     errorMessage.value = err?.message || 'Failed to update keepers'

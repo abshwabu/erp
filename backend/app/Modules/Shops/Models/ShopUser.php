@@ -6,16 +6,24 @@ namespace App\Modules\Shops\Models;
 
 use App\Modules\Core\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class ShopUser extends Model
+class ShopUser extends Pivot
 {
     use HasUuids;
 
     protected $table = 'shop_user';
 
-    protected $guarded = [];
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    protected $fillable = [
+        'shop_id',
+        'user_id',
+        'role',
+    ];
 
     public function shop(): BelongsTo
     {
