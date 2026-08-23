@@ -36,14 +36,29 @@ class AttendanceController extends Controller
 
     public function index(Request $request)
     {
-        $query = AttendanceLog::query();
-        
-        // Example filter
-        if ($request->has('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
+        $query = AttendanceLog::with('employee.department');
+
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->input('employee_id'));
         }
 
-        return response()->json($query->get());
+        if ($request->filled('department_id')) {
+            $query->whereHas('employee', fn ($q) => $q->where('department_id', $request->input('department_id')));
+        }
+
+        if ($request->filled('clock_type')) {
+            $query->where('clock_type', $request->input('clock_type'));
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('logged_at', '>=', $request->input('start_date'));
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('logged_at', '<=', $request->input('end_date'));
+        }
+
+        return response()->json($query->orderBy('logged_at', 'desc')->get());
     }
 
     public function summary()
