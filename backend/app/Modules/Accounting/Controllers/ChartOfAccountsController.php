@@ -119,8 +119,70 @@ class ChartOfAccountsController extends Controller
 
     public function importCsv(Request $request)
     {
-        // Placeholder for CSV import logic
-        return response()->json(['message' => 'CSV import not implemented yet.'], 501);
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        if (! $handle) {
+            return response()->json(['message' => 'Unable to read CSV file.'], 422);
+        }
+
+        $header = fgetcsv($handle);
+        if (! $header) {
+            fclose($handle);
+            return response()->json(['message' => 'Empty CSV file.'], 422);
+        }
+
+        $header = array_map(fn ($col) => strtolower(trim(str_replace([' ', '_', '-'], '', (string) $col))), $header);
+        $imported = 0;
+        $accountTypes = AccountType::all()->keyBy(fn ($t) => strtolower(trim($t->name)));
+        $defaultType = $accountTypes->first();
+
+        DB::transaction(function () use ($handle, $header, $accountTypes, $defaultType, &$imported) {
+            while (($row = fgetcsv($handle)) !== false) {
+                if (count($row) < 2 || empty(trim((string) $row[0]))) {
+                    continue;
+                }
+
+                $rowMap = [];
+                foreach ($header as $idx => $key) {
+                    if (isset($row[$idx])) {
+                        $rowMap[$key] = trim((string) $row[$idx]);
+                    }
+                }
+
+                $code = $rowMap['code'] ?? trim((string) $row[0]);
+                $name = $rowMap['name'] ?? trim((string) $row[1]);
+                $typeStr = strtolower($rowMap['accounttype'] ?? $rowMap['type'] ?? (isset($row[2]) ? trim((string) $row[2]) : ''));
+                $description = $rowMap['description'] ?? (isset($row[3]) ? trim((string) $row[3]) : null);
+                $currency = strtoupper($rowMap['currencycode'] ?? $rowMap['currency'] ?? 'USD') ?: 'USD';
+
+                $accountType = $accountTypes->get($typeStr) ?? $defaultType;
+                if (! $accountType) {
+                    continue;
+                }
+
+                Account::updateOrCreate(
+                    ['code' => $code],
+                    [
+                        'name' => $name,
+                        'account_type_id' => $accountType->id,
+                        'description' => $description,
+                        'currency_code' => $currency,
+                        'is_active' => true,
+                    ]
+                );
+                $imported++;
+            }
+            fclose($handle);
+        });
+
+        return response()->json([
+            'message' => "Successfully imported {$imported} accounts.",
+            'imported_count' => $imported,
+        ]);
     }
 
     public function accountTypes()

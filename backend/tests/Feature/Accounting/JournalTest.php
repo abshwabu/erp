@@ -11,7 +11,7 @@ use App\Services\Accounting\JournalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->tenant = $this->createTenant();

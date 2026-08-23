@@ -10,7 +10,7 @@ use App\Services\Accounting\JournalService;
 use App\Services\Accounting\ReportingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->tenant = $this->createTenant();
