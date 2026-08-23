@@ -27,5 +27,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\Inventory\Events\LowStockDetected::class,
             \App\Modules\Inventory\Listeners\LowStockListener::class
         );
+
+        \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return rtrim($frontendUrl, '/') . '/reset-password?token=' . urlencode($token) . '&email=' . urlencode($notifiable->getEmailForPasswordReset());
+        });
     }
 }

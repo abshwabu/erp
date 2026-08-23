@@ -12,6 +12,10 @@ export const rolesApi = {
     return apiClient.get<{ data: Role[] }>('/roles')
   },
 
+  permissions() {
+    return apiClient.get<{ data: string[] }>('/permissions')
+  },
+
   create(name: string) {
     return apiClient.post('/roles', { name })
   },

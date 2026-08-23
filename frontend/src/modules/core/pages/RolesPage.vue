@@ -21,23 +21,28 @@ const { data: roles, isLoading } = useQuery({
   queryFn: () => rolesApi.list().then(res => res.data.data),
 })
 
+const { data: serverPermissions } = useQuery({
+  queryKey: ['core', 'permissions'],
+  queryFn: () => rolesApi.permissions().then(res => res.data.data).catch(() => [] as string[]),
+})
+
 const allPermissions = computed(() => {
   const set = new Set<string>()
+  ;(serverPermissions.value || []).forEach(p => set.add(p))
   ;(roles.value || []).forEach(role => role.permissions.forEach(p => set.add(p)))
-  // Always include common module permissions even if not yet assigned
-  ;[
-    'core.roles.view', 'core.roles.create', 'core.roles.edit', 'core.roles.delete',
-    'inventory.products.view', 'inventory.products.create', 'inventory.stock.view',
-    'pos.sessions.open', 'pos.sessions.close',
-    'hr.employees.view', 'hr.leave.view', 'hr.attendance.view',
-    'accounting.journals.view', 'accounting.reports.view',
-    'sales.invoices.create', 'warehouse.receive', 'warehouse.pick',
-    'procurement.purchase_orders.view', 'procurement.purchase_orders.create', 'procurement.suppliers.manage',
-    'payroll.runs.view', 'payroll.runs.process', 'payroll.payslips.view',
-    'crm.contacts.view', 'crm.contacts.manage',
-    'core.settings.view', 'core.settings.edit', 'accounting.reports.view',
-  ].forEach(p => set.add(p))
   return Array.from(set).sort()
+})
+
+const groupedPermissions = computed(() => {
+  const groups: Record<string, string[]> = {}
+  allPermissions.value.forEach(p => {
+    const prefix = p.split('.')[0]?.toUpperCase() || 'OTHER'
+    if (!groups[prefix]) {
+      groups[prefix] = []
+    }
+    groups[prefix].push(p)
+  })
+  return groups
 })
 
 const saveMutation = useMutation({
@@ -136,21 +141,30 @@ function togglePermission(permission: string) {
       <div class="space-y-4">
         <UiInput v-model="roleName" label="Role Name" placeholder="e.g. Cashier" />
         <div>
-          <p class="text-sm font-medium text-slate-700 mb-2">Permissions</p>
-          <div class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2">
-            <label
-              v-for="permission in allPermissions"
-              :key="permission"
-              class="flex items-center gap-2 text-sm text-slate-700"
-            >
-              <input
-                type="checkbox"
-                class="rounded border-slate-300"
-                :checked="selectedPermissions.includes(permission)"
-                @change="togglePermission(permission)"
-              />
-              <span class="font-mono text-xs">{{ permission }}</span>
-            </label>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-medium text-slate-700">Permissions ({{ selectedPermissions.length }} selected)</p>
+          </div>
+          <div class="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-4">
+            <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="space-y-2">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-1">
+                {{ moduleName }}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label
+                  v-for="permission in perms"
+                  :key="permission"
+                  class="flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    :checked="selectedPermissions.includes(permission)"
+                    @change="togglePermission(permission)"
+                  />
+                  <span class="font-mono">{{ permission }}</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">

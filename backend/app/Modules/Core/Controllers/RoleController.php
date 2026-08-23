@@ -28,6 +28,11 @@ class RoleController extends Controller
         return response()->json(['data' => $roles]);
     }
 
+    public function permissions(): JsonResponse
+    {
+        return response()->json(['data' => Permission::allValues()]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

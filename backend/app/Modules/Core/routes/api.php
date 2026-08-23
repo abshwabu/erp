@@ -28,6 +28,9 @@ Route::prefix('api/auth')->group(function () {
 Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
 
     // Role CRUD
+    Route::get('permissions', [RoleController::class, 'permissions'])
+        ->middleware('permission:core.roles.view');
+
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('permission:core.roles.view');
 
