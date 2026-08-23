@@ -117,7 +117,7 @@ export const usePosStore = defineStore('pos', () => {
       }
 
       if (!selectedShopId.value) {
-        if (shops.length === 1) {
+        if (shops.length === 1 && shops[0]) {
           selectedShopId.value = shops[0].id
         } else {
           needsShopSelection.value = true
