@@ -216,6 +216,12 @@ const router = createRouter({
           meta: { title: 'Settings', permission: 'core.settings.view' }
         },
         {
+          path: 'integrations',
+          name: 'integrations',
+          component: () => import('@/modules/integrations/pages/IntegrationsPage.vue'),
+          meta: { title: 'Integrations', permission: 'integrations.view' }
+        },
+        {
           path: 'notifications',
           name: 'notifications',
           component: () => import('@/modules/notifications/pages/NotificationsPage.vue'),

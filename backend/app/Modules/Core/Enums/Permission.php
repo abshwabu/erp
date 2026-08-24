@@ -118,6 +118,10 @@ enum Permission: string
     case EcommerceChannelsManage = 'ecommerce.channels.manage';
     case EcommerceOrdersView     = 'ecommerce.orders.view';
 
+    // ─── Integrations ─────────────────────────────────────────────────────────
+    case IntegrationsView   = 'integrations.view';
+    case IntegrationsManage = 'integrations.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
