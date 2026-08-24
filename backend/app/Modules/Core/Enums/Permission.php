@@ -98,6 +98,11 @@ enum Permission: string
     case ProjectsCreate = 'projects.create';
     case ProjectsManage = 'projects.manage';
 
+    // ─── Documents ────────────────────────────────────────────────────────────
+    case DocumentsView   = 'documents.view';
+    case DocumentsUpload = 'documents.upload';
+    case DocumentsManage = 'documents.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

@@ -109,6 +109,12 @@ const router = createRouter({
           component: () => import('@/modules/manufacturing/pages/ManufacturingPage.vue'),
           meta: { title: 'Manufacturing', permission: 'manufacturing.work_orders.view' }
         },
+        {
+          path: 'documents',
+          name: 'documents',
+          component: () => import('@/modules/documents/pages/DocumentsPage.vue'),
+          meta: { title: 'Documents', permission: 'documents.view' }
+        },
         // HR Module
         {
           path: 'hr',

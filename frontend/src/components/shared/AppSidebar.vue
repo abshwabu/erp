@@ -75,6 +75,7 @@ const navigationGroups = [
       { name: 'Shops', to: '/shops', icon: markRaw(Store), permission: 'shops.view' },
       { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view' },
       { name: 'Manufacturing', to: '/manufacturing', icon: markRaw(Factory), permission: 'manufacturing.work_orders.view' },
+      { name: 'Documents', to: '/documents', icon: markRaw(FileText), permission: 'documents.view' },
     ]
   },
   {
