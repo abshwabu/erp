@@ -174,6 +174,12 @@ const router = createRouter({
           meta: { title: 'CRM', permission: 'crm.contacts.view' }
         },
         {
+          path: 'projects',
+          name: 'projects',
+          component: () => import('@/modules/projects/pages/ProjectsPage.vue'),
+          meta: { title: 'Projects', permission: 'projects.view' }
+        },
+        {
           path: 'reporting',
           name: 'reporting',
           component: () => import('@/modules/reporting/pages/ReportingPage.vue'),

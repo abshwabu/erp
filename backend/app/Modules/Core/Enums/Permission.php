@@ -93,6 +93,11 @@ enum Permission: string
     case NotificationsView   = 'notifications.view';
     case NotificationsManage = 'notifications.manage';
 
+    // ─── Projects ─────────────────────────────────────────────────────────────
+    case ProjectsView   = 'projects.view';
+    case ProjectsCreate = 'projects.create';
+    case ProjectsManage = 'projects.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
