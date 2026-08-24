@@ -103,6 +103,11 @@ enum Permission: string
     case DocumentsUpload = 'documents.upload';
     case DocumentsManage = 'documents.manage';
 
+    // ─── Assets ───────────────────────────────────────────────────────────────
+    case AssetsView   = 'assets.view';
+    case AssetsCreate = 'assets.create';
+    case AssetsManage = 'assets.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

@@ -27,6 +27,7 @@ import {
   Store,
   Factory,
   FolderKanban,
+  Landmark,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -122,6 +123,7 @@ const navigationGroups = [
         ]
       },
       { name: 'Reporting', to: '/reporting', icon: markRaw(BarChart2), permission: 'accounting.reports.view' },
+      { name: 'Assets', to: '/assets', icon: markRaw(Landmark), permission: 'assets.view' },
     ]
   },
   {

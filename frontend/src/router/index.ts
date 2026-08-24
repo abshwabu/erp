@@ -192,6 +192,12 @@ const router = createRouter({
           meta: { title: 'Reporting', permission: 'accounting.reports.view' }
         },
         {
+          path: 'assets',
+          name: 'assets',
+          component: () => import('@/modules/assets/pages/AssetsPage.vue'),
+          meta: { title: 'Assets', permission: 'assets.view' }
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('@/modules/core/pages/SettingsPage.vue'),
