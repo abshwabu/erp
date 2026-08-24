@@ -23,6 +23,7 @@ import {
   Star,
   Check,
   Copy,
+  Globe,
 } from '@lucide/vue'
 
 interface Section {
@@ -66,6 +67,12 @@ const selectedSectionId = ref<string | null>(null)
 const viewMode = ref<'desktop' | 'tablet' | 'mobile'>('desktop')
 const isSaving = ref(false)
 const isAddingSection = ref(false)
+const isPublished = ref(props.storefront.is_published ?? true)
+const themeConfig = ref(JSON.parse(JSON.stringify(props.storefront.theme_config || {
+  primary_color: '#4f46e5',
+  banner_text: '✨ Welcome to our new store! Free shipping worldwide.',
+  show_banner: true,
+})))
 
 // Sample demo products to render live inside product_grid blocks
 const catalogProducts = ref([
@@ -237,19 +244,43 @@ function duplicateSection(index: number) {
   selectedSectionId.value = clone.id
 }
 
-async function saveChanges() {
+async function togglePublish() {
+  const nextState = !isPublished.value
+  try {
+    await api.put(`/ecommerce/storefronts/${props.storefront.id}`, {
+      is_published: nextState,
+    })
+    isPublished.value = nextState
+    props.storefront.is_published = nextState
+    toast.success(nextState ? 'Storefront is now Published LIVE!' : 'Storefront changed to Draft.')
+  } catch (e: any) {
+    toast.error('Failed to change publish status.')
+  }
+}
+
+async function saveAndPublish() {
   if (!activePage.value) return
   isSaving.value = true
   try {
-    const res = await api.put(
-      `/ecommerce/storefronts/${props.storefront.id}/pages/${activePage.value.id}`,
-      {
-        sections: sections.value,
-      }
-    )
-    toast.success('Storefront page layout saved successfully!')
+    await Promise.all([
+      api.put(
+        `/ecommerce/storefronts/${props.storefront.id}/pages/${activePage.value.id}`,
+        {
+          sections: sections.value,
+          is_published: true,
+        }
+      ),
+      api.put(`/ecommerce/storefronts/${props.storefront.id}`, {
+        is_published: true,
+        theme_config: themeConfig.value,
+      }),
+    ])
+
+    isPublished.value = true
+    props.storefront.is_published = true
+    toast.success(`Published live! Your store is live at /store/${props.storefront.slug}`)
   } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Failed to save page layout.')
+    toast.error(e?.response?.data?.message || 'Failed to save and publish.')
   } finally {
     isSaving.value = false
   }
@@ -274,12 +305,20 @@ function formatCents(cents: number) {
         <div>
           <h1 class="text-base font-bold text-white flex items-center space-x-2">
             <span>{{ storefront.name }}</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400 border border-primary-500/30">
-              Page Builder
-            </span>
+            <button
+              @click="togglePublish"
+              :class="[
+                'text-xs px-2.5 py-0.5 rounded-full font-bold transition-all cursor-pointer flex items-center space-x-1',
+                isPublished ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
+              ]"
+              :title="isPublished ? 'Click to switch to Draft' : 'Click to publish Live'"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" :class="isPublished ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"></span>
+              <span>{{ isPublished ? '● Published Live' : '○ Draft' }}</span>
+            </button>
           </h1>
           <p class="text-xs font-mono text-slate-400">
-            Public URL: /store/{{ storefront.slug }}
+            Store URL: /store/{{ storefront.slug }}
           </p>
         </div>
       </div>
@@ -314,19 +353,19 @@ function formatCents(cents: number) {
         <router-link
           :to="`/store/${storefront.slug}`"
           target="_blank"
-          class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 inline-flex items-center space-x-1.5 transition-colors"
+          class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 inline-flex items-center space-x-1.5 transition-colors"
         >
           <ExternalLink class="w-3.5 h-3.5" />
           <span>View Live Store</span>
         </router-link>
 
         <button
-          @click="saveChanges"
+          @click="saveAndPublish"
           :disabled="isSaving"
           class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/30 inline-flex items-center space-x-1.5 transition-colors disabled:opacity-50"
         >
           <Save class="w-3.5 h-3.5" />
-          <span>{{ isSaving ? 'Saving...' : 'Publish & Save' }}</span>
+          <span>{{ isSaving ? 'Publishing...' : 'Publish & Save Changes' }}</span>
         </button>
       </div>
     </header>
@@ -411,10 +450,10 @@ function formatCents(cents: number) {
         >
           <!-- Top Store Announcement Bar -->
           <div
-            v-if="storefront.theme_config?.show_banner"
+            v-if="themeConfig?.show_banner"
             class="bg-indigo-600 text-white text-xs text-center py-2 px-4 font-medium"
           >
-            {{ storefront.theme_config?.banner_text || 'Welcome to our store!' }}
+            {{ themeConfig?.banner_text || 'Welcome to our store!' }}
           </div>
 
           <!-- Dynamic Rendered Sections -->

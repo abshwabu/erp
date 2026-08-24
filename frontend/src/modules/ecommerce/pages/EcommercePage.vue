@@ -445,6 +445,7 @@ onMounted(fetchData)
     <StorefrontBuilder
       v-if="activeBuildingStorefront"
       :storefront="activeBuildingStorefront"
+      @updated="fetchData"
       @close="activeBuildingStorefront = null; fetchData()"
     />
   </div>

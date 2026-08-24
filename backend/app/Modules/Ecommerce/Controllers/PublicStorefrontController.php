@@ -21,10 +21,12 @@ class PublicStorefrontController extends BaseController
      */
     private function resolveStorefrontTenant(string $slug): ?Storefront
     {
+        $isPreview = request()->boolean('preview') || request()->header('X-Tenant-ID') !== null;
+
         // 1. If tenancy is already initialized, find storefront in current tenant context
         if (tenancy()->initialized) {
             return Storefront::where('slug', $slug)
-                ->where('is_published', true)
+                ->when(! $isPreview, fn ($q) => $q->where('is_published', true))
                 ->first();
         }
 
@@ -43,7 +45,7 @@ class PublicStorefrontController extends BaseController
             if ($tenant) {
                 tenancy()->initialize($tenant);
                 return Storefront::where('slug', $slug)
-                    ->where('is_published', true)
+                    ->when(! $isPreview, fn ($q) => $q->where('is_published', true))
                     ->first();
             }
         }
@@ -52,9 +54,9 @@ class PublicStorefrontController extends BaseController
         $tenants = Tenant::where('status', 'active')->get();
         foreach ($tenants as $t) {
             try {
-                $store = $t->run(function () use ($slug) {
+                $store = $t->run(function () use ($slug, $isPreview) {
                     return Storefront::where('slug', $slug)
-                        ->where('is_published', true)
+                        ->when(! $isPreview, fn ($q) => $q->where('is_published', true))
                         ->first();
                 });
 
@@ -78,7 +80,8 @@ class PublicStorefrontController extends BaseController
             return $this->errorResponse('Storefront not found or is not published yet.', 404);
         }
 
-        $storefront->load(['pages' => fn ($q) => $q->where('is_published', true)->orderBy('order')]);
+        $isPreview = request()->boolean('preview') || request()->header('X-Tenant-ID') !== null;
+        $storefront->load(['pages' => fn ($q) => $q->when(! $isPreview, fn ($pq) => $pq->where('is_published', true))->orderBy('order')]);
 
         // Fetch products for storefront catalog
         $products = Product::where('status', 'active')
