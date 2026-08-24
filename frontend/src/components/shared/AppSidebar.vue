@@ -29,6 +29,7 @@ import {
   FolderKanban,
   Landmark,
   Headphones,
+  Globe,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -78,6 +79,7 @@ const navigationGroups = [
       { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view' },
       { name: 'Manufacturing', to: '/manufacturing', icon: markRaw(Factory), permission: 'manufacturing.work_orders.view' },
       { name: 'Documents', to: '/documents', icon: markRaw(FileText), permission: 'documents.view' },
+      { name: 'E-Commerce', to: '/ecommerce', icon: markRaw(Globe), permission: 'ecommerce.channels.view' },
     ]
   },
   {

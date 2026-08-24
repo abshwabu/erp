@@ -115,6 +115,12 @@ const router = createRouter({
           component: () => import('@/modules/documents/pages/DocumentsPage.vue'),
           meta: { title: 'Documents', permission: 'documents.view' }
         },
+        {
+          path: 'ecommerce',
+          name: 'ecommerce',
+          component: () => import('@/modules/ecommerce/pages/EcommercePage.vue'),
+          meta: { title: 'E-Commerce', permission: 'ecommerce.channels.view' }
+        },
         // HR Module
         {
           path: 'hr',
