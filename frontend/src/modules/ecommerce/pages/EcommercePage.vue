@@ -1,44 +1,45 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import api from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import StorefrontBuilder from '../components/StorefrontBuilder.vue'
 import {
   Globe,
-  RefreshCw,
   ShoppingCart,
-  CheckCircle,
-  Package,
-  Sparkles,
-  ExternalLink,
-  Edit3,
+  RefreshCw,
   Plus,
+  ExternalLink,
   Trash2,
+  Sliders,
+  CheckCircle,
+  Clock,
+  Sparkles,
   Layout,
-  Store,
+  Layers,
+  Palette,
+  Eye,
 } from '@lucide/vue'
+
+interface EcommerceChannel {
+  id: string
+  name: string
+  platform: 'shopify' | 'woocommerce' | 'amazon' | 'custom'
+  is_active: boolean
+  last_sync_at: string | null
+  created_at: string
+}
 
 interface EcommerceOrder {
   id: string
   order_number: string
   customer_name: string
-  customer_email: string | null
+  customer_email: string
   total_cents: number
   currency: string
   payment_status: string
   fulfillment_status: string
   created_at: string
-  channel?: { name: string; platform: string }
-}
-
-interface EcommerceChannel {
-  id: string
-  name: string
-  platform: string
-  store_url: string | null
-  is_active: boolean
-  last_sync_at: string | null
-  orders_count?: number
+  channel?: { name: string }
 }
 
 interface Storefront {
@@ -49,8 +50,8 @@ interface Storefront {
   description: string | null
   theme_config: Record<string, any>
   is_published: boolean
+  created_at: string
   pages?: any[]
-  created_at?: string
 }
 
 const toast = useToast()
@@ -60,33 +61,39 @@ const storefronts = ref<Storefront[]>([])
 const loading = ref(true)
 const activeTab = ref<'storefronts' | 'orders' | 'channels'>('storefronts')
 
-// Builder overlay state
+// Active storefront in builder modal
 const activeBuildingStorefront = ref<Storefront | null>(null)
 
-// Create Storefront modal state
+// Create store modal
 const isCreateModalOpen = ref(false)
+const isCreatingStore = ref(false)
 const newStoreName = ref('')
 const newStoreTitle = ref('')
-const isCreatingStore = ref(false)
 
-const fulfillmentColors: Record<string, string> = {
-  unfulfilled: 'bg-amber-50 text-amber-700 border-amber-200',
-  fulfilled: 'bg-green-50 text-green-700 border-green-200',
-  cancelled: 'bg-red-50 text-red-700 border-red-200',
-}
+// Connect channel modal
+const isConnectModalOpen = ref(false)
+const isConnecting = ref(false)
+const newChannel = ref({
+  name: '',
+  platform: 'shopify' as 'shopify' | 'woocommerce' | 'amazon' | 'custom',
+  store_url: '',
+  api_key: '',
+  api_secret: '',
+})
 
 async function fetchData() {
   loading.value = true
   try {
-    const [chanRes, ordRes, storeRes] = await Promise.all([
+    const [channelsRes, ordersRes, storefrontsRes] = await Promise.all([
       api.get('/ecommerce/channels'),
       api.get('/ecommerce/orders'),
       api.get('/ecommerce/storefronts'),
     ])
-    channels.value = chanRes.data?.data ?? chanRes.data ?? []
-    orders.value = ordRes.data?.data?.data ?? ordRes.data?.data ?? []
-    storefronts.value = storeRes.data?.data ?? storeRes.data ?? []
-  } catch (e) {
+    channels.value = channelsRes.data?.data || channelsRes.data || []
+    const rawOrders = ordersRes.data?.data || ordersRes.data || []
+    orders.value = Array.isArray(rawOrders) ? rawOrders : rawOrders.data || []
+    storefronts.value = storefrontsRes.data?.data || storefrontsRes.data || []
+  } catch (e: any) {
     console.error('Failed to load ecommerce data', e)
   } finally {
     loading.value = false
@@ -106,7 +113,6 @@ async function createStorefront() {
     newStoreTitle.value = ''
     isCreateModalOpen.value = false
     await fetchData()
-    // Open builder immediately
     const created = res.data?.data || res.data
     if (created) {
       activeBuildingStorefront.value = created
@@ -144,61 +150,100 @@ async function deleteStorefront(id: string) {
 async function triggerSync(id: string) {
   try {
     await api.post(`/ecommerce/channels/${id}/sync`)
+    toast.success('Order sync triggered successfully')
     await fetchData()
-    toast.success('Channel orders synced successfully.')
-  } catch (e) {
-    toast.error('Failed to sync channel.')
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Sync failed')
   }
 }
 
-function formatCents(cents: number, cur = 'USD') {
-  return '$' + (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + cur
+async function connectChannel() {
+  if (!newChannel.value.name) return
+  isConnecting.value = true
+  try {
+    await api.post('/ecommerce/channels', newChannel.value)
+    toast.success('Channel connected successfully')
+    isConnectModalOpen.value = false
+    newChannel.value = { name: '', platform: 'shopify', store_url: '', api_key: '', api_secret: '' }
+    await fetchData()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Failed to connect channel')
+  } finally {
+    isConnecting.value = false
+  }
+}
+
+function formatCents(cents: number, currency: string = 'USD') {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+  }).format(cents / 100)
+}
+
+const fulfillmentColors: Record<string, string> = {
+  unfulfilled: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  fulfilled: 'bg-green-50 text-green-700 border-green-200',
+  shipped: 'bg-blue-50 text-blue-700 border-blue-200',
+  cancelled: 'bg-red-50 text-red-700 border-red-200',
 }
 
 onMounted(fetchData)
 </script>
 
 <template>
-  <div class="p-6 space-y-6">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <Globe class="w-7 h-7 text-primary-600" />
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">E-Commerce & Online Store Builder</h1>
-          <p class="text-xs text-gray-500">Create, customize, and manage customer-facing online stores with drag-and-drop pages</p>
-        </div>
+  <div class="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
+    <!-- Header Section (Mobile Responsive) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">E-Commerce & Storefronts</h1>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+          Build drag-and-drop customer websites, manage multi-channel orders, and sync integrations.
+        </p>
       </div>
 
-      <button
-        v-if="activeTab === 'storefronts'"
-        @click="isCreateModalOpen = true"
-        class="inline-flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
-      >
-        <Plus class="w-4 h-4" />
-        <span>Create Storefront Site</span>
-      </button>
+      <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+        <button
+          v-if="activeTab === 'storefronts'"
+          @click="isCreateModalOpen = true"
+          class="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2"
+        >
+          <Plus class="w-4 h-4" />
+          <span>New Storefront Site</span>
+        </button>
+
+        <button
+          v-if="activeTab === 'channels'"
+          @click="isConnectModalOpen = true"
+          class="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2"
+        >
+          <Plus class="w-4 h-4" />
+          <span>Connect Channel</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="border-b border-gray-200">
-      <nav class="-mb-px flex space-x-8">
+    <!-- Navigation Tabs (Mobile Horizontally Scrollable) -->
+    <div class="border-b border-gray-200 overflow-x-auto scrollbar-none">
+      <nav class="-mb-px flex space-x-6 sm:space-x-8 min-w-max">
         <button
           @click="activeTab = 'storefronts'"
-          :class="[activeTab === 'storefronts' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2']"
+          :class="[activeTab === 'storefronts' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
-          <Store class="w-4 h-4" />
+          <Sparkles class="w-4 h-4" />
           <span>My Storefront Sites ({{ storefronts.length }})</span>
         </button>
+
         <button
           @click="activeTab = 'orders'"
-          :class="[activeTab === 'orders' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2']"
+          :class="[activeTab === 'orders' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
           <ShoppingCart class="w-4 h-4" />
-          <span>Customer Orders ({{ orders.length }})</span>
+          <span>Orders ({{ orders.length }})</span>
         </button>
+
         <button
           @click="activeTab = 'channels'"
-          :class="[activeTab === 'channels' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2']"
+          :class="[activeTab === 'channels' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
           <Globe class="w-4 h-4" />
           <span>External Connectors ({{ channels.length }})</span>
@@ -206,17 +251,17 @@ onMounted(fetchData)
       </nav>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-gray-500">Loading e-commerce data…</div>
+    <div v-if="loading" class="text-center py-12 text-gray-500 text-sm">Loading e-commerce data…</div>
 
     <!-- 1. Storefronts Builder Tab -->
     <div v-else-if="activeTab === 'storefronts'" class="space-y-6">
-      <div v-if="storefronts.length === 0" class="text-center py-16 bg-white rounded-2xl border border-gray-200 space-y-4">
-        <div class="w-16 h-16 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mx-auto">
-          <Sparkles class="w-8 h-8" />
+      <div v-if="storefronts.length === 0" class="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mx-auto">
+          <Sparkles class="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
         <div class="space-y-1">
-          <h3 class="text-lg font-bold text-gray-900">Build Your First Online Store</h3>
-          <p class="text-sm text-gray-500 max-w-md mx-auto">
+          <h3 class="text-base sm:text-lg font-bold text-gray-900">Build Your First Online Store</h3>
+          <p class="text-xs sm:text-sm text-gray-500 max-w-md mx-auto">
             Design a public e-commerce store with drag-and-drop editable blocks (Hero banners, product grids, promo deals, testimonials).
           </p>
         </div>
@@ -229,25 +274,25 @@ onMounted(fetchData)
         </button>
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <div
           v-for="store in storefronts"
           :key="store.id"
           class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
         >
           <!-- Card Header -->
-          <div class="p-6 space-y-4">
-            <div class="flex items-start justify-between">
-              <div class="space-y-1">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
+          <div class="p-5 sm:p-6 space-y-3 sm:space-y-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="space-y-1 min-w-0">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 truncate max-w-full">
                   /store/{{ store.slug }}
                 </span>
-                <h3 class="text-lg font-bold text-gray-900">{{ store.name }}</h3>
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 truncate">{{ store.name }}</h3>
               </div>
               <button
                 @click="togglePublish(store)"
                 :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-bold transition-colors',
+                  'px-2.5 py-1 rounded-full text-xs font-bold transition-colors shrink-0',
                   store.is_published ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
                 ]"
               >
@@ -272,7 +317,7 @@ onMounted(fetchData)
           </div>
 
           <!-- Card Actions -->
-          <div class="p-4 bg-slate-50 border-t border-gray-100 flex items-center justify-between">
+          <div class="p-3 sm:p-4 bg-slate-50 border-t border-gray-100 flex items-center justify-between gap-2">
             <button
               @click="activeBuildingStorefront = store"
               class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-sm transition-colors"
@@ -281,7 +326,7 @@ onMounted(fetchData)
               <span>Edit Pages (Builder)</span>
             </button>
 
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1.5 sm:space-x-2">
               <router-link
                 :to="`/store/${store.slug}`"
                 target="_blank"
@@ -306,12 +351,45 @@ onMounted(fetchData)
 
     <!-- 2. Orders Tab -->
     <div v-else-if="activeTab === 'orders'">
-      <div v-if="orders.length === 0" class="text-center py-16 bg-white rounded-lg border border-gray-200">
+      <div v-if="orders.length === 0" class="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-200 p-6">
         <ShoppingCart class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-500 font-medium">No online orders placed yet</p>
-        <p class="text-sm text-gray-400 mt-1">Orders placed through your public storefronts will appear here automatically.</p>
+        <p class="text-gray-600 font-medium text-sm">No online orders placed yet</p>
+        <p class="text-xs text-gray-400 mt-1">Orders placed through your public storefronts will appear here automatically.</p>
       </div>
-      <div v-else class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+
+      <!-- Mobile Card List (< md) -->
+      <div class="md:hidden space-y-3">
+        <div
+          v-for="ord in orders"
+          :key="ord.id"
+          class="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-sm"
+        >
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-xs text-gray-900">{{ ord.order_number }}</span>
+            <span class="text-[10px] text-gray-400">{{ ord.created_at?.substring(0, 10) }}</span>
+          </div>
+
+          <div class="flex items-center justify-between text-xs">
+            <div>
+              <p class="font-semibold text-gray-900">{{ ord.customer_name }}</p>
+              <p class="text-[10px] text-gray-500">{{ ord.customer_email }}</p>
+            </div>
+            <span class="text-sm font-extrabold text-gray-900">{{ formatCents(ord.total_cents, ord.currency) }}</span>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-[10px]">
+            <span class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold uppercase">
+              {{ ord.payment_status }}
+            </span>
+            <span class="px-2 py-0.5 rounded-full font-semibold border uppercase" :class="fulfillmentColors[ord.fulfillment_status] ?? 'bg-gray-100'">
+              {{ ord.fulfillment_status }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Table (md+) -->
+      <div class="hidden md:block bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -356,86 +434,132 @@ onMounted(fetchData)
 
     <!-- 3. External Channels Tab -->
     <div v-else-if="activeTab === 'channels'">
-      <div v-if="channels.length === 0" class="text-center py-16 bg-white rounded-lg border border-gray-200">
+      <div v-if="channels.length === 0" class="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-200 p-6">
         <Globe class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-500 font-medium">No external sales channels connected</p>
-        <p class="text-sm text-gray-400 mt-1">Connect Shopify, WooCommerce, or custom API channels.</p>
-      </div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div
-          v-for="chan in channels"
-          :key="chan.id"
-          class="bg-white p-5 rounded-lg border border-gray-200 space-y-4 hover:shadow-sm transition-all"
+        <p class="text-gray-600 font-medium text-sm">No external marketplace channels connected</p>
+        <p class="text-xs text-gray-400 mt-1 mb-4">Connect external channels like Shopify, WooCommerce, or Amazon to sync inventory & orders.</p>
+        <button
+          @click="isConnectModalOpen = true"
+          class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-medium text-xs rounded-xl shadow transition-colors"
         >
-          <div class="flex items-start justify-between">
-            <div>
-              <h3 class="font-bold text-gray-900">{{ chan.name }}</h3>
-              <p class="text-xs text-gray-500 uppercase mt-0.5">Platform: {{ chan.platform }}</p>
+          Connect Shopify or WooCommerce
+        </button>
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div
+          v-for="ch in channels"
+          :key="ch.id"
+          class="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 flex flex-col justify-between shadow-sm space-y-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-primary-600">{{ ch.platform }}</span>
+              <span
+                :class="[ch.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600', 'px-2 py-0.5 rounded-full text-[10px] font-bold']"
+              >
+                {{ ch.is_active ? 'Active' : 'Inactive' }}
+              </span>
             </div>
-            <span
-              class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-              :class="chan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'"
-            >
-              {{ chan.is_active ? 'Active' : 'Paused' }}
-            </span>
+            <h3 class="text-base font-bold text-gray-900">{{ ch.name }}</h3>
+            <p class="text-xs text-gray-400">
+              Last synced: {{ ch.last_sync_at ? new Date(ch.last_sync_at).toLocaleString() : 'Never' }}
+            </p>
           </div>
 
-          <div class="text-xs text-gray-500 space-y-1">
-            <p v-if="chan.store_url" class="truncate font-mono">{{ chan.store_url }}</p>
-            <p>Synced Orders: <span class="font-semibold text-gray-800">{{ chan.orders_count ?? 0 }}</span></p>
-            <p v-if="chan.last_sync_at">Last Sync: {{ chan.last_sync_at.substring(0, 16).replace('T', ' ') }}</p>
-          </div>
-
-          <div class="pt-2 border-t border-gray-100 flex justify-end">
+          <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
             <button
-              @click="triggerSync(chan.id)"
-              class="inline-flex items-center space-x-1 text-xs text-primary-600 hover:text-primary-800 font-medium px-2.5 py-1 rounded border border-primary-200 hover:bg-primary-50"
+              @click="triggerSync(ch.id)"
+              class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold"
             >
               <RefreshCw class="w-3.5 h-3.5" />
-              <span>Sync Now</span>
+              <span>Sync Orders</span>
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Create Storefront Modal -->
+    <!-- Create Storefront Modal (Mobile Responsive) -->
     <div
       v-if="isCreateModalOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
     >
-      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 class="text-base font-bold text-gray-900">Create New Storefront Site</h3>
-          <button @click="isCreateModalOpen = false" class="text-gray-400 hover:text-gray-700">✕</button>
+      <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 class="text-base font-bold text-gray-900">Create New Storefront</h3>
+          <button @click="isCreateModalOpen = false" class="text-gray-400 hover:text-gray-700 p-1">✕</button>
         </div>
 
-        <form @submit.prevent="createStorefront" class="space-y-4 text-xs">
+        <form @submit.prevent="createStorefront" class="space-y-3.5 text-xs sm:text-sm">
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Store Name *</label>
+            <label class="font-semibold text-gray-700">Storefront Brand Name *</label>
             <input
               v-model="newStoreName"
               required
-              placeholder="e.g. Modern Outfitters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="e.g. Apex Apparel Store"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/20 text-xs sm:text-sm"
             />
           </div>
 
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Store Title / Tagline</label>
+            <label class="font-semibold text-gray-700">Headline Title</label>
             <input
               v-model="newStoreTitle"
-              placeholder="e.g. Premium handcrafted apparel & gear"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="e.g. Premium Sustainable Clothing"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/20 text-xs sm:text-sm"
             />
           </div>
 
           <button
             type="submit"
             :disabled="isCreatingStore"
-            class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
+            class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all disabled:opacity-50"
           >
             {{ isCreatingStore ? 'Creating Storefront...' : 'Create & Open Visual Builder' }}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Connect Channel Modal (Mobile Responsive) -->
+    <div
+      v-if="isConnectModalOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+    >
+      <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 class="text-base font-bold text-gray-900">Connect Marketplace Channel</h3>
+          <button @click="isConnectModalOpen = false" class="text-gray-400 hover:text-gray-700 p-1">✕</button>
+        </div>
+
+        <form @submit.prevent="connectChannel" class="space-y-3 text-xs sm:text-sm">
+          <div class="space-y-1">
+            <label class="font-semibold text-gray-700">Platform</label>
+            <select v-model="newChannel.platform" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm">
+              <option value="shopify">Shopify</option>
+              <option value="woocommerce">WooCommerce</option>
+              <option value="amazon">Amazon</option>
+              <option value="custom">Custom Webhook</option>
+            </select>
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-semibold text-gray-700">Channel Name *</label>
+            <input v-model="newChannel.name" required placeholder="e.g. US Shopify Store" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-semibold text-gray-700">Store URL</label>
+            <input v-model="newChannel.store_url" placeholder="https://store.myshopify.com" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="isConnecting"
+            class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all disabled:opacity-50"
+          >
+            {{ isConnecting ? 'Connecting...' : 'Save & Connect Channel' }}
           </button>
         </form>
       </div>

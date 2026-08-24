@@ -23,7 +23,8 @@ import {
   Star,
   Check,
   Copy,
-  Globe,
+  Settings,
+  Sliders,
 } from '@lucide/vue'
 
 interface Section {
@@ -65,6 +66,7 @@ const activePage = ref<StorefrontPage | null>(null)
 const sections = ref<Section[]>([])
 const selectedSectionId = ref<string | null>(null)
 const viewMode = ref<'desktop' | 'tablet' | 'mobile'>('desktop')
+const mobileTab = ref<'structure' | 'canvas' | 'inspector'>('canvas')
 const isSaving = ref(false)
 const isAddingSection = ref(false)
 const isPublished = ref(props.storefront.is_published ?? true)
@@ -208,6 +210,7 @@ function addSection(type: Section['type']) {
 
   selectedSectionId.value = newId
   isAddingSection.value = false
+  mobileTab.value = 'inspector'
 }
 
 function moveUp(index: number) {
@@ -242,6 +245,13 @@ function duplicateSection(index: number) {
   clone.id = `${original.type}-${Date.now()}`
   sections.value.splice(index + 1, 0, clone)
   selectedSectionId.value = clone.id
+}
+
+function selectSection(id: string) {
+  selectedSectionId.value = id
+  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    mobileTab.value = 'inspector'
+  }
 }
 
 async function togglePublish() {
@@ -293,37 +303,36 @@ function formatCents(cents: number) {
 
 <template>
   <div class="fixed inset-0 z-50 bg-slate-900 flex flex-col h-screen overflow-hidden text-slate-100 font-sans">
-    <!-- Top Action Bar -->
-    <header class="h-16 px-6 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
-      <div class="flex items-center space-x-4">
+    <!-- Top Action Bar (Mobile Responsive) -->
+    <header class="h-14 sm:h-16 px-3 sm:px-6 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0 gap-2">
+      <div class="flex items-center space-x-2 sm:space-x-4 min-w-0">
         <button
           @click="emit('close')"
-          class="text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
+          class="text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors shrink-0"
         >
-          &larr; Back to Dashboard
+          <span class="hidden sm:inline">&larr; Dashboard</span>
+          <span class="sm:hidden">&larr;</span>
         </button>
-        <div>
-          <h1 class="text-base font-bold text-white flex items-center space-x-2">
-            <span>{{ storefront.name }}</span>
+        <div class="min-w-0">
+          <div class="flex items-center space-x-1.5 min-w-0">
+            <span class="text-xs sm:text-sm font-bold text-white truncate max-w-[120px] sm:max-w-xs">{{ storefront.name }}</span>
             <button
               @click="togglePublish"
               :class="[
-                'text-xs px-2.5 py-0.5 rounded-full font-bold transition-all cursor-pointer flex items-center space-x-1',
-                isPublished ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
+                'text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer shrink-0',
+                isPublished ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
               ]"
-              :title="isPublished ? 'Click to switch to Draft' : 'Click to publish Live'"
             >
-              <span class="w-1.5 h-1.5 rounded-full" :class="isPublished ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"></span>
-              <span>{{ isPublished ? '● Published Live' : '○ Draft' }}</span>
+              {{ isPublished ? '● Live' : '○ Draft' }}
             </button>
-          </h1>
-          <p class="text-xs font-mono text-slate-400">
-            Store URL: /store/{{ storefront.slug }}
+          </div>
+          <p class="text-[10px] font-mono text-slate-400 truncate hidden xs:block">
+            /store/{{ storefront.slug }}
           </p>
         </div>
       </div>
 
-      <!-- Viewport Device Switcher -->
+      <!-- Viewport Device Switcher (Desktop / Tablet) -->
       <div class="hidden md:flex items-center space-x-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
         <button
           @click="viewMode = 'desktop'"
@@ -349,33 +358,39 @@ function formatCents(cents: number) {
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
         <router-link
           :to="`/store/${storefront.slug}`"
           target="_blank"
-          class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 inline-flex items-center space-x-1.5 transition-colors"
+          class="p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 inline-flex items-center space-x-1.5 transition-colors"
+          title="Open live store"
         >
           <ExternalLink class="w-3.5 h-3.5" />
-          <span>View Live Store</span>
+          <span class="hidden sm:inline">Live Store</span>
         </router-link>
 
         <button
           @click="saveAndPublish"
           :disabled="isSaving"
-          class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/30 inline-flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+          class="px-2.5 sm:px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/30 inline-flex items-center space-x-1.5 transition-colors disabled:opacity-50"
         >
           <Save class="w-3.5 h-3.5" />
-          <span>{{ isSaving ? 'Publishing...' : 'Publish & Save Changes' }}</span>
+          <span>{{ isSaving ? 'Saving...' : 'Publish' }}</span>
         </button>
       </div>
     </header>
 
-    <!-- Main Workspace (3-Column Layout) -->
-    <div class="flex-1 flex overflow-hidden">
-      <!-- Left Sidebar: Section Outline & Palette -->
-      <div class="w-72 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
-        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Page Structure</span>
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <!-- Left Sidebar: Section Outline & Palette (Hidden on mobile unless active) -->
+      <div
+        :class="[
+          'w-full lg:w-72 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0',
+          mobileTab === 'structure' ? 'flex flex-1 z-20' : 'hidden lg:flex'
+        ]"
+      >
+        <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Page Blocks ({{ sections.length }})</span>
           <button
             @click="isAddingSection = true"
             class="text-xs px-2 py-1 rounded bg-primary-600 hover:bg-primary-500 text-white flex items-center space-x-1 font-medium"
@@ -386,11 +401,11 @@ function formatCents(cents: number) {
         </div>
 
         <!-- Section list / reordering -->
-        <div class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="flex-1 overflow-y-auto p-3 space-y-2 pb-20 lg:pb-3">
           <div
             v-for="(sec, idx) in sections"
             :key="sec.id"
-            @click="selectedSectionId = sec.id"
+            @click="selectedSectionId = sec.id; mobileTab = 'inspector'"
             :class="[
               'p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between group',
               selectedSectionId === sec.id
@@ -404,7 +419,7 @@ function formatCents(cents: number) {
             </div>
 
             <!-- Controls -->
-            <div class="flex items-center space-x-1 opacity-60 group-hover:opacity-100">
+            <div class="flex items-center space-x-1">
               <button
                 @click.stop="moveUp(idx)"
                 :disabled="idx === 0"
@@ -423,7 +438,7 @@ function formatCents(cents: number) {
               </button>
               <button
                 @click.stop="duplicateSection(idx)"
-                class="p-1 hover:bg-slate-800 rounded"
+                class="p-1 hover:bg-slate-800 rounded hidden xs:inline-block"
                 title="Duplicate"
               >
                 <Copy class="w-3 h-3" />
@@ -441,82 +456,90 @@ function formatCents(cents: number) {
       </div>
 
       <!-- Center Live Preview Canvas -->
-      <div class="flex-1 bg-slate-900/80 p-6 overflow-y-auto flex items-start justify-center">
+      <div
+        :class="[
+          'flex-1 bg-slate-900/80 p-3 sm:p-6 overflow-y-auto flex items-start justify-center',
+          mobileTab === 'canvas' ? 'flex' : 'hidden lg:flex'
+        ]"
+      >
         <div
           :class="[
-            'bg-white text-slate-900 shadow-2xl transition-all duration-300 min-h-full rounded-lg overflow-hidden border border-slate-700',
-            viewMode === 'desktop' ? 'w-full max-w-5xl' : (viewMode === 'tablet' ? 'w-[768px]' : 'w-[375px]')
+            'bg-white text-slate-900 shadow-2xl transition-all duration-300 min-h-full rounded-lg overflow-hidden border border-slate-700 w-full mb-16 lg:mb-0',
+            viewMode === 'desktop' ? 'max-w-5xl' : (viewMode === 'tablet' ? 'max-w-[768px]' : 'max-w-[375px]')
           ]"
         >
           <!-- Top Store Announcement Bar -->
           <div
             v-if="themeConfig?.show_banner"
-            class="bg-indigo-600 text-white text-xs text-center py-2 px-4 font-medium"
+            class="bg-indigo-600 text-white text-[11px] sm:text-xs text-center py-2 px-3 font-medium"
           >
             {{ themeConfig?.banner_text || 'Welcome to our store!' }}
           </div>
 
           <!-- Dynamic Rendered Sections -->
-          <div v-for="sec in sections" :key="sec.id" :class="[selectedSectionId === sec.id ? 'ring-2 ring-primary-500 relative' : '']">
+          <div
+            v-for="sec in sections"
+            :key="sec.id"
+            @click="selectSection(sec.id)"
+            :class="[
+              'cursor-pointer transition-all',
+              selectedSectionId === sec.id ? 'ring-2 ring-primary-500 relative' : 'hover:opacity-95'
+            ]"
+          >
             <!-- 1. Hero Block -->
             <section
               v-if="sec.type === 'hero'"
               :style="{ backgroundColor: sec.props.background_color || '#0f172a', color: sec.props.text_color || '#ffffff' }"
-              class="py-16 px-8 text-center space-y-4"
+              class="py-10 sm:py-16 px-4 sm:px-8 text-center space-y-3 sm:space-y-4"
             >
-              <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ sec.props.headline }}</h2>
-              <p class="text-sm max-w-xl mx-auto opacity-90 leading-relaxed">{{ sec.props.subheadline }}</p>
+              <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">{{ sec.props.headline }}</h2>
+              <p class="text-xs sm:text-sm max-w-xl mx-auto opacity-90 leading-relaxed">{{ sec.props.subheadline }}</p>
               <div class="pt-2">
-                <a
-                  :href="sec.props.button_link || '#'"
-                  class="inline-block px-6 py-2.5 rounded-full font-semibold text-sm bg-primary-600 text-white shadow hover:bg-primary-700 transition-colors"
-                >
+                <span class="inline-block px-5 py-2 rounded-full font-semibold text-xs sm:text-sm bg-primary-600 text-white shadow">
                   {{ sec.props.button_text || 'Shop Now' }}
-                </a>
+                </span>
               </div>
             </section>
 
             <!-- 2. Features Block -->
-            <section v-else-if="sec.type === 'features'" class="py-12 px-8 bg-slate-50 border-y border-slate-100">
-              <h3 v-if="sec.props.title" class="text-xl font-bold text-center text-slate-900 mb-8">{{ sec.props.title }}</h3>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-                <div v-for="(feat, i) in sec.props.items" :key="i" class="p-4 bg-white rounded-xl shadow-sm border border-slate-100 space-y-2">
-                  <div class="w-10 h-10 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mx-auto">
-                    <Truck v-if="feat.icon === 'truck'" class="w-5 h-5" />
-                    <ShieldCheck v-else-if="feat.icon === 'shield'" class="w-5 h-5" />
-                    <RefreshCw v-else class="w-5 h-5" />
+            <section v-else-if="sec.type === 'features'" class="py-8 sm:py-12 px-4 sm:px-8 bg-slate-50 border-y border-slate-100">
+              <h3 v-if="sec.props.title" class="text-base sm:text-xl font-bold text-center text-slate-900 mb-6">{{ sec.props.title }}</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div v-for="(feat, i) in sec.props.items" :key="i" class="p-3 sm:p-4 bg-white rounded-xl shadow-sm border border-slate-100 space-y-1.5">
+                  <div class="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mx-auto">
+                    <Truck v-if="feat.icon === 'truck'" class="w-4 h-4 sm:w-5 sm:h-5" />
+                    <ShieldCheck v-else-if="feat.icon === 'shield'" class="w-4 h-4 sm:w-5 sm:h-5" />
+                    <RefreshCw v-else class="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <h4 class="font-semibold text-sm text-slate-900">{{ feat.title }}</h4>
-                  <p class="text-xs text-slate-500">{{ feat.description }}</p>
+                  <h4 class="font-semibold text-xs sm:text-sm text-slate-900">{{ feat.title }}</h4>
+                  <p class="text-[11px] text-slate-500">{{ feat.description }}</p>
                 </div>
               </div>
             </section>
 
             <!-- 3. Product Grid Block -->
-            <section v-else-if="sec.type === 'product_grid'" id="products" class="py-14 px-8">
-              <div class="text-center mb-8 space-y-1">
-                <h3 class="text-2xl font-bold text-slate-900">{{ sec.props.title }}</h3>
+            <section v-else-if="sec.type === 'product_grid'" class="py-10 sm:py-14 px-4 sm:px-8">
+              <div class="text-center mb-6 sm:mb-8 space-y-1">
+                <h3 class="text-xl sm:text-2xl font-bold text-slate-900">{{ sec.props.title }}</h3>
                 <p v-if="sec.props.subtitle" class="text-xs text-slate-500">{{ sec.props.subtitle }}</p>
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div
                   v-for="prod in catalogProducts"
                   :key="prod.id"
-                  class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-sm hover:shadow-md transition-shadow"
+                  class="bg-white border border-slate-200 rounded-xl p-3 space-y-2 shadow-sm"
                 >
                   <div class="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300 font-mono text-xs">
                     {{ prod.sku }}
                   </div>
                   <div>
-                    <span class="text-[10px] uppercase font-semibold text-primary-600 tracking-wider">{{ prod.category }}</span>
+                    <span class="text-[9px] uppercase font-semibold text-primary-600 tracking-wider">{{ prod.category }}</span>
                     <h4 class="font-bold text-xs text-slate-900 truncate">{{ prod.name }}</h4>
                   </div>
                   <div class="flex items-center justify-between pt-1">
-                    <span class="font-bold text-sm text-slate-900">{{ formatCents(prod.price_cents) }}</span>
-                    <button class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-900 text-white hover:bg-slate-800">
-                      Add
-                    </button>
+                    <span class="font-bold text-xs sm:text-sm text-slate-900">{{ formatCents(prod.price_cents) }}</span>
+                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-900 text-white">Add</span>
                   </div>
                 </div>
               </div>
@@ -526,38 +549,38 @@ function formatCents(cents: number) {
             <section
               v-else-if="sec.type === 'promo_banner'"
               :style="{ backgroundColor: sec.props.background_color || '#6366f1' }"
-              class="py-10 px-8 text-white text-center space-y-2"
+              class="py-8 sm:py-10 px-4 sm:px-8 text-white text-center space-y-2"
             >
-              <span class="inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-white/20 uppercase tracking-widest">
+              <span class="inline-block px-2.5 py-0.5 text-[9px] font-bold rounded-full bg-white/20 uppercase tracking-widest">
                 {{ sec.props.badge || 'PROMO' }}
               </span>
-              <h3 class="text-2xl font-extrabold">{{ sec.props.headline }}</h3>
+              <h3 class="text-lg sm:text-2xl font-extrabold">{{ sec.props.headline }}</h3>
               <p class="text-xs max-w-md mx-auto opacity-90">{{ sec.props.description }}</p>
-              <div v-if="sec.props.code" class="pt-2">
-                <span class="px-3 py-1 font-mono text-xs font-bold rounded bg-white text-slate-900">
+              <div v-if="sec.props.code" class="pt-1">
+                <span class="px-2.5 py-1 font-mono text-xs font-bold rounded bg-white text-slate-900">
                   CODE: {{ sec.props.code }}
                 </span>
               </div>
             </section>
 
             <!-- 5. Testimonials -->
-            <section v-else-if="sec.type === 'testimonials'" class="py-12 px-8 bg-slate-50">
-              <h3 class="text-xl font-bold text-center text-slate-900 mb-6">{{ sec.props.title }}</h3>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div v-for="(t, idx) in sec.props.items" :key="idx" class="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
+            <section v-else-if="sec.type === 'testimonials'" class="py-8 sm:py-12 px-4 sm:px-8 bg-slate-50">
+              <h3 class="text-base sm:text-xl font-bold text-center text-slate-900 mb-4 sm:mb-6">{{ sec.props.title }}</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div v-for="(t, idx) in sec.props.items" :key="idx" class="p-3 sm:p-4 bg-white rounded-xl border border-slate-200 space-y-1.5">
                   <div class="flex text-amber-400">
-                    <Star v-for="s in (t.rating || 5)" :key="s" class="w-3.5 h-3.5 fill-current" />
+                    <Star v-for="s in (t.rating || 5)" :key="s" class="w-3 h-3 fill-current" />
                   </div>
                   <p class="text-xs text-slate-700 italic">"{{ t.quote }}"</p>
-                  <p class="text-xs font-bold text-slate-900">— {{ t.author }}</p>
+                  <p class="text-[11px] font-bold text-slate-900">— {{ t.author }}</p>
                 </div>
               </div>
             </section>
 
             <!-- 6. Footer -->
-            <footer v-else-if="sec.type === 'footer'" class="py-8 px-8 bg-slate-900 text-slate-400 text-center text-xs space-y-2">
+            <footer v-else-if="sec.type === 'footer'" class="py-6 sm:py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-center text-xs space-y-1.5">
               <p class="font-bold text-white text-sm">{{ sec.props.store_name }}</p>
-              <p>{{ sec.props.tagline }}</p>
+              <p class="text-xs">{{ sec.props.tagline }}</p>
               <p class="pt-2 text-[10px] text-slate-500">&copy; 2026 {{ sec.props.store_name }}. All rights reserved.</p>
             </footer>
           </div>
@@ -565,15 +588,28 @@ function formatCents(cents: number) {
       </div>
 
       <!-- Right Sidebar: Section Inspector / Properties -->
-      <div class="w-80 bg-slate-950 border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4">
+      <div
+        :class="[
+          'w-full lg:w-80 bg-slate-950 border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 pb-20 lg:pb-4',
+          mobileTab === 'inspector' ? 'flex flex-1 z-20' : 'hidden lg:flex'
+        ]"
+      >
         <div v-if="!selectedSection" class="text-center py-16 text-slate-500 text-xs">
           Select any block from the left outline or center preview to customize its settings.
         </div>
 
         <div v-else class="space-y-4">
-          <div class="border-b border-slate-800 pb-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-primary-400">Block Settings</span>
-            <h3 class="text-sm font-bold text-white capitalize">{{ selectedSection.type.replace('_', ' ') }}</h3>
+          <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-primary-400">Block Settings</span>
+              <h3 class="text-sm font-bold text-white capitalize">{{ selectedSection.type.replace('_', ' ') }}</h3>
+            </div>
+            <button
+              @click="mobileTab = 'canvas'"
+              class="lg:hidden text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 font-semibold"
+            >
+              Done
+            </button>
           </div>
 
           <!-- Hero Inspector -->
@@ -647,29 +683,60 @@ function formatCents(cents: number) {
       </div>
     </div>
 
-    <!-- Add Block Modal -->
+    <!-- Mobile Bottom Navigation Bar (< lg screens) -->
+    <div class="lg:hidden h-12 bg-slate-950 border-t border-slate-800 flex items-center justify-around z-30 shrink-0">
+      <button
+        @click="mobileTab = 'structure'"
+        :class="[mobileTab === 'structure' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
+      >
+        <Layers class="w-4 h-4" />
+        <span>Blocks</span>
+      </button>
+
+      <button
+        @click="mobileTab = 'canvas'"
+        :class="[mobileTab === 'canvas' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
+      >
+        <Eye class="w-4 h-4" />
+        <span>Preview</span>
+      </button>
+
+      <button
+        @click="mobileTab = 'inspector'"
+        :class="[mobileTab === 'inspector' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
+      >
+        <Sliders class="w-4 h-4" />
+        <span>Settings</span>
+      </button>
+    </div>
+
+    <!-- Add Block Modal (Mobile Responsive) -->
     <div
       v-if="isAddingSection"
-      class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
     >
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-base font-bold text-white">Add Page Block</h3>
-          <button @click="isAddingSection = false" class="text-slate-400 hover:text-white text-xs font-bold">✕</button>
+          <h3 class="text-sm sm:text-base font-bold text-white">Add Page Block</h3>
+          <button @click="isAddingSection = false" class="text-slate-400 hover:text-white text-xs font-bold p-1">✕</button>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 max-h-[60vh] overflow-y-auto">
           <div
             v-for="b in availableBlockTypes"
             :key="b.type"
             @click="addSection(b.type)"
-            class="p-3.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-primary-500 hover:bg-primary-600/10 cursor-pointer transition-all space-y-1.5 group text-left"
+            class="p-3 sm:p-3.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-primary-500 hover:bg-primary-600/10 cursor-pointer transition-all space-y-1 group text-left"
           >
-            <div class="w-8 h-8 rounded-lg bg-primary-500/10 text-primary-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <component :is="b.icon" class="w-4 h-4" />
+            <div class="flex items-center space-x-2.5">
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary-500/10 text-primary-400 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <component :is="b.icon" class="w-4 h-4" />
+              </div>
+              <div>
+                <h4 class="font-bold text-xs text-white">{{ b.label }}</h4>
+                <p class="text-[10px] text-slate-400 leading-snug line-clamp-1 sm:line-clamp-2">{{ b.description }}</p>
+              </div>
             </div>
-            <h4 class="font-bold text-xs text-white">{{ b.label }}</h4>
-            <p class="text-[10px] text-slate-400 leading-snug">{{ b.description }}</p>
           </div>
         </div>
       </div>
