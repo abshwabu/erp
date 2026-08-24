@@ -26,8 +26,12 @@ final class SubdomainTenantFinder
 
         $subdomain = $parts[0];
 
-        return Tenant::query()
-            ->where('slug', $subdomain)
-            ->first();
+        try {
+            return Tenant::query()
+                ->where('slug', $subdomain)
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

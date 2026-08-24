@@ -13,9 +13,13 @@ final class DomainTenantFinder
     {
         $host = $request->getHost();
 
-        return Tenant::query()
-            ->where('custom_domain', $host)
-            ->orWhere('slug', $host)
-            ->first();
+        try {
+            return Tenant::query()
+                ->where('custom_domain', $host)
+                ->orWhere('slug', $host)
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

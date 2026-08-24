@@ -17,14 +17,18 @@ final class HeaderTenantFinder
             return null;
         }
 
-        return Tenant::query()
-            ->where(function ($query) use ($tenantId) {
-                // Only query 'id' if it looks like a UUID to prevent Postgres errors
-                if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $tenantId)) {
-                    $query->where('id', $tenantId);
-                }
-                $query->orWhere('slug', $tenantId);
-            })
-            ->first();
+        try {
+            return Tenant::query()
+                ->where(function ($query) use ($tenantId) {
+                    // Only query 'id' if it looks like a UUID to prevent Postgres errors
+                    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $tenantId)) {
+                        $query->where('id', $tenantId);
+                    }
+                    $query->orWhere('slug', $tenantId);
+                })
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }
