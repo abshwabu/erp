@@ -103,6 +103,12 @@ const router = createRouter({
           component: () => import('@/modules/procurement/pages/PurchaseOrdersPage.vue'),
           meta: { title: 'Procurement', permission: 'procurement.purchase_orders.view' }
         },
+        {
+          path: 'manufacturing',
+          name: 'manufacturing',
+          component: () => import('@/modules/manufacturing/pages/ManufacturingPage.vue'),
+          meta: { title: 'Manufacturing', permission: 'manufacturing.work_orders.view' }
+        },
         // HR Module
         {
           path: 'hr',
