@@ -28,6 +28,7 @@ import {
   Factory,
   FolderKanban,
   Landmark,
+  Headphones,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -103,6 +104,7 @@ const navigationGroups = [
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
       { name: 'CRM', to: '/crm', icon: markRaw(UserCheck), permission: 'crm.contacts.view' },
       { name: 'Projects', to: '/projects', icon: markRaw(FolderKanban), permission: 'projects.view' },
+      { name: 'Support', to: '/support', icon: markRaw(Headphones), permission: 'support.tickets.view' },
     ]
   },
   {

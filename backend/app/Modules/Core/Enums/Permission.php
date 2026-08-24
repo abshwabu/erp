@@ -108,6 +108,11 @@ enum Permission: string
     case AssetsCreate = 'assets.create';
     case AssetsManage = 'assets.manage';
 
+    // ─── Support ──────────────────────────────────────────────────────────────
+    case SupportTicketsView   = 'support.tickets.view';
+    case SupportTicketsCreate = 'support.tickets.create';
+    case SupportTicketsManage = 'support.tickets.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

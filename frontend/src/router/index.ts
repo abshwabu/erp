@@ -186,6 +186,12 @@ const router = createRouter({
           meta: { title: 'Projects', permission: 'projects.view' }
         },
         {
+          path: 'support',
+          name: 'support',
+          component: () => import('@/modules/support/pages/SupportPage.vue'),
+          meta: { title: 'Support', permission: 'support.tickets.view' }
+        },
+        {
           path: 'reporting',
           name: 'reporting',
           component: () => import('@/modules/reporting/pages/ReportingPage.vue'),
