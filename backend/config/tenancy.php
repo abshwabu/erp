@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Modules\Core\Models\Tenant;
 use App\Modules\Core\Tenancy\Finders\DomainTenantFinder;
 use App\Modules\Core\Tenancy\Finders\SubdomainTenantFinder;
-use Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLSchemaManager;
+use App\Modules\Core\Tenancy\PostgreSQLSchemaManager;
 
 // Only collect /tenant sub-directory migration paths from all modules.
 // Top-level module migrations (e.g. Inventory stock tables) are central-only
