@@ -61,7 +61,8 @@ final class TenantMiddleware
             'api/health',
         ];
 
-        return in_array($request->path(), $centralRoutes, true);
+        return in_array($request->path(), $centralRoutes, true)
+            || str_starts_with($request->path(), 'api/store');
     }
 
     private function applyTenantContext(Tenant $tenant): void

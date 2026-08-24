@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import api from '@/api/client'
 import {
   ShoppingBag,
   ShoppingCart,
@@ -55,7 +55,8 @@ async function fetchStore() {
   loading.value = true
   error.value = ''
   try {
-    const res = await axios.get(`/api/store/${slug.value}`)
+    const tenantQuery = route.query.tenant ? `?tenant=${route.query.tenant}` : ''
+    const res = await api.get(`/store/${slug.value}${tenantQuery}`)
     storefront.value = res.data?.data?.storefront || res.data?.storefront
     products.value = res.data?.data?.products || res.data?.products || []
   } catch (e: any) {
@@ -124,7 +125,8 @@ async function handleCheckout() {
       })),
     }
 
-    const res = await axios.post(`/api/store/${slug.value}/checkout`, payload)
+    const tenantQuery = route.query.tenant ? `?tenant=${route.query.tenant}` : ''
+    const res = await api.post(`/store/${slug.value}/checkout${tenantQuery}`, payload)
     orderSuccess.value = res.data?.data || res.data
     cart.value = []
     isCheckoutOpen.value = false

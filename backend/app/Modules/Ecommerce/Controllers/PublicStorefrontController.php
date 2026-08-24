@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ecommerce\Controllers;
 
 use App\Http\Controllers\BaseController;
+use App\Modules\Core\Models\Tenant;
 use App\Modules\Ecommerce\Models\EcommerceChannel;
 use App\Modules\Ecommerce\Models\EcommerceOrder;
 use App\Modules\Ecommerce\Models\Storefront;
@@ -15,12 +16,69 @@ use Illuminate\Support\Str;
 
 class PublicStorefrontController extends BaseController
 {
+    /**
+     * Resolve and initialize the tenant that owns the requested storefront slug.
+     */
+    private function resolveStorefrontTenant(string $slug): ?Storefront
+    {
+        // 1. If tenancy is already initialized, find storefront in current tenant context
+        if (tenancy()->initialized) {
+            return Storefront::where('slug', $slug)
+                ->where('is_published', true)
+                ->first();
+        }
+
+        // 2. Try explicit tenant identifier from header or query param
+        $tenantId = request()->header('X-Tenant-ID') ?? request()->query('tenant');
+        if ($tenantId) {
+            $tenant = Tenant::query()
+                ->where(function ($q) use ($tenantId) {
+                    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $tenantId)) {
+                        $q->where('id', $tenantId);
+                    }
+                    $q->orWhere('slug', $tenantId);
+                })
+                ->first();
+
+            if ($tenant) {
+                tenancy()->initialize($tenant);
+                return Storefront::where('slug', $slug)
+                    ->where('is_published', true)
+                    ->first();
+            }
+        }
+
+        // 3. Scan active tenants to find the owner of this storefront slug
+        $tenants = Tenant::where('status', 'active')->get();
+        foreach ($tenants as $t) {
+            try {
+                $store = $t->run(function () use ($slug) {
+                    return Storefront::where('slug', $slug)
+                        ->where('is_published', true)
+                        ->first();
+                });
+
+                if ($store) {
+                    tenancy()->initialize($t);
+                    return $store;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
     public function getStore(string $slug): JsonResponse
     {
-        $storefront = Storefront::with(['pages' => fn ($q) => $q->where('is_published', true)->orderBy('order')])
-            ->where('slug', $slug)
-            ->where('is_published', true)
-            ->firstOrFail();
+        $storefront = $this->resolveStorefrontTenant($slug);
+
+        if (! $storefront) {
+            return $this->errorResponse('Storefront not found or is not published yet.', 404);
+        }
+
+        $storefront->load(['pages' => fn ($q) => $q->where('is_published', true)->orderBy('order')]);
 
         // Fetch products for storefront catalog
         $products = Product::where('status', 'active')
@@ -38,14 +96,16 @@ class PublicStorefrontController extends BaseController
 
     public function checkout(Request $request, string $slug): JsonResponse
     {
-        $storefront = Storefront::where('slug', $slug)
-            ->where('is_published', true)
-            ->firstOrFail();
+        $storefront = $this->resolveStorefrontTenant($slug);
+
+        if (! $storefront) {
+            return $this->errorResponse('Storefront not found or is not published.', 404);
+        }
 
         $data = $request->validate([
-            'customer_name'  => ['required', 'string', 'max:255'],
-            'customer_email' => ['required', 'email', 'max:255'],
-            'items'          => ['required', 'array', 'min:1'],
+            'customer_name'      => ['required', 'string', 'max:255'],
+            'customer_email'     => ['required', 'email', 'max:255'],
+            'items'              => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'uuid'],
             'items.*.name'       => ['required', 'string'],
             'items.*.quantity'   => ['required', 'integer', 'min:1'],
