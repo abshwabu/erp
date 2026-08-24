@@ -89,6 +89,10 @@ enum Permission: string
     case ManufacturingWorkOrdersCreate = 'manufacturing.work_orders.create';
     case ManufacturingBomManage        = 'manufacturing.bom.manage';
 
+    // ─── Notifications ────────────────────────────────────────────────────────
+    case NotificationsView   = 'notifications.view';
+    case NotificationsManage = 'notifications.manage';
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

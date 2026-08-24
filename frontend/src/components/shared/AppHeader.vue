@@ -90,6 +90,11 @@ const userMenuItems = [
               <p class="text-xs text-slate-500 mt-1">{{ n.message }}</p>
             </div>
           </div>
+          <div class="p-2 border-t border-slate-100 text-center">
+            <router-link to="/notifications" class="text-xs text-primary-600 font-medium hover:underline">
+              View all notifications
+            </router-link>
+          </div>
         </div>
       </UiDropdown>
 

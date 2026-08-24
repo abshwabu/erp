@@ -185,6 +185,12 @@ const router = createRouter({
           component: () => import('@/modules/core/pages/SettingsPage.vue'),
           meta: { title: 'Settings', permission: 'core.settings.view' }
         },
+        {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/modules/notifications/pages/NotificationsPage.vue'),
+          meta: { title: 'Notifications' }
+        },
         // Accounting Module
         {
           path: 'accounting',
