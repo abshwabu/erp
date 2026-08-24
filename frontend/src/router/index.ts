@@ -38,6 +38,12 @@ const router = createRouter({
       ]
     },
     {
+      path: '/store/:slug',
+      name: 'public-storefront',
+      component: () => import('@/views/store/PublicStorefrontView.vue'),
+      meta: { title: 'Online Store', requiresAuth: false }
+    },
+    {
       path: '/',
       component: AppLayout,
       meta: { requiresAuth: true },

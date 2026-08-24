@@ -114,9 +114,11 @@ enum Permission: string
     case SupportTicketsManage = 'support.tickets.manage';
 
     // ─── Ecommerce ────────────────────────────────────────────────────────────
-    case EcommerceChannelsView   = 'ecommerce.channels.view';
-    case EcommerceChannelsManage = 'ecommerce.channels.manage';
-    case EcommerceOrdersView     = 'ecommerce.orders.view';
+    case EcommerceChannelsView     = 'ecommerce.channels.view';
+    case EcommerceChannelsManage   = 'ecommerce.channels.manage';
+    case EcommerceOrdersView       = 'ecommerce.orders.view';
+    case EcommerceStorefrontView   = 'ecommerce.storefront.view';
+    case EcommerceStorefrontManage = 'ecommerce.storefront.manage';
 
     // ─── Integrations ─────────────────────────────────────────────────────────
     case IntegrationsView   = 'integrations.view';

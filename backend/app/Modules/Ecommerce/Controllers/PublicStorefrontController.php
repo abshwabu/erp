@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Ecommerce\Controllers;
+
+use App\Http\Controllers\BaseController;
+use App\Modules\Ecommerce\Models\EcommerceChannel;
+use App\Modules\Ecommerce\Models\EcommerceOrder;
+use App\Modules\Ecommerce\Models\Storefront;
+use App\Modules\Inventory\Models\Product;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
+class PublicStorefrontController extends BaseController
+{
+    public function getStore(string $slug): JsonResponse
+    {
+        $storefront = Storefront::with(['pages' => fn ($q) => $q->where('is_published', true)->orderBy('order')])
+            ->where('slug', $slug)
+            ->where('is_published', true)
+            ->firstOrFail();
+
+        // Fetch products for storefront catalog
+        $products = Product::where('status', 'active')
+            ->select(['id', 'name', 'sku', 'selling_price', 'cost_price', 'category_id', 'type', 'description'])
+            ->with('category:id,name')
+            ->orderBy('name')
+            ->limit(50)
+            ->get();
+
+        return $this->successResponse([
+            'storefront' => $storefront,
+            'products'   => $products,
+        ]);
+    }
+
+    public function checkout(Request $request, string $slug): JsonResponse
+    {
+        $storefront = Storefront::where('slug', $slug)
+            ->where('is_published', true)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'customer_name'  => ['required', 'string', 'max:255'],
+            'customer_email' => ['required', 'email', 'max:255'],
+            'items'          => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'uuid'],
+            'items.*.name'       => ['required', 'string'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1'],
+            'items.*.price_cents'=> ['required', 'integer', 'min:0'],
+            'shipping_address'   => ['nullable', 'string'],
+            'notes'              => ['nullable', 'string'],
+        ]);
+
+        // Find or create default Storefront channel
+        $channel = EcommerceChannel::firstOrCreate(
+            ['name' => 'Storefront: ' . $storefront->name],
+            ['platform' => 'custom', 'is_active' => true]
+        );
+
+        $totalCents = 0;
+        foreach ($data['items'] as $item) {
+            $totalCents += $item['price_cents'] * $item['quantity'];
+        }
+
+        $orderNumber = '#WEB-' . strtoupper(Str::random(6));
+        $externalId  = 'STORE-' . (string) Str::uuid();
+
+        $order = EcommerceOrder::create([
+            'channel_id'         => $channel->id,
+            'external_order_id'  => $externalId,
+            'order_number'       => $orderNumber,
+            'customer_name'      => $data['customer_name'],
+            'customer_email'     => $data['customer_email'],
+            'total_cents'        => $totalCents,
+            'currency'           => 'USD',
+            'payment_status'     => 'paid',
+            'fulfillment_status' => 'unfulfilled',
+            'items'              => $data['items'],
+        ]);
+
+        return $this->createdResponse([
+            'order_number' => $order->order_number,
+            'total_cents'  => $order->total_cents,
+            'message'      => 'Thank you for your order! Your purchase was received successfully.',
+            'order'        => $order,
+        ]);
+    }
+}
