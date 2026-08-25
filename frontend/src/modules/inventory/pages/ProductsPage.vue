@@ -48,19 +48,49 @@ const filters = reactive<ProductFilters>({
   type: undefined,
 })
 
+const debouncedSearch = ref('')
+let debounceTimer: any = null
+
 watch(
-  () => [filters.search, filters.category_id, filters.status, filters.type],
+  () => filters.search,
+  (val) => {
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      debouncedSearch.value = val || ''
+      page.value = 1
+    }, 200)
+  }
+)
+
+watch(
+  () => [filters.category_id, filters.status, filters.type],
   () => {
     page.value = 1
   }
 )
 
-// Safe products query
+// Safe products query with reactive computed queryKey
 const { data, isLoading, refetch, isFetching } = useQuery({
-  queryKey: ['inventory', 'products', page, filters],
+  queryKey: computed(() => [
+    'inventory',
+    'products',
+    page.value,
+    debouncedSearch.value,
+    filters.category_id || '',
+    filters.status || '',
+    filters.type || '',
+  ]),
   queryFn: async () => {
     try {
-      const res = await inventoryApi.getProducts(filters, page.value)
+      const res = await inventoryApi.getProducts(
+        {
+          search: debouncedSearch.value || undefined,
+          category_id: filters.category_id || undefined,
+          status: filters.status || undefined,
+          type: filters.type || undefined,
+        },
+        page.value
+      )
       return res.data
     } catch (e) {
       console.warn('Failed to load products', e)
@@ -168,13 +198,21 @@ const money = (cents: number) => formatCurrency((cents || 0) / 100)
 
 function resetFilters() {
   filters.search = ''
+  debouncedSearch.value = ''
   filters.category_id = undefined
   filters.status = undefined
   filters.type = undefined
+  page.value = 1
 }
 
 const hasActiveFilters = computed(() => {
-  return !!filters.search || !!filters.category_id || !!filters.status || !!filters.type
+  return (
+    !!filters.search ||
+    !!debouncedSearch.value ||
+    (filters.category_id !== undefined && filters.category_id !== '') ||
+    (filters.status !== undefined && filters.status !== '') ||
+    (filters.type !== undefined && filters.type !== '')
+  )
 })
 </script>
 

@@ -34,7 +34,14 @@ class ProductController extends BaseController
         if ($search = trim((string) $request->input('search', $request->input('filter.search', '')))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('sku', 'ilike', "%{$search}%");
+                    ->orWhere('sku', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%")
+                    ->orWhereHas('barcodes', function ($bq) use ($search) {
+                        $bq->where('barcode', 'ilike', "%{$search}%");
+                    })
+                    ->orWhereHas('category', function ($cq) use ($search) {
+                        $cq->where('name', 'ilike', "%{$search}%");
+                    });
             });
         }
 
