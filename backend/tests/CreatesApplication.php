@@ -14,6 +14,9 @@ trait CreatesApplication
 
         $app->make(Kernel::class)->bootstrap();
 
+        config(['database.connections.pgsql.database' => 'erp_testing']);
+        \Illuminate\Support\Facades\DB::purge('pgsql');
+
         return $app;
     }
 }
