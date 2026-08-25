@@ -114,7 +114,18 @@ export const usePosStore = defineStore('pos', () => {
   }
 
   const ensureSession = async () => {
-    if (session.value?.status === 'open') return session.value
+    // Eagerly establish shop list and default active shop
+    const shops = await loadShops()
+    if (!selectedShopId.value && shops.length > 0 && shops[0]) {
+      selectedShopId.value = shops[0].id
+    }
+
+    if (session.value?.status === 'open') {
+      if (!session.value.shop_id && selectedShopId.value) {
+        session.value.shop_id = selectedShopId.value
+      }
+      return session.value
+    }
 
     sessionLoading.value = true
     try {
@@ -123,12 +134,13 @@ export const usePosStore = defineStore('pos', () => {
         session.value = current.data.data
         if (session.value.shop_id) {
           selectedShopId.value = session.value.shop_id
+        } else if (shops.length > 0 && shops[0]) {
+          selectedShopId.value = shops[0].id
+          session.value.shop_id = shops[0].id
         }
         needsShopSelection.value = false
         return session.value
       }
-
-      const shops = await loadShops()
 
       if (shops.length === 0) {
         const terminals = await posApi.getTerminals()

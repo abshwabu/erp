@@ -15,7 +15,7 @@ const addedProductId = ref<string | null>(null)
 const variantModalOpen = ref(false)
 const activeModalProduct = ref<any>(null)
 
-const shopId = computed(() => posStore.selectedShopId)
+const shopId = computed(() => posStore.selectedShopId || posStore.session?.shop_id || posStore.availableShops?.[0]?.id || null)
 const locationId = computed(() => posStore.selectedShop()?.stock_location_id || posStore.session?.terminal?.location_id || null)
 
 // Null-safe categories query
@@ -152,16 +152,12 @@ const catalogItems = computed(() => {
 
     const categoryId = productItem?.category_id || productItem?.category?.id || shopItem?.category_id || null
 
-    // Stock for products with variants is strictly the sum of in-store variant quantities
+    // Stock for products in POS is strictly the in-store inventory level
     let stock = 0
     if (hasVariants && variants.length > 0) {
       stock = variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
-    } else if (hasActiveShop) {
-      stock = shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0
     } else {
-      stock = typeof productItem?.available_quantity === 'number'
-        ? productItem.available_quantity
-        : (Number(shopItem?.available_quantity ?? productItem?.stock) || 0)
+      stock = shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0
     }
 
     return {

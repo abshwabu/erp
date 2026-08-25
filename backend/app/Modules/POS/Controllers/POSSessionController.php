@@ -119,11 +119,19 @@ class POSSessionController extends BaseController
      */
     public function current(): JsonResponse
     {
-        $session = POSSession::with('terminal')
+        $session = POSSession::with(['terminal', 'shop'])
             ->where('cashier_id', auth()->id())
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();
+
+        if ($session && ! $session->shop_id && Schema::hasTable('shops')) {
+            $shop = Shop::query()->where('is_active', true)->first();
+            if ($shop) {
+                $session->update(['shop_id' => $shop->id]);
+                $session->refresh()->load(['terminal', 'shop']);
+            }
+        }
 
         return $this->successResponse($session);
     }
@@ -145,7 +153,13 @@ class POSSessionController extends BaseController
             ->first();
 
         if ($existing) {
-            return $this->successResponse($existing->load('terminal'));
+            if (! $existing->shop_id && Schema::hasTable('shops')) {
+                $shop = Shop::query()->where('is_active', true)->first();
+                if ($shop) {
+                    $existing->update(['shop_id' => $shop->id]);
+                }
+            }
+            return $this->successResponse($existing->fresh()->load(['terminal', 'shop']));
         }
 
         $terminal = POSTerminal::findOrFail($data['terminal_id']);
@@ -155,7 +169,7 @@ class POSSessionController extends BaseController
 
         if ($shopsExist) {
             if (! $shopId) {
-                return $this->errorResponse('shop_id is required when shops are configured.', 422);
+                $shopId = Shop::query()->where('is_active', true)->value('id');
             }
             $this->shopAccess->assertCanAccessShop($shopId);
 
@@ -167,6 +181,7 @@ class POSSessionController extends BaseController
             if (! $shop->is_active) {
                 return $this->errorResponse('Selected shop is inactive.', 422);
             }
+        }
 
             // Keep terminal location aligned with shop
             if ((string) $terminal->location_id !== (string) $shop->stock_location_id) {
