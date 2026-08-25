@@ -51,7 +51,7 @@ const { data: shopStock, isLoading: isShopStockLoading } = useQuery<any[]>({
   initialData: [],
 })
 
-// Null-safe direct inventory products query
+// Null-safe direct inventory products query (always fetched for complete catalog metadata)
 const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
   queryKey: ['inventory', 'products-pos'],
   queryFn: async () => {
@@ -65,7 +65,6 @@ const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
       return []
     }
   },
-  enabled: computed(() => !shopId.value),
   initialData: [],
 })
 
@@ -77,39 +76,62 @@ const categoryList = computed(() => {
   return [{ id: null, name: 'All Products' }, ...list]
 })
 
-// Defensive watch to map catalog
-watch([shopStock, products, shopId], () => {
-  if (shopId.value && Array.isArray(shopStock.value) && shopStock.value.length > 0) {
-    posStore.catalog = shopStock.value
-      .filter((p: any) => p && (p.available_quantity ?? p.stock ?? 0) > 0)
-      .map((p: any) => ({
-        id: p.product_id || p.id,
-        name: p.name || 'Unnamed Product',
-        price: typeof p.selling_price === 'number' ? p.selling_price / 100 : (Number(p.price) || 0),
-        categoryId: p.category_id || p.categoryId || null,
-        sku: p.sku || `SKU-${p.product_id || p.id}`,
-        stock: p.available_quantity ?? p.stock ?? 0,
-        locationId: p.location_id || locationId.value,
-        image: p.primary_image_url || p.image || p.images?.[0]?.url || p.images?.[0]?.path || null,
-      }))
-    return
+// Unified Watcher: Merge catalog products with store-specific stock levels
+watch([products, shopStock, shopId], () => {
+  const rawProducts = Array.isArray(products.value) ? products.value : []
+  const rawStock = Array.isArray(shopStock.value) ? shopStock.value : []
+
+  // Create a fast lookup map for shop-specific stock levels
+  const shopStockMap = new Map<string, any>()
+  for (const s of rawStock) {
+    if (s && s.product_id) {
+      shopStockMap.set(String(s.product_id), s)
+    }
   }
 
-  if (Array.isArray(products.value)) {
-    posStore.catalog = products.value.map((p: any) => {
-      const rawStock = (typeof p?.available_quantity === 'number') ? p.available_quantity : (p?.stock ?? 0)
-      return {
-        id: p?.id || '',
-        name: p?.name || 'Unnamed Product',
-        price: typeof p?.selling_price === 'number' ? (p.selling_price / 100) : (Number(p?.price) || 0),
-        categoryId: p?.category_id || p?.category?.id || null,
-        sku: p?.sku || `SKU-${p?.id}`,
-        stock: rawStock,
-        image: p?.primary_image_url || p?.image || p?.images?.[0]?.url || p?.images?.[0]?.path || null,
-      }
-    })
+  // Map products
+  const mappedCatalog = rawProducts.map((p: any) => {
+    const shopItem = shopStockMap.get(String(p.id))
+    const calculatedStock = shopItem
+      ? (shopItem.available_quantity ?? shopItem.stock ?? 0)
+      : (typeof p?.available_quantity === 'number' ? p.available_quantity : (p?.stock ?? 0))
+
+    const primaryImage =
+      p?.primary_image_url ||
+      p?.image ||
+      shopItem?.primary_image_url ||
+      p?.images?.[0]?.url ||
+      p?.images?.[0]?.path ||
+      null
+
+    return {
+      id: p?.id || '',
+      name: p?.name || shopItem?.name || 'Unnamed Product',
+      price: typeof p?.selling_price === 'number'
+        ? (p.selling_price / 100)
+        : (typeof shopItem?.selling_price === 'number' ? shopItem.selling_price / 100 : (Number(p?.price) || 0)),
+      categoryId: p?.category_id || p?.category?.id || shopItem?.category_id || null,
+      sku: p?.sku || shopItem?.sku || `SKU-${p?.id}`,
+      stock: Number(calculatedStock) || 0,
+      locationId: shopItem?.location_id || locationId.value,
+      image: primaryImage,
+    }
+  })
+
+  // If rawProducts is empty but shopStock has products, fallback to shopStock
+  if (mappedCatalog.length === 0 && rawStock.length > 0) {
+    posStore.catalog = rawStock.map((s: any) => ({
+      id: s.product_id || s.id,
+      name: s.name || 'Unnamed Product',
+      price: typeof s.selling_price === 'number' ? s.selling_price / 100 : (Number(s.price) || 0),
+      categoryId: s.category_id || null,
+      sku: s.sku || `SKU-${s.product_id || s.id}`,
+      stock: s.available_quantity ?? s.stock ?? 0,
+      locationId: s.location_id || locationId.value,
+      image: s.primary_image_url || s.image || s.images?.[0]?.url || null,
+    }))
   } else {
-    posStore.catalog = []
+    posStore.catalog = mappedCatalog
   }
 }, { immediate: true })
 
@@ -117,18 +139,21 @@ const filteredProducts = computed(() => {
   const catalog = Array.isArray(posStore.catalog) ? posStore.catalog : []
   return catalog.filter(p => {
     if (!p) return false
-    const hasStock = typeof p.stock === 'number' ? p.stock > 0 : true
-    const matchesCategory = selectedCategoryId.value === null || p.categoryId === selectedCategoryId.value
+    const matchesCategory = selectedCategoryId.value === null || String(p.categoryId) === String(selectedCategoryId.value)
     const nameStr = (p.name || '').toLowerCase()
     const skuStr = (p.sku || '').toLowerCase()
-    const query = (searchQuery.value || '').toLowerCase()
+    const query = (searchQuery.value || '').toLowerCase().trim()
     const matchesSearch = !query || nameStr.includes(query) || skuStr.includes(query)
-    return hasStock && matchesCategory && matchesSearch
+    return matchesCategory && matchesSearch
   })
 })
 
 function handleAddProduct(product: any) {
-  if (!product || product.stock <= 0) return
+  if (!product) return
+  if (product.stock <= 0) {
+    alert(`${product.name} is currently out of stock.`)
+    return
+  }
 
   const cartItem = (posStore.cart || []).find(item => String(item.id) === String(product.id))
   const currentInCart = cartItem ? cartItem.quantity : 0
@@ -184,9 +209,9 @@ function handleAddProduct(product: any) {
         <div class="p-3 bg-slate-100 rounded-full mb-3">
           <Package class="h-8 w-8 text-slate-400 opacity-60" />
         </div>
-        <h4 class="text-sm font-semibold text-slate-700 mb-1">No products available in this view</h4>
+        <h4 class="text-sm font-semibold text-slate-700 mb-1">No products found</h4>
         <p class="text-xs text-slate-400 max-w-sm">
-          {{ searchQuery ? `No products match "${searchQuery}". Try a different keyword.` : 'Products will appear here once items are stocked in your inventory catalog.' }}
+          {{ searchQuery ? `No products match "${searchQuery}". Try a different keyword.` : 'Products will appear here once items are created in your inventory catalog.' }}
         </p>
       </div>
 
@@ -196,7 +221,10 @@ function handleAddProduct(product: any) {
           :key="product.id"
           type="button"
           @click="handleAddProduct(product)"
-          class="relative text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-blue-400 hover:shadow-md transition-all active:scale-[0.98] group"
+          class="relative text-left bg-white border rounded-xl p-3 transition-all active:scale-[0.98] group"
+          :class="product.stock > 0
+            ? 'border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
+            : 'border-slate-200/60 bg-slate-50/60 opacity-75 cursor-not-allowed'"
         >
           <div
             v-if="addedProductId === product.id"
@@ -204,20 +232,25 @@ function handleAddProduct(product: any) {
           >
             <Check class="h-8 w-8 text-emerald-600" />
           </div>
-          <div class="h-12 w-12 rounded-xl bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2 overflow-hidden border border-slate-100">
+          <div class="h-16 w-full rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2 overflow-hidden border border-slate-100">
             <img
               v-if="resolveImageUrl(product.image)"
               :src="resolveImageUrl(product.image)!"
               :alt="product.name"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
-            <Package v-else class="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            <Package v-else class="h-6 w-6 text-slate-400 group-hover:text-blue-600 transition-colors" />
           </div>
           <div class="font-semibold text-xs sm:text-sm text-slate-900 line-clamp-2 min-h-[2.25rem] leading-snug">{{ product.name }}</div>
           <div class="text-[11px] text-slate-400 font-mono mt-1 truncate">{{ product.sku }}</div>
           <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100">
             <span class="font-bold text-xs sm:text-sm text-slate-900">${{ Number(product.price || 0).toFixed(2) }}</span>
-            <span class="text-[11px] font-medium text-slate-500">{{ product.stock }} left</span>
+            <span
+              class="text-[11px] font-medium px-1.5 py-0.5 rounded"
+              :class="product.stock > 0 ? 'text-slate-600 bg-slate-100' : 'text-amber-700 bg-amber-100 font-semibold'"
+            >
+              {{ product.stock > 0 ? `${product.stock} left` : 'Out of stock' }}
+            </span>
           </div>
         </button>
       </div>

@@ -150,7 +150,7 @@ class ShopController extends BaseController
 
         $levels = StockLevel::query()
             ->where('location_id', $locationId)
-            ->with(['product', 'location'])
+            ->with(['product.category', 'product.images', 'location'])
             ->get();
 
         $byProduct = [];
@@ -166,6 +166,9 @@ class ShopController extends BaseController
                     'sku' => $level->product->sku,
                     'selling_price' => (int) $level->product->selling_price,
                     'cost_price' => (int) $level->product->cost_price,
+                    'category_id' => $level->product->category_id,
+                    'primary_image_url' => $level->product->primary_image_url,
+                    'images' => $level->product->images,
                     'quantity_on_hand' => 0,
                     'quantity_committed' => 0,
                     'available_quantity' => 0,
@@ -179,10 +182,11 @@ class ShopController extends BaseController
                 $byProduct[$key]['quantity_on_hand'] - $byProduct[$key]['quantity_committed'];
         }
 
-        // Include active products with zero stock at this location for adjustment UX
+        // Include active products with zero stock at this location for adjustment & POS catalog UX
         $existingIds = array_keys($byProduct);
         $zeroProducts = Product::query()
             ->where('status', 'active')
+            ->with(['category', 'images'])
             ->when($existingIds !== [], fn ($q) => $q->whereNotIn('id', $existingIds))
             ->orderBy('name')
             ->limit(200)
@@ -195,6 +199,9 @@ class ShopController extends BaseController
                 'sku' => $product->sku,
                 'selling_price' => (int) $product->selling_price,
                 'cost_price' => (int) $product->cost_price,
+                'category_id' => $product->category_id,
+                'primary_image_url' => $product->primary_image_url,
+                'images' => $product->images,
                 'quantity_on_hand' => 0,
                 'quantity_committed' => 0,
                 'available_quantity' => 0,
