@@ -115,7 +115,12 @@ class TenantRoleSeeder extends Seeder
                 Permission::PosSessionsOpen->value,
                 Permission::PosSessionsClose->value,
                 Permission::PosTransactionsCreate->value,
+                Permission::PosDiscountsApply->value,
+                Permission::PosRefundsProcess->value,
+                Permission::PosReportsView->value,
                 Permission::ShopsView->value,
+                Permission::InventoryProductsView->value,
+                Permission::InventoryStockView->value,
             ]
         );
     }
@@ -126,11 +131,18 @@ class TenantRoleSeeder extends Seeder
             $this->role('Shop Keeper'),
             [
                 Permission::ShopsView->value,
+                Permission::InventoryProductsView->value,
+                Permission::InventoryProductsCreate->value,
+                Permission::InventoryProductsEdit->value,
                 Permission::InventoryStockView->value,
                 Permission::InventoryStockAdjust->value,
+                Permission::InventoryStockMovementsView->value,
                 Permission::PosSessionsOpen->value,
                 Permission::PosSessionsClose->value,
                 Permission::PosTransactionsCreate->value,
+                Permission::PosDiscountsApply->value,
+                Permission::PosRefundsProcess->value,
+                Permission::PosReportsView->value,
             ]
         );
     }
@@ -141,7 +153,12 @@ class TenantRoleSeeder extends Seeder
             $this->role('Warehouse Staff'),
             array_merge(
                 Permission::module('warehouse'),
-                [Permission::InventoryStockView->value]
+                [
+                    Permission::InventoryProductsView->value,
+                    Permission::InventoryStockView->value,
+                    Permission::InventoryStockMovementsView->value,
+                    Permission::InventoryStockAdjust->value,
+                ]
             )
         );
     }

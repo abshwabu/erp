@@ -306,8 +306,8 @@ router.beforeEach(async (to) => {
     uiStore.setPageTitle(to.meta.title as string)
   }
 
-  // Load user info if missing but authenticated (e.g., on page refresh)
-  if (authStore.isAuthenticated && !authStore.user && to.name !== 'login') {
+  // Load user info if missing or permissions empty but authenticated (e.g., on page refresh or role change)
+  if (authStore.isAuthenticated && (!authStore.user || authStore.permissions.length === 0) && to.name !== 'login') {
     try {
       await authStore.checkAuth()
     } catch {
