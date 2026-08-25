@@ -2,9 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { inventoryApi } from '@/api/inventory'
-import { accountingApi } from '@/api/accounting'
-import { hrApi } from '@/api/hr'
+import api from '@/api/client'
 import {
   TrendingUp,
   TrendingDown,
@@ -25,7 +23,11 @@ import {
   Layers,
   ArrowRight,
   ShieldCheck,
-  Building
+  Building,
+  Globe,
+  Briefcase,
+  LifeBuoy,
+  CreditCard,
 } from '@lucide/vue'
 
 import {
@@ -39,7 +41,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 } from 'chart.js'
 import { Line, Doughnut } from 'vue-chartjs'
 
@@ -60,12 +62,36 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(true)
-const totalProducts = ref(0)
-const lowStockItems = ref<any[]>([])
-const recentMovements = ref<any[]>([])
-const employeeCount = ref(0)
-const pendingLeaveRequests = ref<any[]>([])
-const totalValuation = ref(60180) // default formatted or dynamically fetched
+
+// Real Dynamic Dashboard State
+const dashboardData = ref({
+  financial: {
+    monthly_revenue_cents: 0,
+    prev_monthly_revenue_cents: 0,
+    revenue_growth_pct: 0,
+    today_revenue_cents: 0,
+    today_orders_count: 0,
+    monthly_trend: [] as { month: string; revenue: number }[],
+  },
+  inventory: {
+    total_products: 0,
+    total_valuation_cents: 0,
+    optimal_count: 0,
+    low_stock_count: 0,
+    out_of_stock_count: 0,
+    low_stock_items: [] as any[],
+    recent_movements: [] as any[],
+  },
+  operations: {
+    employee_count: 0,
+    pending_leaves_count: 0,
+    open_tickets_count: 0,
+    active_projects_count: 0,
+    open_pos_sessions: 0,
+    active_storefronts: 0,
+    recent_orders: [] as any[],
+  },
+})
 
 const currentHour = new Date().getHours()
 const greeting = computed(() => {
@@ -76,46 +102,35 @@ const greeting = computed(() => {
 
 const userName = computed(() => authStore.user?.name || 'Administrator')
 
-// Fetch Dashboard Data
+function formatCents(cents: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format((cents || 0) / 100)
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return 'Just now'
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Fetch Real Live Dashboard Data
 async function loadDashboardData() {
   loading.value = true
   try {
-    const [productsRes, lowStockRes, movementsRes, employeesRes, leaveRes] = await Promise.allSettled([
-      inventoryApi.getProducts({}, 1),
-      inventoryApi.getLowStockProducts(),
-      inventoryApi.getStockMovements({}, 1),
-      hrApi.getEmployees(),
-      hrApi.getLeaveRequests({ status: 'pending' })
-    ])
-
-    if (productsRes.status === 'fulfilled' && productsRes.value.data) {
-      totalProducts.value = productsRes.value.data.meta?.total || productsRes.value.data.data?.length || 8
-    } else {
-      totalProducts.value = 8
-    }
-
-    if (lowStockRes.status === 'fulfilled' && Array.isArray(lowStockRes.value.data)) {
-      lowStockItems.value = lowStockRes.value.data
-    } else {
-      lowStockItems.value = [
-        { id: 1, name: 'Valvoline SynPower 5W-30', sku: 'VAL-01', available_quantity: 10, min_quantity: 15 },
-        { id: 2, name: 'Logitech Wireless Mouse', sku: 'MOU-002', available_quantity: 4, min_quantity: 10 },
-        { id: 3, name: 'Adjustable Standing Desk', sku: 'DSK-003', available_quantity: 2, min_quantity: 5 }
-      ]
-    }
-
-    if (movementsRes.status === 'fulfilled' && movementsRes.value.data) {
-      recentMovements.value = (movementsRes.value.data.data || []).slice(0, 5)
-    }
-
-    if (employeesRes.status === 'fulfilled' && Array.isArray(employeesRes.value.data)) {
-      employeeCount.value = employeesRes.value.data.length
-    } else {
-      employeeCount.value = 14
-    }
-
-    if (leaveRes.status === 'fulfilled' && Array.isArray(leaveRes.value.data)) {
-      pendingLeaveRequests.value = leaveRes.value.data
+    const res = await api.get('/core/dashboard')
+    const data = res.data?.data || res.data
+    if (data) {
+      dashboardData.value = {
+        financial: { ...dashboardData.value.financial, ...(data.financial || {}) },
+        inventory: { ...dashboardData.value.inventory, ...(data.inventory || {}) },
+        operations: { ...dashboardData.value.operations, ...(data.operations || {}) },
+      }
     }
   } catch (err) {
     console.error('Failed to load dashboard data:', err)
@@ -128,32 +143,28 @@ onMounted(() => {
   loadDashboardData()
 })
 
-// Revenue vs Expense Line Chart Data
-const revenueChartData = computed(() => ({
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [
-    {
-      label: 'Revenue ($)',
-      data: [32000, 41000, 38000, 52000, 48000, 64200],
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.12)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    },
-    {
-      label: 'Operating Expenses ($)',
-      data: [18000, 22000, 21000, 26000, 24000, 28500],
-      borderColor: '#ef4444',
-      backgroundColor: 'rgba(239, 68, 68, 0.05)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    }
-  ]
-}))
+// Revenue Line Chart Data (From Real Monthly Trend)
+const revenueChartData = computed(() => {
+  const trend = dashboardData.value.financial.monthly_trend || []
+  const labels = trend.length > 0 ? trend.map((t) => t.month) : ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6']
+  const data = trend.length > 0 ? trend.map((t) => t.revenue) : [0, 0, 0, 0, 0, 0]
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Gross Sales Revenue ($)',
+        data,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+    ],
+  }
+})
 
 const lineChartOptions = {
   responsive: true,
@@ -163,38 +174,56 @@ const lineChartOptions = {
       position: 'top' as const,
       labels: {
         usePointStyle: true,
-        font: { family: 'Inter', size: 12 }
-      }
+        font: { family: 'Inter', size: 12 },
+      },
     },
     tooltip: {
       mode: 'index' as const,
-      intersect: false
-    }
+      intersect: false,
+    },
   },
   scales: {
     x: { grid: { display: false } },
     y: {
       grid: { color: 'rgba(226, 232, 240, 0.6)' },
       ticks: {
-        callback: (val: any) => `$${val / 1000}k`
-      }
-    }
-  }
+        callback: (val: any) => `$${val}`,
+      },
+      beginAtZero: true,
+    },
+  },
 }
 
-// Inventory Breakdown Doughnut Chart
-const inventoryChartData = computed(() => ({
-  labels: ['Optimal Stock', 'Low Stock Alert', 'Out of Stock'],
-  datasets: [
-    {
-      data: [totalProducts.value - lowStockItems.value.length, lowStockItems.value.length, 1],
-      backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-      hoverOffset: 6,
-      borderWidth: 2,
-      borderColor: '#ffffff'
+// Inventory Breakdown Doughnut Chart (Real Optimal vs Low vs Out of Stock)
+const inventoryChartData = computed(() => {
+  const { optimal_count, low_stock_count, out_of_stock_count, total_products } = dashboardData.value.inventory
+
+  if (total_products === 0) {
+    return {
+      labels: ['No Catalog Items Added'],
+      datasets: [
+        {
+          data: [1],
+          backgroundColor: ['#e2e8f0'],
+          borderWidth: 0,
+        },
+      ],
     }
-  ]
-}))
+  }
+
+  return {
+    labels: ['Healthy Stock', 'Low Stock Alert', 'Out of Stock'],
+    datasets: [
+      {
+        data: [optimal_count, low_stock_count, out_of_stock_count],
+        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+        hoverOffset: 6,
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  }
+})
 
 const doughnutChartOptions = {
   responsive: true,
@@ -204,18 +233,18 @@ const doughnutChartOptions = {
       position: 'bottom' as const,
       labels: {
         usePointStyle: true,
-        font: { family: 'Inter', size: 12 }
-      }
-    }
+        font: { family: 'Inter', size: 12 },
+      },
+    },
   },
-  cutout: '70%'
+  cutout: '70%',
 }
 </script>
 
 <template>
-  <div class="space-y-6 pb-12">
+  <div class="space-y-6 pb-12 font-sans max-w-7xl mx-auto px-4 sm:px-6">
     <!-- Header Banner -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-6 md:p-8 shadow-xl">
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-5 sm:p-8 shadow-xl">
       <div class="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
       <div class="absolute right-32 bottom-0 -mb-16 h-48 w-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none"></div>
 
@@ -223,38 +252,38 @@ const doughnutChartOptions = {
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-200 mb-3 border border-white/10">
             <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Enterprise Resource Planning System v2.4
+            Enterprise Cloud ERP &bull; Real-Time Telemetry
           </div>
           <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">
             {{ greeting }}, {{ userName }}! 👋
           </h1>
-          <p class="mt-1 text-sm md:text-base text-slate-300 max-w-xl">
-            Here is a real-time overview of your company's sales, inventory health, financial status, and team operations.
+          <p class="mt-1 text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+            Real-time multi-tenant dashboard with live inventory stock tracking, POS checkouts, online storefronts, and accounting ledger synchronization.
           </p>
         </div>
 
         <!-- Quick Action Buttons Header -->
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <button
             @click="router.push('/pos')"
-            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/30 transition-all transform hover:-translate-y-0.5"
+            class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <ShoppingCart class="w-4 h-4" />
-            POS Checkout
+            <span>POS Register</span>
           </button>
 
           <button
             @click="router.push('/inventory/products')"
-            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm border border-white/15 backdrop-blur-md transition-all"
+            class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs sm:text-sm border border-white/15 backdrop-blur-md transition-all"
           >
             <Plus class="w-4 h-4" />
-            Add Product
+            <span>Add Product</span>
           </button>
 
           <button
             @click="loadDashboardData()"
-            title="Refresh Dashboard"
-            class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all"
+            title="Refresh Live Data"
+            class="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all"
           >
             <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }" />
           </button>
@@ -262,270 +291,258 @@ const doughnutChartOptions = {
       </div>
     </div>
 
-    <!-- Key Metrics Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-      <!-- Metric 1: Monthly Revenue -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200">
+    <!-- Key Real Metrics Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <!-- Metric 1: Monthly Sales Revenue -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly Revenue</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Monthly Revenue</span>
           <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
             <DollarSign class="w-5 h-5" />
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-2xl font-bold text-slate-900">$64,200.00</span>
-          <span class="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-            <TrendingUp class="w-3.5 h-3.5 mr-1" />
-            +14.2%
+          <span class="text-xl sm:text-2xl font-black text-slate-900">
+            {{ formatCents(dashboardData.financial.monthly_revenue_cents) }}
+          </span>
+          <span
+            v-if="dashboardData.financial.revenue_growth_pct !== 0"
+            :class="[
+              'inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full',
+              dashboardData.financial.revenue_growth_pct >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
+            ]"
+          >
+            <component :is="dashboardData.financial.revenue_growth_pct >= 0 ? TrendingUp : TrendingDown" class="w-3.5 h-3.5 mr-1" />
+            {{ dashboardData.financial.revenue_growth_pct > 0 ? '+' : '' }}{{ dashboardData.financial.revenue_growth_pct }}%
           </span>
         </div>
-        <p class="mt-2 text-xs text-slate-500">vs. $56,200 last month</p>
+        <p class="mt-2 text-xs text-slate-500">
+          Prior month: {{ formatCents(dashboardData.financial.prev_monthly_revenue_cents) }}
+        </p>
       </div>
 
-      <!-- Metric 2: Total Products -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200">
+      <!-- Metric 2: Today's Orders -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Products</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Today's Sales</span>
+          <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+            <ShoppingCart class="w-5 h-5" />
+          </div>
+        </div>
+        <div class="mt-3 flex items-baseline justify-between">
+          <span class="text-xl sm:text-2xl font-black text-slate-900">
+            {{ formatCents(dashboardData.financial.today_revenue_cents) }}
+          </span>
+          <span class="text-xs font-semibold text-slate-500">
+            {{ dashboardData.financial.today_orders_count }} orders
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">Across POS, Sales & Web Store</p>
+      </div>
+
+      <!-- Metric 3: Active Catalog & Inventory -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Catalog Inventory</span>
           <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
             <Package class="w-5 h-5" />
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-2xl font-bold text-slate-900">{{ totalProducts }} SKUs</span>
+          <span class="text-xl sm:text-2xl font-black text-slate-900">
+            {{ dashboardData.inventory.total_products }} Products
+          </span>
           <span
-            v-if="lowStockItems.length > 0"
-            class="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full cursor-pointer"
-            @click="router.push('/inventory/stock/low')"
+            v-if="dashboardData.inventory.low_stock_count > 0"
+            class="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full cursor-pointer hover:bg-amber-100 transition-colors"
+            @click="router.push('/inventory/stock')"
           >
             <AlertTriangle class="w-3.5 h-3.5 mr-1" />
-            {{ lowStockItems.length }} Low
+            {{ dashboardData.inventory.low_stock_count }} Low
           </span>
         </div>
-        <p class="mt-2 text-xs text-slate-500">Managed in Central Warehouse</p>
+        <p class="mt-2 text-xs text-slate-500">
+          Valuation: {{ formatCents(dashboardData.inventory.total_valuation_cents) }}
+        </p>
       </div>
 
-      <!-- Metric 3: Active Employees -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200">
+      <!-- Metric 4: Workforce & Storefronts -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Team & HR</span>
-          <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Active Workforce</span>
+          <div class="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
             <Users class="w-5 h-5" />
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-2xl font-bold text-slate-900">{{ employeeCount }} Staff</span>
-          <span class="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-            <ShieldCheck class="w-3.5 h-3.5 mr-1" />
-            100% Active
+          <span class="text-xl sm:text-2xl font-black text-slate-900">
+            {{ dashboardData.operations.employee_count }} Staff
+          </span>
+          <span
+            v-if="dashboardData.operations.pending_leaves_count > 0"
+            class="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full cursor-pointer"
+            @click="router.push('/hr/leaves')"
+          >
+            {{ dashboardData.operations.pending_leaves_count }} Leave Req
           </span>
         </div>
         <p class="mt-2 text-xs text-slate-500">
-          {{ pendingLeaveRequests.length }} pending leave request(s)
+          {{ dashboardData.operations.active_storefronts }} Live Web Store{{ dashboardData.operations.active_storefronts === 1 ? '' : 's' }}
         </p>
       </div>
-
-      <!-- Metric 4: Total Stock Valuation -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Stock Valuation</span>
-          <div class="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
-            <Layers class="w-5 h-5" />
-          </div>
-        </div>
-        <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-2xl font-bold text-slate-900">${{ totalValuation.toLocaleString() }}.00</span>
-          <span class="inline-flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-            Asset Value
-          </span>
-        </div>
-        <p class="mt-2 text-xs text-slate-500">Across main bin storage</p>
-      </div>
     </div>
 
-    <!-- Charts Section -->
+    <!-- Charts & Analytics Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Revenue & Expense Line Chart -->
-      <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
+      <!-- Revenue Trend Line Chart -->
+      <div class="lg:col-span-2 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
-            <h3 class="text-base font-bold text-slate-900">Financial Overview</h3>
-            <p class="text-xs text-slate-500">Revenue vs Operating Expenses (H1 2026)</p>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900">Sales & Revenue Trend</h3>
+            <p class="text-xs text-slate-500">Monthly gross sales history across all integrated channels</p>
           </div>
           <button
-            @click="router.push('/accounting/reports/profit-loss')"
-            class="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+            @click="router.push('/accounting')"
+            class="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center space-x-1"
           >
-            Full Report
-            <ArrowUpRight class="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div class="h-72">
-          <Line :data="revenueChartData" :options="lineChartOptions" />
-        </div>
-      </div>
-
-      <!-- Inventory Health Breakdown -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-base font-bold text-slate-900">Inventory Status</h3>
-              <p class="text-xs text-slate-500">Health distribution across catalog</p>
-            </div>
-            <button
-              @click="router.push('/inventory/stock')"
-              class="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
-            >
-              View Stock
-              <ArrowUpRight class="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div class="h-56 relative flex items-center justify-center">
-            <Doughnut :data="inventoryChartData" :options="doughnutChartOptions" />
-          </div>
-        </div>
-
-        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-around text-center text-xs">
-          <div>
-            <span class="block text-slate-400 font-medium">Optimal</span>
-            <span class="text-base font-bold text-emerald-600">{{ Math.max(0, totalProducts - lowStockItems.length) }}</span>
-          </div>
-          <div class="border-r border-slate-200 h-8 my-auto"></div>
-          <div>
-            <span class="block text-slate-400 font-medium">Low Stock</span>
-            <span class="text-base font-bold text-amber-500">{{ lowStockItems.length }}</span>
-          </div>
-          <div class="border-r border-slate-200 h-8 my-auto"></div>
-          <div>
-            <span class="block text-slate-400 font-medium">Critical</span>
-            <span class="text-base font-bold text-red-500">1</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Module Navigation & Low Stock Table Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Low Stock Alerts List -->
-      <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="p-2 bg-amber-50 text-amber-600 rounded-lg">
-              <AlertTriangle class="w-4 h-4" />
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-slate-900">Low Stock Reorder Alerts</h3>
-              <p class="text-xs text-slate-500">Items reaching minimum threshold</p>
-            </div>
-          </div>
-
-          <button
-            @click="router.push('/inventory/stock/low')"
-            class="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
-          >
-            View All
+            <span>Ledger Details</span>
             <ArrowRight class="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                <th class="pb-3">Product Name</th>
-                <th class="pb-3">SKU</th>
-                <th class="pb-3">Available</th>
-                <th class="pb-3">Min Level</th>
-                <th class="pb-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="item in lowStockItems.slice(0, 4)" :key="item.id || item.sku" class="hover:bg-slate-50/80 transition-colors">
-                <td class="py-3 font-medium text-slate-900 flex items-center gap-2">
-                  <Box class="w-4 h-4 text-slate-400" />
-                  {{ item.name || item.product?.name || 'Inventory Product' }}
-                </td>
-                <td class="py-3 text-slate-500 font-mono text-xs">{{ item.sku || item.product?.sku || 'SKU-001' }}</td>
-                <td class="py-3 font-bold text-amber-600">{{ item.available_quantity ?? 10 }} units</td>
-                <td class="py-3 text-slate-500">{{ item.min_quantity ?? 15 }} units</td>
-                <td class="py-3 text-right">
-                  <button
-                    @click="router.push('/inventory/stock')"
-                    class="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                  >
-                    Adjust Stock
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="h-64 sm:h-72 w-full">
+          <Line :data="revenueChartData" :options="lineChartOptions" />
         </div>
       </div>
 
-      <!-- Quick Action Modules Grid -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-        <div>
-          <h3 class="text-base font-bold text-slate-900 mb-1">Quick Navigation</h3>
-          <p class="text-xs text-slate-500 mb-4">Direct access to core business modules</p>
-
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              @click="router.push('/accounting/journals')"
-              class="p-3.5 rounded-xl border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/50 text-left transition-all group"
-            >
-              <div class="p-2 bg-blue-50 group-hover:bg-blue-100 text-blue-600 rounded-lg w-fit mb-2">
-                <BookOpen class="w-4 h-4" />
-              </div>
-              <span class="block font-semibold text-xs text-slate-900">Journals</span>
-              <span class="text-[11px] text-slate-500">Accounting</span>
-            </button>
-
-            <button
-              @click="router.push('/inventory/products')"
-              class="p-3.5 rounded-xl border border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/50 text-left transition-all group"
-            >
-              <div class="p-2 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 rounded-lg w-fit mb-2">
-                <Package class="w-4 h-4" />
-              </div>
-              <span class="block font-semibold text-xs text-slate-900">Products</span>
-              <span class="text-[11px] text-slate-500">Inventory</span>
-            </button>
-
-            <button
-              @click="router.push('/hr/employees')"
-              class="p-3.5 rounded-xl border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/50 text-left transition-all group"
-            >
-              <div class="p-2 bg-emerald-50 group-hover:bg-emerald-100 text-emerald-600 rounded-lg w-fit mb-2">
-                <UserPlus class="w-4 h-4" />
-              </div>
-              <span class="block font-semibold text-xs text-slate-900">Employees</span>
-              <span class="text-[11px] text-slate-500">Human Resources</span>
-            </button>
-
-            <button
-              @click="router.push('/pos')"
-              class="p-3.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/50 text-left transition-all group"
-            >
-              <div class="p-2 bg-purple-50 group-hover:bg-purple-100 text-purple-600 rounded-lg w-fit mb-2">
-                <ShoppingCart class="w-4 h-4" />
-              </div>
-              <span class="block font-semibold text-xs text-slate-900">POS Terminal</span>
-              <span class="text-[11px] text-slate-500">Point of Sale</span>
-            </button>
+      <!-- Inventory Breakdown Doughnut Chart -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900">Inventory Health</h3>
+            <p class="text-xs text-slate-500">Catalog stock level distribution</p>
           </div>
+          <button
+            @click="router.push('/inventory/products')"
+            class="text-xs font-semibold text-primary-600 hover:text-primary-700"
+          >
+            Manage
+          </button>
         </div>
 
-        <!-- System Status Bar Footer -->
-        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span class="flex items-center gap-1.5 font-medium text-slate-600">
-            <Building class="w-3.5 h-3.5 text-slate-400" />
-            Tenant: {{ authStore.user?.tenant_id || 'Main Multi-Tenant' }}
-          </span>
-          <span class="flex items-center gap-1 text-emerald-600 font-semibold">
-            <CheckCircle2 class="w-3.5 h-3.5" />
-            All Systems Operational
-          </span>
+        <div class="h-56 sm:h-64 relative flex items-center justify-center">
+          <Doughnut :data="inventoryChartData" :options="doughnutChartOptions" />
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100 text-center text-xs">
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Optimal</span>
+            <span class="font-bold text-emerald-600">{{ dashboardData.inventory.optimal_count }}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Low Stock</span>
+            <span class="font-bold text-amber-600">{{ dashboardData.inventory.low_stock_count }}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Out of Stock</span>
+            <span class="font-bold text-red-600">{{ dashboardData.inventory.out_of_stock_count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operational Split Grid (Low Stock Alerts & Recent Activity) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- 1. Low Stock & Critical Inventory Alerts -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <AlertTriangle class="w-5 h-5 text-amber-500" />
+            <h3 class="text-base font-bold text-slate-900">Stock Reorder Alerts</h3>
+          </div>
+          <button
+            @click="router.push('/inventory/stock')"
+            class="text-xs font-semibold text-primary-600 hover:text-primary-700"
+          >
+            View All Stock
+          </button>
+        </div>
+
+        <div v-if="dashboardData.inventory.low_stock_items.length === 0" class="text-center py-10 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+          <ShieldCheck class="w-10 h-10 text-emerald-500 mx-auto" />
+          <p class="text-xs sm:text-sm font-semibold text-slate-700">All product stock levels are optimal!</p>
+          <p class="text-[11px] text-slate-400">No items are currently below their minimum threshold.</p>
+        </div>
+
+        <div v-else class="space-y-2.5">
+          <div
+            v-for="item in dashboardData.inventory.low_stock_items"
+            :key="item.id"
+            class="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-slate-100 transition-colors"
+          >
+            <div class="space-y-0.5 truncate pr-2">
+              <h4 class="font-bold text-xs text-slate-900 truncate">{{ item.name }}</h4>
+              <p class="text-[11px] font-mono text-slate-400">SKU: {{ item.sku }}</p>
+            </div>
+            <div class="flex items-center space-x-3 shrink-0">
+              <div class="text-right">
+                <span :class="['text-xs font-bold', item.available_quantity === 0 ? 'text-red-600' : 'text-amber-600']">
+                  {{ item.available_quantity }} in stock
+                </span>
+                <p class="text-[10px] text-slate-400">Min: {{ item.min_quantity }}</p>
+              </div>
+              <button
+                @click="router.push('/procurement/purchase-orders')"
+                class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-900 text-white hover:bg-primary-600 transition-colors"
+              >
+                Reorder
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Recent Sales & Orders Stream -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <Clock class="w-5 h-5 text-indigo-500" />
+            <h3 class="text-base font-bold text-slate-900">Recent Transactions & Orders</h3>
+          </div>
+          <button
+            @click="router.push('/sales/invoices')"
+            class="text-xs font-semibold text-primary-600 hover:text-primary-700"
+          >
+            Sales Ledger
+          </button>
+        </div>
+
+        <div v-if="dashboardData.operations.recent_orders.length === 0" class="text-center py-10 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+          <ShoppingCart class="w-10 h-10 text-slate-300 mx-auto" />
+          <p class="text-xs sm:text-sm font-semibold text-slate-700">No transactions recorded yet.</p>
+          <p class="text-[11px] text-slate-400">Orders completed via POS or web storefronts will stream here in real time.</p>
+        </div>
+
+        <div v-else class="space-y-2.5">
+          <div
+            v-for="(ord, idx) in dashboardData.operations.recent_orders"
+            :key="idx"
+            class="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/70"
+          >
+            <div class="space-y-0.5 truncate pr-2">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono font-bold text-xs text-slate-900">{{ ord.number }}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 font-semibold text-slate-700">
+                  {{ ord.channel }}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 truncate">{{ ord.customer }}</p>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="font-black text-xs sm:text-sm text-slate-900">{{ formatCents(ord.total_cents) }}</span>
+              <p class="text-[10px] text-slate-400">{{ formatDate(ord.created_at) }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

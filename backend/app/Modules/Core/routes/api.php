@@ -63,4 +63,7 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
 
     Route::post('core/settings', [SettingsController::class, 'update'])
         ->middleware('permission:core.settings.edit');
+
+    // Consolidated live dashboard stats
+    Route::get('core/dashboard', [\App\Modules\Core\Controllers\DashboardController::class, 'stats']);
 });
