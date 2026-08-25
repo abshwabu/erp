@@ -429,43 +429,24 @@ const hasActiveFilters = computed(() => {
         </template>
 
         <template #cell(actions)="{ item }">
-          <Menu as="div" class="relative inline-block text-left">
-            <MenuButton class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-700">
-              <MoreHorizontal class="h-4 w-4" />
-            </MenuButton>
-            <MenuItems
-              class="absolute right-0 mt-2 w-44 origin-top-right divide-y divide-slate-100 rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none z-20"
+          <div class="flex items-center justify-end space-x-1">
+            <button
+              type="button"
+              @click.stop="handleEdit(item)"
+              title="Edit Product"
+              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
             >
-              <div class="p-1">
-                <MenuItem v-slot="{ active }">
-                  <button
-                    type="button"
-                    @click="handleEdit(item)"
-                    :class="[
-                      active ? 'bg-blue-50 text-blue-700' : 'text-slate-700',
-                      'group flex w-full items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors',
-                    ]"
-                  >
-                    <Edit2 class="mr-2.5 h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600" /> Edit Product
-                  </button>
-                </MenuItem>
-              </div>
-              <div class="p-1">
-                <MenuItem v-slot="{ active }">
-                  <button
-                    type="button"
-                    @click="handleDelete(item.id)"
-                    :class="[
-                      active ? 'bg-red-50 text-red-700' : 'text-slate-700',
-                      'group flex w-full items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors',
-                    ]"
-                  >
-                    <Trash2 class="mr-2.5 h-3.5 w-3.5 text-slate-400 group-hover:text-red-600" /> Delete
-                  </button>
-                </MenuItem>
-              </div>
-            </MenuItems>
-          </Menu>
+              <Edit2 class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              @click.stop="handleDelete(item.id)"
+              title="Delete Product"
+              class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+            >
+              <Trash2 class="h-4 w-4" />
+            </button>
+          </div>
         </template>
       </UiTable>
     </div>
