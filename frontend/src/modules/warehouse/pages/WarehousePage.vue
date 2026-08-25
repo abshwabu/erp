@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ArrowRightLeft, MapPin, PackagePlus, Plus } from '@lucide/vue'
 import { inventoryApi } from '@/api/inventory'
@@ -26,6 +26,7 @@ const locationForm = reactive({
 
 const receiveForm = reactive({
   product_id: '' as string,
+  variant_id: '' as string,
   location_id: '' as string,
   quantity: 1,
   unit_cost: 0,
@@ -33,6 +34,7 @@ const receiveForm = reactive({
 
 const transferForm = reactive({
   product_id: '' as string,
+  variant_id: '' as string,
   from_location_id: '' as string,
   to_location_id: '' as string,
   quantity: 1,
@@ -62,6 +64,81 @@ const locationOptions = computed(() =>
   }))
 )
 
+// Variants for receive
+const selectedReceiveProduct = computed(() => {
+  if (!Array.isArray(products.value) || !receiveForm.product_id) return null
+  return products.value.find((p: any) => String(p.id) === String(receiveForm.product_id))
+})
+
+const receiveHasVariants = computed(() => {
+  const p = selectedReceiveProduct.value as any
+  return !!(p?.has_variants || (Array.isArray(p?.variants) && p.variants.length > 0))
+})
+
+const receiveVariantOptions = computed(() => {
+  const p = selectedReceiveProduct.value as any
+  if (!p || !Array.isArray(p.variants)) return []
+  return p.variants.map((v: any) => ({
+    label: `${v.name || v.sku || `Variant ${v.id}`}`,
+    value: v.id,
+  }))
+})
+
+// Auto-select first variant on product select for receive
+watch(selectedReceiveProduct, (prod: any) => {
+  if (prod && Array.isArray(prod.variants) && prod.variants.length > 0) {
+    receiveForm.variant_id = prod.variants[0].id
+  } else {
+    receiveForm.variant_id = ''
+  }
+})
+
+// Variants for transfer
+const selectedTransferProduct = computed(() => {
+  if (!Array.isArray(products.value) || !transferForm.product_id) return null
+  return products.value.find((p: any) => String(p.id) === String(transferForm.product_id))
+})
+
+const transferHasVariants = computed(() => {
+  const p = selectedTransferProduct.value as any
+  return !!(p?.has_variants || (Array.isArray(p?.variants) && p.variants.length > 0))
+})
+
+const transferVariantOptions = computed(() => {
+  const p = selectedTransferProduct.value as any
+  if (!p || !Array.isArray(p.variants)) return []
+  return p.variants.map((v: any) => ({
+    label: `${v.name || v.sku || `Variant ${v.id}`}`,
+    value: v.id,
+  }))
+})
+
+// Auto-select first variant on product select for transfer
+watch(selectedTransferProduct, (prod: any) => {
+  if (prod && Array.isArray(prod.variants) && prod.variants.length > 0) {
+    transferForm.variant_id = prod.variants[0].id
+  } else {
+    transferForm.variant_id = ''
+  }
+})
+
+// Live stock at source location
+const { data: transferProductStock } = useQuery({
+  queryKey: ['inventory', 'product-stock-transfer', computed(() => transferForm.product_id)],
+  queryFn: () => transferForm.product_id ? inventoryApi.getProductStock(transferForm.product_id).then(res => res.data) : Promise.resolve([]),
+  enabled: computed(() => !!transferForm.product_id)
+})
+
+const transferAvailableAtSource = computed(() => {
+  if (!Array.isArray(transferProductStock.value) || !transferForm.from_location_id) return null
+  const match = transferProductStock.value.find((sl: any) => {
+    const locMatch = String(sl.location_id) === String(transferForm.from_location_id)
+    const varMatch = transferForm.variant_id ? String(sl.variant_id) === String(transferForm.variant_id) : true
+    return locMatch && varMatch
+  })
+  return match ? (match.available_quantity ?? match.quantity_on_hand ?? 0) : 0
+})
+
 const locationColumns = [
   { key: 'name', label: 'Name' },
   { key: 'code', label: 'Code' },
@@ -88,6 +165,7 @@ function invalidateStockQueries() {
   queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
   queryClient.invalidateQueries({ queryKey: ['inventory', 'product-stock'] })
   queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
+  queryClient.invalidateQueries({ queryKey: ['shops'] })
 }
 
 const createLocationMutation = useMutation({
@@ -116,6 +194,7 @@ const receiveMutation = useMutation({
       location_id: receiveForm.location_id,
       quantity: Number(receiveForm.quantity),
       unit_cost: Number(receiveForm.unit_cost) || 0,
+      variant_id: receiveForm.variant_id ? String(receiveForm.variant_id) : undefined,
     }),
   onSuccess: () => {
     receiveForm.quantity = 1
@@ -124,7 +203,7 @@ const receiveMutation = useMutation({
     toast.success('Stock received')
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to receive stock')
+    toast.error(err?.response?.data?.message || err?.message || 'Failed to receive stock')
   },
 })
 
@@ -135,6 +214,7 @@ const transferMutation = useMutation({
       from_location_id: transferForm.from_location_id,
       to_location_id: transferForm.to_location_id,
       quantity: Number(transferForm.quantity),
+      variant_id: transferForm.variant_id ? String(transferForm.variant_id) : undefined,
     }),
   onSuccess: () => {
     transferForm.quantity = 1
@@ -142,7 +222,7 @@ const transferMutation = useMutation({
     toast.success('Stock transferred')
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to transfer stock')
+    toast.error(err?.response?.data?.message || err?.message || 'Failed to transfer stock')
   },
 })
 
@@ -159,6 +239,10 @@ function submitReceive() {
     toast.error('Product and location are required')
     return
   }
+  if (receiveHasVariants.value && !receiveForm.variant_id) {
+    toast.error('Please select a product variant')
+    return
+  }
   if (!receiveForm.quantity || receiveForm.quantity < 1) {
     toast.error('Quantity must be at least 1')
     return
@@ -171,12 +255,20 @@ function submitTransfer() {
     toast.error('Product and both locations are required')
     return
   }
+  if (transferHasVariants.value && !transferForm.variant_id) {
+    toast.error('Please select a product variant')
+    return
+  }
   if (transferForm.from_location_id === transferForm.to_location_id) {
     toast.error('From and to locations must differ')
     return
   }
   if (!transferForm.quantity || transferForm.quantity < 1) {
     toast.error('Quantity must be at least 1')
+    return
+  }
+  if (transferAvailableAtSource.value !== null && transferForm.quantity > transferAvailableAtSource.value) {
+    toast.error(`Insufficient stock at source location. Available: ${transferAvailableAtSource.value}`)
     return
   }
   transferMutation.mutate()
@@ -268,6 +360,13 @@ const typeOptions = [
             :options="productOptions"
           />
           <UiSelect
+            v-if="receiveHasVariants"
+            v-model="receiveForm.variant_id"
+            label="Variant"
+            required
+            :options="receiveVariantOptions"
+          />
+          <UiSelect
             v-model="receiveForm.location_id"
             label="Location"
             required
@@ -308,11 +407,29 @@ const typeOptions = [
             :options="productOptions"
           />
           <UiSelect
-            v-model="transferForm.from_location_id"
-            label="From location"
+            v-if="transferHasVariants"
+            v-model="transferForm.variant_id"
+            label="Variant"
             required
-            :options="locationOptions"
+            :options="transferVariantOptions"
           />
+          <div class="space-y-1">
+            <UiSelect
+              v-model="transferForm.from_location_id"
+              label="From location"
+              required
+              :options="locationOptions"
+            />
+            <div
+              v-if="transferForm.from_location_id && transferAvailableAtSource !== null"
+              class="text-xs text-slate-500 font-medium px-1 flex items-center gap-1.5"
+            >
+              <span>Available at Source:</span>
+              <UiBadge :variant="(transferAvailableAtSource || 0) > 0 ? 'success' : 'danger'">
+                {{ transferAvailableAtSource }} units
+              </UiBadge>
+            </div>
+          </div>
           <UiSelect
             v-model="transferForm.to_location_id"
             label="To location"

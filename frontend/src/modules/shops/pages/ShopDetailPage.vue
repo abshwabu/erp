@@ -13,6 +13,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiModal from '@/components/ui/UiModal.vue'
+import StockAdjustmentModal from '@/modules/inventory/components/StockAdjustmentModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,13 +33,8 @@ const settings = reactive({
   is_active: true,
 })
 
-const adjustForm = reactive({
-  product_id: '',
-  quantity: 1,
-  type: 'add' as 'add' | 'remove',
-  reason: 'stock_take',
-})
 const isAdjustOpen = ref(false)
+const selectedAdjustProductId = ref<string | undefined>(undefined)
 
 const selectedKeeperIds = ref<string[]>([])
 
@@ -128,23 +124,6 @@ const syncKeepersMutation = useMutation({
   },
 })
 
-const adjustMutation = useMutation({
-  mutationFn: () =>
-    shopsApi.adjustStock(shopId.value, {
-      product_id: adjustForm.product_id,
-      quantity: adjustForm.quantity,
-      type: adjustForm.type,
-      reason: adjustForm.reason,
-    }),
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['shops', shopId.value, 'stock'] })
-    isAdjustOpen.value = false
-  },
-  onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to adjust stock'
-  },
-})
-
 function toggleKeeper(id: string) {
   const idx = selectedKeeperIds.value.indexOf(id)
   if (idx >= 0) selectedKeeperIds.value.splice(idx, 1)
@@ -152,9 +131,7 @@ function toggleKeeper(id: string) {
 }
 
 function openAdjust(productId?: string) {
-  adjustForm.product_id = productId || ''
-  adjustForm.quantity = 1
-  adjustForm.type = 'add'
+  selectedAdjustProductId.value = productId
   isAdjustOpen.value = true
 }
 </script>
@@ -275,27 +252,11 @@ function openAdjust(productId?: string) {
       </template>
     </div>
 
-    <UiModal v-model="isAdjustOpen" title="Adjust Shop Stock" size="md">
-      <form class="space-y-4" @submit.prevent="adjustMutation.mutate()">
-        <UiSelect
-          v-model="adjustForm.product_id"
-          label="Product"
-          :options="[{ label: 'Select…', value: '' }, ...productOptions]"
-        />
-        <UiSelect
-          v-model="adjustForm.type"
-          label="Type"
-          :options="[
-            { label: 'Add', value: 'add' },
-            { label: 'Remove', value: 'remove' },
-          ]"
-        />
-        <UiInput v-model.number="adjustForm.quantity" type="number" min="1" label="Quantity" />
-      </form>
-      <template #footer>
-        <UiButton variant="ghost" class="mr-2" @click="isAdjustOpen = false">Cancel</UiButton>
-        <UiButton :loading="adjustMutation.isPending.value" @click="adjustMutation.mutate()">Apply</UiButton>
-      </template>
-    </UiModal>
+    <StockAdjustmentModal
+      v-model="isAdjustOpen"
+      :product-id="selectedAdjustProductId"
+      :location-id="shop?.stock_location?.id"
+      @saved="queryClient.invalidateQueries({ queryKey: ['shops', shopId, 'stock'] })"
+    />
   </div>
 </template>
