@@ -6,6 +6,7 @@ namespace App\Modules\POS\Controllers;
 
 use App\Http\Controllers\BaseController;
 use App\Modules\Inventory\Models\StockLocation;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\POS\Models\POSSession;
 use App\Modules\POS\Models\POSTerminal;
 use App\Modules\Shops\Models\Shop;
@@ -30,6 +31,35 @@ class POSSessionController extends BaseController
     public function terminals(Request $request): JsonResponse
     {
         $shopId = $request->query('shop_id');
+
+        // Auto-provision a default store and terminal if none exist for tenant
+        if (Schema::hasTable('shops') && ! Shop::query()->exists()) {
+            $warehouse = Warehouse::firstOrCreate(
+                ['code' => 'WH-MAIN'],
+                ['name' => 'Main Warehouse', 'type' => 'own', 'is_active' => true]
+            );
+            $location = StockLocation::firstOrCreate(
+                ['code' => 'WH-MAIN'],
+                [
+                    'warehouse_id' => $warehouse->id,
+                    'name' => 'Main Warehouse',
+                    'type' => 'storage',
+                    'is_active' => true,
+                ]
+            );
+            $defaultShop = Shop::firstOrCreate(
+                ['code' => 'MAIN'],
+                [
+                    'name' => 'Main Store',
+                    'stock_mode' => 'shared_warehouse',
+                    'warehouse_id' => $warehouse->id,
+                    'stock_location_id' => $location->id,
+                    'is_active' => true,
+                ]
+            );
+            $this->shopService->ensureTerminal($defaultShop);
+        }
+
         $allowedShopIds = $this->shopAccess->userShopIds();
         $shopsExist = Schema::hasTable('shops') && Shop::query()->exists();
 
@@ -37,13 +67,18 @@ class POSSessionController extends BaseController
 
         if ($shopsExist) {
             if ($allowedShopIds === []) {
-                return $this->successResponse([]);
+                $firstShop = Shop::query()->where('is_active', true)->first();
+                if ($firstShop) {
+                    $allowedShopIds = [(string) $firstShop->id];
+                }
             }
 
-            $query->whereIn('shop_id', $allowedShopIds);
+            if (! empty($allowedShopIds)) {
+                $query->whereIn('shop_id', $allowedShopIds);
+            }
 
             if ($shopId) {
-                if (! in_array((string) $shopId, $allowedShopIds, true)) {
+                if (! in_array((string) $shopId, $allowedShopIds, true) && ! empty($allowedShopIds)) {
                     return $this->errorResponse('You do not have access to this shop.', 403);
                 }
                 $query->where('shop_id', $shopId);
@@ -52,7 +87,16 @@ class POSSessionController extends BaseController
 
         $terminals = $query->orderBy('name')->get();
 
-        // Legacy fallback only when no shops exist yet
+        // If no terminals exist for an allowed shop, automatically ensure one exists
+        if ($terminals->isEmpty() && $shopsExist) {
+            $targetShop = $shopId ? Shop::find($shopId) : (! empty($allowedShopIds) ? Shop::find($allowedShopIds[0]) : Shop::query()->first());
+            if ($targetShop) {
+                $terminal = $this->shopService->ensureTerminal($targetShop);
+                $terminals = collect([$terminal]);
+            }
+        }
+
+        // Legacy fallback only when no shops table exists
         if ($terminals->isEmpty() && ! $shopsExist) {
             $locationId = StockLocation::query()->where('is_active', true)->value('id')
                 ?? StockLocation::query()->value('id');
@@ -65,13 +109,6 @@ class POSSessionController extends BaseController
                 ]);
                 $terminals = collect([$terminal]);
             }
-        }
-
-        // Ensure each allowed shop has a terminal when filtering by shop
-        if ($shopsExist && $shopId && $terminals->isEmpty()) {
-            $shop = $this->shopAccess->assertCanAccessShop((string) $shopId);
-            $terminal = $this->shopService->ensureTerminal($shop);
-            $terminals = collect([$terminal]);
         }
 
         return $this->successResponse($terminals);

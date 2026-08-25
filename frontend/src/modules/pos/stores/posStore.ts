@@ -100,12 +100,11 @@ export const usePosStore = defineStore('pos', () => {
       const shops = await loadShops()
 
       if (shops.length === 0) {
-        // Legacy mode only when tenant has no shop-bound terminals
         const terminals = await posApi.getTerminals()
         const terminal = terminals.data.data?.[0]
         if (!terminal) {
           throw new Error(
-            'No shop assigned. Ask an admin to create a shop and assign you as a keeper.'
+            'No POS terminal or shop available. Please ensure a shop and terminal are configured.'
           )
         }
         const opened = await posApi.openSession({
@@ -119,17 +118,27 @@ export const usePosStore = defineStore('pos', () => {
       if (!selectedShopId.value) {
         if (shops.length === 1 && shops[0]) {
           selectedShopId.value = shops[0].id
-        } else {
-          needsShopSelection.value = true
-          throw new Error('Select a shop to continue.')
+        } else if (shops.length > 1) {
+          // Default to the first shop or prompt selection
+          selectedShopId.value = shops[0]?.id || null
         }
       }
 
-      const shopId = selectedShopId.value!
+      const shopId = selectedShopId.value || shops[0]?.id
+      if (!shopId) {
+        needsShopSelection.value = true
+        throw new Error('Please select a shop to continue.')
+      }
+
       const terminals = await posApi.getTerminals(shopId)
       let terminal = terminals.data.data?.[0]
       if (!terminal) {
-        throw new Error('No POS terminal for this shop.')
+        const allTerminals = await posApi.getTerminals()
+        terminal = allTerminals.data.data?.[0]
+      }
+
+      if (!terminal) {
+        throw new Error('No POS terminal found for this shop.')
       }
 
       const opened = await posApi.openSession({

@@ -37,11 +37,22 @@ class ShopAccessService
             return Shop::query()->pluck('id')->map(fn ($id) => (string) $id)->all();
         }
 
-        return ShopUser::query()
+        $assignedIds = ShopUser::query()
             ->where('user_id', $user->id)
             ->pluck('shop_id')
             ->map(fn ($id) => (string) $id)
             ->all();
+
+        if (! empty($assignedIds)) {
+            return $assignedIds;
+        }
+
+        // If no explicit user assignment, allow active tenant shops for users with POS session permissions
+        if ($user->can(Permission::PosSessionsOpen->value)) {
+            return Shop::query()->where('is_active', true)->pluck('id')->map(fn ($id) => (string) $id)->all();
+        }
+
+        return [];
     }
 
     public function shopsForUser(?User $user = null, bool $activeOnly = true): Collection
@@ -83,6 +94,9 @@ class ShopAccessService
             ->exists();
 
         if (! $assigned) {
+            if ($user?->can(Permission::PosSessionsOpen->value) && $shop->is_active) {
+                return $shop;
+            }
             throw new AccessDeniedHttpException('You do not have access to this shop.');
         }
 
