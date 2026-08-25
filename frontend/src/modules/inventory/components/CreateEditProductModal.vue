@@ -159,9 +159,7 @@ watch(
         categoryId: newProduct.category?.id || (newProduct as any).category_id || undefined,
         costPrice: typeof rawProd.cost_price === 'number' ? rawProd.cost_price / 100 : 0,
         sellingPrice: typeof rawProd.selling_price === 'number' ? rawProd.selling_price / 100 : 0,
-        minSellingPrice: typeof rawProd.min_selling_price === 'number' ? rawProd.min_selling_price / 100 : 0,
-        maxSellingPrice: typeof rawProd.max_selling_price === 'number' ? rawProd.max_selling_price / 100 : 0,
-        initialStock: 0,
+        initialStock: Number(rawProd.available_quantity ?? rawProd.quantity_on_hand ?? rawProd.stock ?? 0),
         minStock: typeof rawProd.min_stock === 'number' ? rawProd.min_stock : 5,
         barcode: rawProd.barcode || '',
         trackSerialNumbers: !!rawProd.track_serial_numbers,
@@ -394,10 +392,12 @@ const mutation = useMutation({
         is_primary: img.is_primary,
         sort_order: idx,
       })),
-      initial_stock:
-        !form.hasVariants && !isEdit.value
-          ? Math.max(0, Math.floor(Number(form.initialStock || 0)))
-          : undefined,
+      initial_stock: !form.hasVariants
+        ? Math.max(0, Math.floor(Number(form.initialStock || 0)))
+        : undefined,
+      stock: !form.hasVariants
+        ? Math.max(0, Math.floor(Number(form.initialStock || 0)))
+        : undefined,
       variants: form.hasVariants
         ? form.variants.map((v: any) => ({
             id: v.id || undefined,
@@ -406,7 +406,7 @@ const mutation = useMutation({
             cost_price: Math.round(Number(v.costPrice || 0) * 100),
             selling_price: Math.round(Number(v.sellingPrice || 0) * 100),
             is_active: v.is_active !== false,
-            stock: isEdit.value ? undefined : v.stock || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock || 0))),
             attribute_value_ids: v.attribute_value_ids || [],
           }))
         : [],
@@ -754,11 +754,13 @@ function handleCategoryCreated(newCat: any) {
                   </div>
                 </div>
 
-                <!-- Opening Stock (for simple products on create) -->
-                <div v-if="!isEdit && !form.hasVariants" class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
+                <!-- Stock Quantity on Hand (for non-variant products) -->
+                <div v-if="!form.hasVariants" class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
                   <div class="flex items-center space-x-2">
                     <Boxes class="w-4 h-4 text-blue-600" />
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Initial Opening Stock</h4>
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      {{ isEdit ? 'Current Stock on Hand (Units)' : 'Initial Opening Stock (Units)' }}
+                    </h4>
                   </div>
                   <UiInput
                     v-model.number="form.initialStock"
@@ -769,7 +771,10 @@ function handleCategoryCreated(newCat: any) {
                     :error="errors.initialStock"
                   />
                   <p class="text-[11px] text-slate-500 leading-normal">
-                    Initial stock units will automatically be credited to your default warehouse inventory upon saving.
+                    {{ isEdit
+                      ? 'Adjusting this count will log an inventory stock level adjustment for your main warehouse.'
+                      : 'Initial stock units will automatically be credited to your default warehouse inventory upon saving.'
+                    }}
                   </p>
                 </div>
               </TabPanel>

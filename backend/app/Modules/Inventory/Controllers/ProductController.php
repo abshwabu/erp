@@ -155,7 +155,7 @@ class ProductController extends BaseController
                     'reference_type' => 'InitialStock',
                     'unit_cost' => (int) ($validated['cost_price'] ?? 0),
                     'currency_code' => $product->currency_code ?: 'USD',
-                    'user_id' => auth()->id(),
+                    'user_id' => auth()->id() ?? \App\Modules\Core\Models\User::first()?->id,
                 ]);
             }
 
@@ -254,6 +254,51 @@ class ProductController extends BaseController
                         'path' => $primaryImageUrl,
                         'is_primary' => true,
                         'sort_order' => 0,
+                    ]);
+                }
+            }
+
+            // Handle non-variant stock update if provided
+            $incomingStock = $validated['stock'] ?? $validated['initial_stock'] ?? null;
+            if ($incomingStock !== null && $variants === null && ! $product->has_variants) {
+                $warehouse = \App\Modules\Inventory\Models\Warehouse::firstOrCreate(
+                    ['code' => 'WH-MAIN'],
+                    ['name' => 'Main Warehouse', 'type' => 'own', 'is_active' => true]
+                );
+
+                $location = \App\Modules\Inventory\Models\StockLocation::firstOrCreate(
+                    ['code' => 'WH-MAIN'],
+                    [
+                        'warehouse_id' => $warehouse->id,
+                        'name' => 'Main Warehouse',
+                        'type' => 'storage',
+                        'is_active' => true
+                    ]
+                );
+
+                $stockLevel = \App\Modules\Inventory\Models\StockLevel::firstOrCreate([
+                    'product_id' => $product->id,
+                    'variant_id' => null,
+                    'location_id' => $location->id,
+                ], [
+                    'quantity_on_hand' => 0,
+                    'quantity_committed' => 0,
+                    'quantity_on_order' => 0,
+                ]);
+
+                $diff = (int) $incomingStock - (int) $stockLevel->quantity_on_hand;
+                if ($diff !== 0) {
+                    $stockLevel->update(['quantity_on_hand' => (int) $incomingStock]);
+
+                    \App\Modules\Inventory\Models\StockMovement::create([
+                        'product_id' => $product->id,
+                        'to_location_id' => $location->id,
+                        'quantity' => abs($diff),
+                        'type' => 'adjustment',
+                        'reference_type' => 'StockAdjustment',
+                        'unit_cost' => (int) ($validated['cost_price'] ?? $product->cost_price ?? 0),
+                        'currency_code' => $product->currency_code ?: 'USD',
+                        'user_id' => auth()->id() ?? \App\Modules\Core\Models\User::first()?->id,
                     ]);
                 }
             }

@@ -29,6 +29,8 @@ class UpdateProductRequest extends FormRequest
             'category_id'          => ['nullable', 'uuid', 'exists:product_categories,id'],
             'cost_price'           => ['sometimes', 'integer', 'min:0'],
             'selling_price'        => ['sometimes', 'integer', 'min:0'],
+            'stock'                => ['nullable', 'integer', 'min:0'],
+            'initial_stock'        => ['nullable', 'integer', 'min:0'],
             'has_variants'         => ['boolean'],
             'track_serial_numbers' => ['boolean'],
             'track_lots'           => ['boolean'],

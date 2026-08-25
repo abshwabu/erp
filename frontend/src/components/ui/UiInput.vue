@@ -21,7 +21,12 @@ withDefaults(defineProps<Props>(), {
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement
-  emit('update:modelValue', target.value)
+  if (target.type === 'number') {
+    const val = target.value === '' ? '' : Number(target.value)
+    emit('update:modelValue', val)
+  } else {
+    emit('update:modelValue', target.value)
+  }
 }
 </script>
 
