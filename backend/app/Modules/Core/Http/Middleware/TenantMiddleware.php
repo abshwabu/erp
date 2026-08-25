@@ -62,7 +62,9 @@ final class TenantMiddleware
 
         return in_array($request->path(), $centralRoutes, true)
             || str_starts_with($request->path(), 'api/auth')
-            || str_starts_with($request->path(), 'api/store');
+            || str_starts_with($request->path(), 'api/store')
+            || str_starts_with($request->path(), 'storage')
+            || str_starts_with($request->path(), 'api/media');
     }
 
     private function applyTenantContext(Tenant $tenant): void

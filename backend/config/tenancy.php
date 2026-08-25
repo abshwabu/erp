@@ -52,14 +52,12 @@ return [
         'suffix_base' => 'tenant',
         'disks' => [
             'local',
-            'public',
         ],
         'root_override' => [
             'local' => '%storage_path%/app/',
-            'public' => '%storage_path%/app/public/',
         ],
         'suffix_storage_path' => true,
-        'asset_helper_tenancy' => true,
+        'asset_helper_tenancy' => false,
     ],
     'redis' => [
         'prefix_base' => 'tenant',
