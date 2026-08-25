@@ -61,6 +61,14 @@ const isCreateCategoryModalOpen = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
 
+const categoryOptions = computed(() => {
+  const list = Array.isArray(props.categories) ? props.categories : []
+  return [
+    { label: 'Uncategorized / General', value: '' },
+    ...list.map((c) => ({ label: c.name, value: c.id })),
+  ]
+})
+
 const form = reactive({
   name: '',
   description: '',
@@ -582,10 +590,7 @@ function handleCategoryCreated(newCat: any) {
                     </div>
                     <UiSelect
                       v-model="form.categoryId"
-                      :options="[
-                        { label: 'Uncategorized / General', value: '' },
-                        ...(Array.isArray(categories) ? categories.map((c) => ({ label: c.name, value: c.id })) : [])
-                      ]"
+                      :options="categoryOptions"
                     />
                   </div>
                 </div>

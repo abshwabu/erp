@@ -35,7 +35,7 @@ import CreateEditProductModal from '../components/CreateEditProductModal.vue'
 import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
 import { formatCurrency, resolveImageUrl } from '@/utils/format'
-import type { Product, ProductFilters, ProductStatus } from '@/types/inventory'
+import type { Product, ProductCategory, ProductFilters, ProductStatus } from '@/types/inventory'
 
 const queryClient = useQueryClient()
 const page = ref(1)
@@ -100,7 +100,7 @@ const { data, isLoading, refetch, isFetching } = useQuery({
 })
 
 // Safe categories query
-const { data: categories } = useQuery<any[]>({
+const { data: categoriesRaw } = useQuery<any>({
   queryKey: ['inventory', 'categories'],
   queryFn: async () => {
     try {
@@ -113,6 +113,20 @@ const { data: categories } = useQuery<any[]>({
     }
   },
   initialData: [],
+})
+
+const categoriesList = computed<ProductCategory[]>(() => {
+  const raw = categoriesRaw.value
+  if (Array.isArray(raw)) return raw
+  if (Array.isArray((raw as any)?.data)) return (raw as any).data
+  return []
+})
+
+const categoryFilterOptions = computed(() => {
+  return [
+    { label: 'All Categories', value: '' },
+    ...categoriesList.value.map((c: any) => ({ label: c.name, value: c.id })),
+  ]
 })
 
 const isCreateModalOpen = ref(false)
@@ -333,10 +347,7 @@ const hasActiveFilters = computed(() => {
           <div class="w-full sm:w-44">
             <UiSelect
               v-model="filters.category_id"
-              :options="[
-                { label: 'All Categories', value: '' },
-                ...(Array.isArray(categories) ? categories.map((c) => ({ label: c.name, value: c.id })) : []),
-              ]"
+              :options="categoryFilterOptions"
             />
           </div>
 
@@ -595,7 +606,7 @@ const hasActiveFilters = computed(() => {
     <CreateEditProductModal
       v-model="isCreateModalOpen"
       :product="selectedProduct"
-      :categories="categories || []"
+      :categories="categoriesList"
       @saved="refetch"
     />
 
