@@ -38,16 +38,24 @@ class ProductResource extends BaseResource
             'variants'             => ProductVariantResource::collection($this->whenLoaded('variants')),
             'barcodes'             => ProductBarcodeResource::collection($this->whenLoaded('barcodes')),
             'quantity_on_hand'   => $this->relationLoaded('stockLevels')
-                ? (int) $this->stockLevels->sum('quantity_on_hand')
+                ? (int) ($this->has_variants && $this->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                    ? $this->stockLevels->whereNotNull('variant_id')->sum('quantity_on_hand')
+                    : $this->stockLevels->sum('quantity_on_hand'))
                 : 0,
             'quantity_committed' => $this->relationLoaded('stockLevels')
-                ? (int) $this->stockLevels->sum('quantity_committed')
+                ? (int) ($this->has_variants && $this->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                    ? $this->stockLevels->whereNotNull('variant_id')->sum('quantity_committed')
+                    : $this->stockLevels->sum('quantity_committed'))
                 : 0,
             'quantity_on_order'  => $this->relationLoaded('stockLevels')
-                ? (int) $this->stockLevels->sum('quantity_on_order')
+                ? (int) ($this->has_variants && $this->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                    ? $this->stockLevels->whereNotNull('variant_id')->sum('quantity_on_order')
+                    : $this->stockLevels->sum('quantity_on_order'))
                 : 0,
             'available_quantity'   => $this->relationLoaded('stockLevels')
-                ? (int) ($this->stockLevels->sum('quantity_on_hand') - $this->stockLevels->sum('quantity_committed'))
+                ? (int) ($this->has_variants && $this->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                    ? ($this->stockLevels->whereNotNull('variant_id')->sum('quantity_on_hand') - $this->stockLevels->whereNotNull('variant_id')->sum('quantity_committed'))
+                    : ($this->stockLevels->sum('quantity_on_hand') - $this->stockLevels->sum('quantity_committed')))
                 : 0,
             'created_at'           => $this->created_at?->toIso8601String(),
             'updated_at'           => $this->updated_at?->toIso8601String(),

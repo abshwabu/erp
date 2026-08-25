@@ -111,15 +111,23 @@ const catalogItems = computed(() => {
       (productItem?.variants && productItem.variants.length > 0)
     )
 
-    const rawVariants = (shopItem?.variants && shopItem.variants.length > 0)
-      ? shopItem.variants
-      : (productItem?.variants || [])
+    // Build shop variant lookup map
+    const shopVariantMap = new Map<string, any>()
+    if (shopItem?.variants && Array.isArray(shopItem.variants)) {
+      for (const sv of shopItem.variants) {
+        if (sv?.id) shopVariantMap.set(String(sv.id), sv)
+      }
+    }
+
+    const baseVariants = (productItem?.variants?.length ? productItem.variants : (shopItem?.variants || []))
 
     // Map variants with store-specific stock
-    const variants = rawVariants.map((v: any) => {
+    const variants = baseVariants.map((v: any) => {
+      const sv = shopVariantMap.get(String(v.id))
       const vStock = hasActiveShop
-        ? Number(v.stock ?? v.available_quantity ?? 0)
+        ? (sv ? Number(sv.stock ?? sv.available_quantity ?? 0) : 0)
         : Number(v.stock ?? v.available_quantity ?? 0)
+
       return {
         ...v,
         stock: vStock,
@@ -144,7 +152,7 @@ const catalogItems = computed(() => {
 
     const categoryId = productItem?.category_id || productItem?.category?.id || shopItem?.category_id || null
 
-    // Stock for products with variants is the sum of in-store variant quantities
+    // Stock for products with variants is strictly the sum of in-store variant quantities
     let stock = 0
     if (hasVariants && variants.length > 0) {
       stock = variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)

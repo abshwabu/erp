@@ -155,6 +155,7 @@ class ShopController extends BaseController
 
         $byProduct = [];
         $variantStockMap = [];
+        $parentStockMap = [];
 
         foreach ($levels as $level) {
             if (! $level->product) {
@@ -166,6 +167,8 @@ class ShopController extends BaseController
 
             if ($vId) {
                 $variantStockMap[$pId][$vId] = $avail;
+            } else {
+                $parentStockMap[$pId] = $avail;
             }
 
             if (! isset($byProduct[$pId])) {
@@ -188,11 +191,6 @@ class ShopController extends BaseController
                     'raw_product' => $prod,
                 ];
             }
-
-            $byProduct[$pId]['quantity_on_hand'] += (int) $level->quantity_on_hand;
-            $byProduct[$pId]['quantity_committed'] += (int) $level->quantity_committed;
-            $byProduct[$pId]['available_quantity'] =
-                $byProduct[$pId]['quantity_on_hand'] - $byProduct[$pId]['quantity_committed'];
         }
 
         // Include active products with zero stock at this location for adjustment & POS catalog UX
@@ -231,7 +229,10 @@ class ShopController extends BaseController
             unset($item['raw_product']);
 
             $variants = [];
-            if ($prod->relationLoaded('variants') && $prod->variants) {
+            $hasVariants = (bool) $prod->has_variants;
+
+            if ($prod->relationLoaded('variants') && $prod->variants && $prod->variants->isNotEmpty()) {
+                $hasVariants = true;
                 foreach ($prod->variants as $variant) {
                     $vStock = $variantStockMap[$pId][$variant->id] ?? 0;
                     $variants[] = [
@@ -247,7 +248,20 @@ class ShopController extends BaseController
                     ];
                 }
             }
+
+            $item['has_variants'] = $hasVariants;
             $item['variants'] = $variants;
+
+            if ($hasVariants && ! empty($variants)) {
+                $totalStock = (int) array_sum(array_column($variants, 'stock'));
+            } else {
+                $totalStock = (int) ($parentStockMap[$pId] ?? 0);
+            }
+
+            $item['quantity_on_hand'] = $totalStock;
+            $item['quantity_committed'] = 0;
+            $item['available_quantity'] = $totalStock;
+
             $result[] = $item;
         }
 
