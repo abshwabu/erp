@@ -48,6 +48,15 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
     Route::delete('products/{product}', [ProductController::class, 'destroy'])
         ->middleware('permission:inventory.products.delete');
 
+    Route::post('media/upload', [ProductController::class, 'uploadMedia'])
+        ->middleware('permission:inventory.products.create');
+
+    Route::post('products/{product}/images', [ProductController::class, 'uploadImage'])
+        ->middleware('permission:inventory.products.edit');
+
+    Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage'])
+        ->middleware('permission:inventory.products.edit');
+
     Route::get('products/{product}/variants', [ProductController::class, 'variants'])
         ->middleware('permission:inventory.products.view');
 

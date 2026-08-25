@@ -9,13 +9,14 @@ use App\Modules\Inventory\Enums\ProductType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Product extends InventoryModel
 {
     use SoftDeletes;
 
     protected $table = 'products';
+
+    protected $guarded = [];
 
     protected $casts = [
         'type' => ProductType::class,
@@ -44,7 +45,7 @@ class Product extends InventoryModel
 
     public function images(): HasMany
     {
-        return $this->hasMany(ProductImage::class, 'product_id');
+        return $this->hasMany(ProductImage::class, 'product_id')->orderBy('sort_order');
     }
 
     public function uoms(): HasMany
@@ -67,13 +68,10 @@ class Product extends InventoryModel
      */
     public function getPrimaryImageUrlAttribute(): ?string
     {
-        $primaryImage = $this->images->where('is_primary', true)->first() 
-                     ?? $this->images->first();
+        $primaryImage = $this->relationLoaded('images')
+            ? ($this->images->where('is_primary', true)->first() ?? $this->images->first())
+            : $this->images()->orderByDesc('is_primary')->first();
 
-        if ($primaryImage && $primaryImage->path) {
-            return Storage::disk('s3')->temporaryUrl($primaryImage->path, now()->addMinutes(60));
-        }
-
-        return null;
+        return $primaryImage?->url;
     }
 }

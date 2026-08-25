@@ -48,6 +48,14 @@ class StoreProductRequest extends FormRequest
             'variants.*.attribute_value_ids' => ['nullable', 'array'],
             'variants.*.is_active'           => ['boolean'],
             'variants.*.stock'               => ['nullable', 'integer', 'min:0'],
+
+            // Images
+            'images'                         => ['nullable', 'array'],
+            'images.*.path'                  => ['nullable', 'string'],
+            'images.*.url'                   => ['nullable', 'string'],
+            'images.*.is_primary'            => ['nullable', 'boolean'],
+            'images.*.sort_order'            => ['nullable', 'integer'],
+            'primary_image_url'              => ['nullable', 'string'],
         ];
     }
 }

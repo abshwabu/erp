@@ -26,6 +26,9 @@ import {
   Hash,
   FileText,
   Percent,
+  UploadCloud,
+  Star,
+  Loader2,
 } from '@lucide/vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -40,12 +43,23 @@ interface Props {
   categories: ProductCategory[]
 }
 
+interface ImageItem {
+  id?: string
+  path?: string
+  url: string
+  is_primary: boolean
+  isUploading?: boolean
+  file?: File
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'saved'])
 
 const queryClient = useQueryClient()
 const isEdit = computed(() => !!props.product)
 const isCreateCategoryModalOpen = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const isDragging = ref(false)
 
 const form = reactive({
   name: '',
@@ -65,7 +79,7 @@ const form = reactive({
   trackLots: false,
   hasVariants: false,
   variants: [] as any[],
-  images: [] as any[],
+  images: [] as ImageItem[],
   tags: [] as string[],
   autoGenerateSku: true,
 })
@@ -127,6 +141,15 @@ watch(
           }))
         : []
 
+      const mappedImages: ImageItem[] = Array.isArray(rawProd.images) && rawProd.images.length > 0
+        ? rawProd.images.map((img: any) => ({
+            id: img.id,
+            path: img.path || img.url,
+            url: img.url || img.path,
+            is_primary: !!img.is_primary,
+          }))
+        : (newProduct.primary_image_url ? [{ url: newProduct.primary_image_url, path: newProduct.primary_image_url, is_primary: true }] : [])
+
       Object.assign(form, {
         name: newProduct.name || '',
         description: newProduct.description || '',
@@ -145,7 +168,7 @@ watch(
         trackLots: !!rawProd.track_lots,
         variants: mappedVariants,
         hasVariants: !!(rawProd.has_variants ?? newProduct.has_variants),
-        images: [],
+        images: mappedImages,
         tags: [],
         autoGenerateSku: false,
       })
@@ -267,8 +290,93 @@ const removeVariant = (index: number) => {
   form.variants.splice(index, 1)
 }
 
+// ── Media Upload Handlers ───────────────────────────────────────────────────
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+async function uploadFileItem(file: File) {
+  // Create instant local preview
+  const localPreview = URL.createObjectURL(file)
+  const isFirstImage = form.images.length === 0
+
+  const imageEntry = reactive<ImageItem>({
+    url: localPreview,
+    path: '',
+    is_primary: isFirstImage,
+    isUploading: true,
+    file,
+  })
+
+  form.images.push(imageEntry)
+
+  try {
+    const response = await inventoryApi.uploadMedia(file)
+    const uploadedData = response.data?.data || response.data
+    if (uploadedData?.url || uploadedData?.path) {
+      imageEntry.url = uploadedData.url || uploadedData.path
+      imageEntry.path = uploadedData.path || uploadedData.url
+    }
+  } catch (error) {
+    console.warn('Failed to upload file to backend, fallback to data URI', error)
+    // Fallback to data URI so it still saves
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        imageEntry.url = e.target.result as string
+        imageEntry.path = e.target.result as string
+      }
+    }
+    reader.readAsDataURL(file)
+  } finally {
+    imageEntry.isUploading = false
+  }
+}
+
+async function handleFileSelect(e: Event) {
+  const target = e.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  const files = Array.from(target.files)
+  for (const file of files) {
+    await uploadFileItem(file)
+  }
+
+  // Reset file input value so same file can be re-selected
+  target.value = ''
+}
+
+async function handleDrop(e: DragEvent) {
+  isDragging.value = false
+  if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) return
+
+  const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+  for (const file of files) {
+    await uploadFileItem(file)
+  }
+}
+
+function setPrimaryImage(index: number) {
+  form.images.forEach((img, i) => {
+    img.is_primary = i === index
+  })
+}
+
+function removeImage(index: number) {
+  const removed = form.images.splice(index, 1)[0]
+  if (removed?.is_primary && form.images[0]) {
+    form.images[0].is_primary = true
+  }
+}
+
+const primaryImage = computed(() => {
+  return form.images.find((img) => img.is_primary) || form.images[0]
+})
+
 const mutation = useMutation({
   mutationFn: () => {
+    const primaryImg = primaryImage.value
     const payload = {
       name: form.name,
       description: form.description || undefined,
@@ -279,6 +387,13 @@ const mutation = useMutation({
       cost_price: Math.round(Number(form.costPrice || 0) * 100),
       selling_price: Math.round(Number(form.sellingPrice || 0) * 100),
       has_variants: form.hasVariants,
+      primary_image_url: primaryImg?.url || primaryImg?.path || undefined,
+      images: form.images.map((img, idx) => ({
+        path: img.path || img.url,
+        url: img.url,
+        is_primary: img.is_primary,
+        sort_order: idx,
+      })),
       initial_stock:
         !form.hasVariants && !isEdit.value
           ? Math.max(0, Math.floor(Number(form.initialStock || 0)))
@@ -362,6 +477,12 @@ function handleCategoryCreated(newCat: any) {
                   class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700"
                 >
                   {{ form.variants.length }}
+                </span>
+                <span
+                  v-if="tab.id === 'media' && form.images.length > 0"
+                  class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700"
+                >
+                  {{ form.images.length }}
                 </span>
               </button>
             </Tab>
@@ -834,18 +955,114 @@ function handleCategoryCreated(newCat: any) {
               </TabPanel>
 
               <!-- 4. MEDIA ASSETS TAB -->
-              <TabPanel class="space-y-4 outline-none">
-                <div class="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-slate-50/50 space-y-3">
-                  <div class="p-3.5 bg-white rounded-2xl w-12 h-12 mx-auto shadow-xs flex items-center justify-center border border-slate-100">
-                    <ImageIcon class="w-6 h-6 text-slate-400" />
+              <TabPanel class="space-y-5 outline-none">
+                <!-- Hidden Real File Input -->
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                  multiple
+                  class="hidden"
+                  @change="handleFileSelect"
+                />
+
+                <!-- Drag and Drop Upload Area -->
+                <div
+                  @dragover.prevent="isDragging = true"
+                  @dragleave.prevent="isDragging = false"
+                  @drop.prevent="handleDrop"
+                  @click="triggerFileInput"
+                  :class="[
+                    'border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center space-y-3',
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:border-blue-400 shadow-2xs'
+                  ]"
+                >
+                  <div class="p-3.5 bg-white rounded-2xl shadow-xs border border-slate-100 text-blue-600">
+                    <UploadCloud class="w-7 h-7" />
                   </div>
                   <div>
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Product Cover & Imagery</h4>
-                    <p class="text-xs text-slate-400 mt-0.5">Showcase your products on POS registers, digital invoices, and storefronts.</p>
+                    <h4 class="text-sm font-bold text-slate-800">
+                      Upload Product Media
+                    </h4>
+                    <p class="text-xs text-slate-500 mt-1">
+                      Drag & drop images here, or <span class="text-blue-600 font-bold underline">browse files</span>
+                    </p>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                      PNG, JPG, WebP, GIF up to 10MB each
+                    </p>
                   </div>
-                  <UiButton type="button" size="sm" variant="outline" class="shadow-2xs">
-                    Browse File Assets
-                  </UiButton>
+                </div>
+
+                <!-- Uploaded Images Gallery Preview -->
+                <div v-if="form.images.length > 0" class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Product Gallery ({{ form.images.length }})
+                    </h5>
+                    <span class="text-[11px] text-slate-400">Click star to set main cover image</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    <div
+                      v-for="(img, idx) in form.images"
+                      :key="idx"
+                      :class="[
+                        'relative aspect-square rounded-2xl border-2 overflow-hidden bg-slate-100 group transition-all',
+                        img.is_primary ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md' : 'border-slate-200'
+                      ]"
+                    >
+                      <!-- Image Element -->
+                      <img
+                        :src="img.url"
+                        alt="Product preview"
+                        class="w-full h-full object-cover"
+                      />
+
+                      <!-- Uploading Overlay -->
+                      <div
+                        v-if="img.isUploading"
+                        class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white text-xs font-bold gap-1.5"
+                      >
+                        <Loader2 class="w-4 h-4 animate-spin" />
+                        <span>Uploading...</span>
+                      </div>
+
+                      <!-- Primary Badge -->
+                      <div
+                        v-if="img.is_primary"
+                        class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-xs flex items-center gap-1"
+                      >
+                        <Star class="w-3 h-3 fill-current" /> Cover
+                      </div>
+
+                      <!-- Action Buttons Hover Overlay -->
+                      <div
+                        v-if="!img.isUploading"
+                        class="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                      >
+                        <button
+                          type="button"
+                          v-if="!img.is_primary"
+                          @click.stop="setPrimaryImage(idx)"
+                          title="Set as Cover Image"
+                          class="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl transition-transform transform hover:scale-110 shadow-md text-xs font-bold flex items-center gap-1"
+                        >
+                          <Star class="w-3.5 h-3.5 text-amber-500" />
+                        </button>
+
+                        <button
+                          type="button"
+                          @click.stop="removeImage(idx)"
+                          title="Delete Image"
+                          class="p-2 bg-red-600/90 hover:bg-red-600 text-white rounded-xl transition-transform transform hover:scale-110 shadow-md"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </TabPanel>
             </TabPanels>

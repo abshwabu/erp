@@ -151,6 +151,27 @@ export const inventoryApi = {
     return apiClient.put(`/inventory/categories/${id}`, data)
   },
 
+  uploadMedia(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post<{ data: { path: string; url: string; name: string } }>('/inventory/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  uploadProductImage(productId: string, file: File, isPrimary = false) {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (isPrimary) formData.append('is_primary', '1')
+    return apiClient.post<{ data: any }>(`/inventory/products/${productId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  deleteProductImage(productId: string, imageId: string) {
+    return apiClient.delete(`/inventory/products/${productId}/images/${imageId}`)
+  },
+
   deleteCategory(id: string) {
     return apiClient.delete(`/inventory/categories/${id}`)
   },

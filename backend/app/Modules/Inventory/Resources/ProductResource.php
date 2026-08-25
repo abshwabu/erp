@@ -16,16 +16,23 @@ class ProductResource extends BaseResource
             'sku'                  => $this->sku,
             'name'                 => $this->name,
             'description'          => $this->description,
-            'type'                 => $this->type?->value,
-            'status'               => $this->status?->value,
+            'type'                 => $this->type?->value ?? $this->type,
+            'status'               => $this->status?->value ?? $this->status,
             'cost_price'           => $this->cost_price,
             'selling_price'        => $this->selling_price,
             'has_variants'         => $this->has_variants,
             'track_serial_numbers' => $this->track_serial_numbers,
             'track_lots'           => $this->track_lots,
-            'primary_image_url'    => $this->when(
+            'primary_image_url'    => $this->primary_image_url,
+            'images'               => $this->when(
                 $this->relationLoaded('images'),
-                fn () => $this->primary_image_url
+                fn () => $this->images->map(fn ($img) => [
+                    'id' => $img->id,
+                    'path' => $img->path,
+                    'url' => $img->url,
+                    'is_primary' => (bool) $img->is_primary,
+                    'sort_order' => (int) $img->sort_order,
+                ])
             ),
             'category'             => new ProductCategoryResource($this->whenLoaded('category')),
             'variants'             => ProductVariantResource::collection($this->whenLoaded('variants')),

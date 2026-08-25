@@ -8,6 +8,7 @@ use App\Http\Controllers\BaseController;
 use App\Modules\Inventory\Jobs\ImportProductsJob;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\ProductBarcode;
+use App\Modules\Inventory\Models\ProductImage;
 use App\Modules\Inventory\Models\ProductVariant;
 use App\Modules\Inventory\Requests\StoreProductRequest;
 use App\Modules\Inventory\Requests\UpdateProductRequest;
@@ -17,6 +18,8 @@ use App\Modules\Inventory\Resources\ProductVariantResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends BaseController
 {
@@ -26,7 +29,7 @@ class ProductController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $query = Product::query()
-            ->with(['category', 'barcodes', 'variants.stockLevels', 'stockLevels']);
+            ->with(['category', 'barcodes', 'variants.stockLevels', 'stockLevels', 'images']);
 
         if ($search = trim((string) $request->input('search', $request->input('filter.search', '')))) {
             $query->where(function ($q) use ($search) {
@@ -64,11 +67,15 @@ class ProductController extends BaseController
             $validated = $request->validated();
             $barcodes  = $validated['barcodes'] ?? [];
             $variants  = $validated['variants'] ?? [];
+            $images    = $validated['images'] ?? [];
+            $primaryImageUrl = $validated['primary_image_url'] ?? null;
             $initialStock = (int) ($validated['initial_stock'] ?? 0);
             $requestedLocationId = $validated['location_id'] ?? null;
             unset(
                 $validated['barcodes'],
                 $validated['variants'],
+                $validated['images'],
+                $validated['primary_image_url'],
                 $validated['initial_stock'],
                 $validated['location_id']
             );
@@ -82,6 +89,33 @@ class ProductController extends BaseController
 
             foreach ($barcodes as $barcode) {
                 $product->barcodes()->create($barcode);
+            }
+
+            // Create images
+            $hasPrimary = false;
+            foreach ($images as $idx => $img) {
+                $isPrimary = ! empty($img['is_primary']) || ($idx === 0 && ! $hasPrimary);
+                if ($isPrimary) {
+                    $hasPrimary = true;
+                }
+                $path = $img['path'] ?? $img['url'] ?? '';
+                if ($path) {
+                    $product->images()->create([
+                        'id' => (string) Str::uuid(),
+                        'path' => $path,
+                        'is_primary' => $isPrimary,
+                        'sort_order' => $img['sort_order'] ?? $idx,
+                    ]);
+                }
+            }
+
+            if (! $hasPrimary && $primaryImageUrl) {
+                $product->images()->create([
+                    'id' => (string) Str::uuid(),
+                    'path' => $primaryImageUrl,
+                    'is_primary' => true,
+                    'sort_order' => 0,
+                ]);
             }
 
             // Create initial stock level record for default main warehouse if none exists
@@ -165,7 +199,7 @@ class ProductController extends BaseController
             return $product;
         });
 
-        $product->load(['category', 'barcodes', 'variants.stockLevels', 'stockLevels']);
+        $product->load(['category', 'barcodes', 'variants.stockLevels', 'stockLevels', 'images']);
 
         return $this->createdResponse(new ProductResource($product));
     }
@@ -188,9 +222,41 @@ class ProductController extends BaseController
         DB::transaction(function () use ($request, $product) {
             $validated = $request->validated();
             $variants  = $validated['variants'] ?? null;
-            unset($validated['variants']);
+            $images    = $validated['images'] ?? null;
+            $primaryImageUrl = $validated['primary_image_url'] ?? null;
+            unset($validated['variants'], $validated['images'], $validated['primary_image_url']);
 
             $product->update($validated);
+
+            // Handle images update if provided
+            if ($images !== null) {
+                $product->images()->delete();
+                $hasPrimary = false;
+                foreach ($images as $idx => $img) {
+                    $isPrimary = ! empty($img['is_primary']) || ($idx === 0 && ! $hasPrimary);
+                    if ($isPrimary) {
+                        $hasPrimary = true;
+                    }
+                    $path = $img['path'] ?? $img['url'] ?? '';
+                    if ($path) {
+                        $product->images()->create([
+                            'id' => (string) Str::uuid(),
+                            'path' => $path,
+                            'is_primary' => $isPrimary,
+                            'sort_order' => $img['sort_order'] ?? $idx,
+                        ]);
+                    }
+                }
+
+                if (! $hasPrimary && $primaryImageUrl) {
+                    $product->images()->create([
+                        'id' => (string) Str::uuid(),
+                        'path' => $primaryImageUrl,
+                        'is_primary' => true,
+                        'sort_order' => 0,
+                    ]);
+                }
+            }
 
             if ($variants !== null) {
                 $incomingVariantIds = [];
@@ -205,7 +271,7 @@ class ProductController extends BaseController
                         'is_active' => $variant['is_active'] ?? true,
                     ];
 
-                    if (isset($variant['id']) && !empty($variant['id'])) {
+                    if (isset($variant['id']) && ! empty($variant['id'])) {
                         $existingVariant = $product->variants()->findOrFail($variant['id']);
                         $existingVariant->update($variantData);
                         $incomingVariantIds[] = $existingVariant->id;
@@ -260,7 +326,7 @@ class ProductController extends BaseController
             }
         });
 
-        $product->load(['category', 'barcodes', 'variants.stockLevels']);
+        $product->load(['category', 'barcodes', 'variants.stockLevels', 'images']);
 
         return $this->successResponse(new ProductResource($product));
     }
@@ -271,6 +337,93 @@ class ProductController extends BaseController
     public function destroy(Product $product): JsonResponse
     {
         $product->delete();
+
+        return $this->noContentResponse();
+    }
+
+    // ── Media & Image Upload ───────────────────────────────────────────────────
+
+    /**
+     * POST /api/inventory/media/upload
+     * General media uploader that stores image in public storage and returns URL.
+     */
+    public function uploadMedia(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'max:10240'],
+        ]);
+
+        $file = $request->file('file');
+        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('products', $fileName, 'public');
+
+        $url = Storage::disk('public')->url($path);
+
+        return $this->successResponse([
+            'path' => $path,
+            'url'  => $url,
+            'name' => $file->getClientOriginalName(),
+        ]);
+    }
+
+    /**
+     * POST /api/inventory/products/{product}/images
+     */
+    public function uploadImage(Request $request, Product $product): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'max:10240'],
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $file = $request->file('file');
+        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('products/' . $product->id, $fileName, 'public');
+
+        $isPrimary = $request->boolean('is_primary') || $product->images()->count() === 0;
+
+        if ($isPrimary) {
+            $product->images()->update(['is_primary' => false]);
+        }
+
+        $image = $product->images()->create([
+            'id' => (string) Str::uuid(),
+            'path' => $path,
+            'is_primary' => $isPrimary,
+            'sort_order' => $product->images()->count(),
+        ]);
+
+        return $this->createdResponse([
+            'id' => $image->id,
+            'path' => $image->path,
+            'url' => $image->url,
+            'is_primary' => $image->is_primary,
+            'sort_order' => $image->sort_order,
+        ]);
+    }
+
+    /**
+     * DELETE /api/inventory/products/{product}/images/{image}
+     */
+    public function deleteImage(Product $product, ProductImage $image): JsonResponse
+    {
+        if ($image->product_id !== $product->id) {
+            return $this->errorResponse('Image does not belong to this product', 404);
+        }
+
+        if ($image->path && ! str_starts_with($image->path, 'http') && ! str_starts_with($image->path, 'data:')) {
+            Storage::disk('public')->delete($image->path);
+        }
+
+        $wasPrimary = $image->is_primary;
+        $image->delete();
+
+        if ($wasPrimary) {
+            $next = $product->images()->first();
+            if ($next) {
+                $next->update(['is_primary' => true]);
+            }
+        }
 
         return $this->noContentResponse();
     }
