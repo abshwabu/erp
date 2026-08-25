@@ -4,13 +4,16 @@ import { useQuery } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { shopsApi } from '@/api/shops'
 import { usePosStore } from '../stores/posStore'
-import { Search, Package, Check, Tag, Filter, Layers, RefreshCw, AlertCircle } from '@lucide/vue'
+import { Search, Package, Check, Layers } from '@lucide/vue'
 import { resolveImageUrl } from '@/utils/format'
+import SelectVariantModal from './SelectVariantModal.vue'
 
 const posStore = usePosStore()
 const searchQuery = ref('')
 const selectedCategoryId = ref<string | null>(null)
 const addedProductId = ref<string | null>(null)
+const variantModalOpen = ref(false)
+const activeModalProduct = ref<any>(null)
 
 const shopId = computed(() => posStore.selectedShopId)
 const locationId = computed(() => posStore.selectedShop()?.stock_location_id || posStore.session?.terminal?.location_id || null)
@@ -101,6 +104,29 @@ const catalogItems = computed(() => {
     const shopItem = shopStockMap.get(pId) || (item.product_id ? item : null)
     const productItem = item.product_id ? rawProducts.find((p: any) => String(p.id) === pId) : item
 
+    const hasVariants = Boolean(
+      shopItem?.has_variants ||
+      productItem?.has_variants ||
+      (shopItem?.variants && shopItem.variants.length > 0) ||
+      (productItem?.variants && productItem.variants.length > 0)
+    )
+
+    const rawVariants = (shopItem?.variants && shopItem.variants.length > 0)
+      ? shopItem.variants
+      : (productItem?.variants || [])
+
+    // Map variants with store-specific stock
+    const variants = rawVariants.map((v: any) => {
+      const vStock = hasActiveShop
+        ? Number(v.stock ?? v.available_quantity ?? 0)
+        : Number(v.stock ?? v.available_quantity ?? 0)
+      return {
+        ...v,
+        stock: vStock,
+        available_quantity: vStock,
+      }
+    })
+
     const primaryImage =
       productItem?.primary_image_url ||
       shopItem?.primary_image_url ||
@@ -118,18 +144,27 @@ const catalogItems = computed(() => {
 
     const categoryId = productItem?.category_id || productItem?.category?.id || shopItem?.category_id || null
 
-    const stock = hasActiveShop
-      ? (shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0)
-      : (typeof productItem?.available_quantity === 'number'
+    // Stock for products with variants is the sum of in-store variant quantities
+    let stock = 0
+    if (hasVariants && variants.length > 0) {
+      stock = variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+    } else if (hasActiveShop) {
+      stock = shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0
+    } else {
+      stock = typeof productItem?.available_quantity === 'number'
         ? productItem.available_quantity
-        : (Number(shopItem?.available_quantity ?? productItem?.stock) || 0))
+        : (Number(shopItem?.available_quantity ?? productItem?.stock) || 0)
+    }
 
     return {
       id: pId,
+      productId: pId,
       name: productItem?.name || shopItem?.name || 'Unnamed Product',
       price,
       categoryId,
       sku: productItem?.sku || shopItem?.sku || `SKU-${pId}`,
+      has_variants: hasVariants,
+      variants,
       stock,
       locationId: shopItem?.location_id || locationId.value,
       image: primaryImage,
@@ -157,8 +192,16 @@ const filteredProducts = computed(() => {
 
 function handleAddProduct(product: any) {
   if (!product) return
+
+  // If product has variants, open variant selection dialog
+  if (product.has_variants && Array.isArray(product.variants) && product.variants.length > 0) {
+    activeModalProduct.value = product
+    variantModalOpen.value = true
+    return
+  }
+
   if (product.stock <= 0) {
-    alert(`${product.name} is currently out of stock.`)
+    alert(`${product.name} is currently out of stock at this store.`)
     return
   }
 
@@ -166,7 +209,7 @@ function handleAddProduct(product: any) {
   const currentInCart = cartItem ? cartItem.quantity : 0
 
   if (currentInCart >= product.stock) {
-    alert(`Cannot add more ${product.name}. Only ${product.stock} unit(s) available in stock!`)
+    alert(`Cannot add more ${product.name}. Only ${product.stock} unit(s) available in this store!`)
     return
   }
 
@@ -174,6 +217,18 @@ function handleAddProduct(product: any) {
   addedProductId.value = product.id
   setTimeout(() => {
     if (addedProductId.value === product.id) {
+      addedProductId.value = null
+    }
+  }, 600)
+}
+
+function handleVariantSelect(variant: any, quantity: number) {
+  if (!activeModalProduct.value || !variant) return
+
+  posStore.addToCart(activeModalProduct.value, quantity, variant)
+  addedProductId.value = activeModalProduct.value.id
+  setTimeout(() => {
+    if (addedProductId.value === activeModalProduct.value?.id) {
       addedProductId.value = null
     }
   }, 600)
@@ -228,7 +283,7 @@ function handleAddProduct(product: any) {
           :key="product.id"
           type="button"
           @click="handleAddProduct(product)"
-          class="relative text-left bg-white border rounded-xl p-3 transition-all active:scale-[0.98] group"
+          class="relative text-left bg-white border rounded-xl p-3 transition-all active:scale-[0.98] group flex flex-col justify-between"
           :class="product.stock > 0
             ? 'border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
             : 'border-slate-200/60 bg-slate-50/60 opacity-75 cursor-not-allowed'"
@@ -239,28 +294,49 @@ function handleAddProduct(product: any) {
           >
             <Check class="h-8 w-8 text-emerald-600" />
           </div>
-          <div class="h-16 w-full rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2 overflow-hidden border border-slate-100">
-            <img
-              v-if="resolveImageUrl(product.image)"
-              :src="resolveImageUrl(product.image)!"
-              :alt="product.name"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform"
-            />
-            <Package v-else class="h-6 w-6 text-slate-400 group-hover:text-blue-600 transition-colors" />
+
+          <div>
+            <div class="h-16 w-full rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2 overflow-hidden border border-slate-100 relative">
+              <img
+                v-if="resolveImageUrl(product.image)"
+                :src="resolveImageUrl(product.image)!"
+                :alt="product.name"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
+              <Package v-else class="h-6 w-6 text-slate-400 group-hover:text-blue-600 transition-colors" />
+
+              <span
+                v-if="product.has_variants && product.variants?.length > 0"
+                class="absolute top-1.5 right-1.5 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm flex items-center gap-1 shadow-sm"
+              >
+                <Layers class="w-3 h-3" />
+                {{ product.variants.length }}
+              </span>
+            </div>
+
+            <div class="font-semibold text-xs sm:text-sm text-slate-900 line-clamp-2 min-h-[2.25rem] leading-snug">{{ product.name }}</div>
+            <div class="text-[11px] text-slate-400 font-mono mt-1 truncate">{{ product.sku }}</div>
           </div>
-          <div class="font-semibold text-xs sm:text-sm text-slate-900 line-clamp-2 min-h-[2.25rem] leading-snug">{{ product.name }}</div>
-          <div class="text-[11px] text-slate-400 font-mono mt-1 truncate">{{ product.sku }}</div>
-          <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100">
+
+          <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 w-full">
             <span class="font-bold text-xs sm:text-sm text-slate-900">${{ Number(product.price || 0).toFixed(2) }}</span>
             <span
               class="text-[11px] font-medium px-1.5 py-0.5 rounded"
               :class="product.stock > 0 ? 'text-slate-600 bg-slate-100' : 'text-amber-700 bg-amber-100 font-semibold'"
             >
-              {{ product.stock > 0 ? `${product.stock} left` : 'Out of stock' }}
+              {{ product.stock > 0 ? `${product.stock} in store` : 'Out of stock' }}
             </span>
           </div>
         </button>
       </div>
     </div>
+
+    <!-- Variant Selection Modal -->
+    <SelectVariantModal
+      :is-open="variantModalOpen"
+      :product="activeModalProduct"
+      @close="variantModalOpen = false"
+      @select="handleVariantSelect"
+    />
   </div>
 </template>

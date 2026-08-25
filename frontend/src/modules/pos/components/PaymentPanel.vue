@@ -85,7 +85,8 @@ async function processPayment() {
         ?? session.terminal?.location_id
         ?? null,
       items: cartItems.map(item => ({
-        product_id: String(item.id),
+        product_id: String(item.productId || item.product_id || item.id),
+        variant_id: item.variantId || item.variant_id || null,
         quantity: item.quantity,
         unit_price_cents: Math.round((item.price || 0) * 100),
       })),
@@ -99,13 +100,10 @@ async function processPayment() {
     const transaction = response.data.data
 
     cartItems.forEach(item => {
-      posStore.deductStock(item.id, item.quantity)
+      posStore.deductStock(item.productId || item.product_id || item.id, item.quantity, item.variantId || item.variant_id)
     })
 
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory'] })
     queryClient.invalidateQueries({ queryKey: ['shops'] })
 
     lastOrderSummary.value = {

@@ -60,19 +60,22 @@ const totalItems = computed(() => {
       <template v-if="posStore.cart.length > 0">
         <div
           v-for="item in posStore.cart"
-          :key="item.id"
+          :key="item.cartKey || item.id"
           class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 hover:border-slate-300 transition-all"
         >
           <div class="flex-1 min-w-0">
             <div class="font-semibold text-xs text-slate-900 truncate mb-0.5">{{ item.name }}</div>
-            <div class="text-[11px] text-slate-500 font-mono">${{ item.price.toFixed(2) }} / unit</div>
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
+              <span>${{ Number(item.price || 0).toFixed(2) }} / unit</span>
+              <span v-if="item.sku" class="text-slate-400 truncate max-w-[100px]">· {{ item.sku }}</span>
+            </div>
           </div>
 
           <!-- Quantity Controls -->
           <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
             <button
               type="button"
-              @click.stop.prevent="posStore.updateQuantity(item.id, -1)"
+              @click.stop.prevent="posStore.updateQuantity(item.cartKey || item.id, -1)"
               class="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer active:scale-95 select-none"
               title="Decrease quantity"
             >
@@ -81,7 +84,7 @@ const totalItems = computed(() => {
             <span class="w-7 text-center text-xs font-bold text-slate-900 font-mono select-none">{{ item.quantity }}</span>
             <button
               type="button"
-              @click.stop.prevent="posStore.updateQuantity(item.id, 1)"
+              @click.stop.prevent="posStore.updateQuantity(item.cartKey || item.id, 1)"
               class="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer active:scale-95 select-none"
               title="Increase quantity"
             >
@@ -95,7 +98,7 @@ const totalItems = computed(() => {
               ${{ (item.price * item.quantity).toFixed(2) }}
             </span>
             <button
-              @click="posStore.removeFromCart(item.id)"
+              @click="posStore.removeFromCart(item.cartKey || item.id)"
               class="text-slate-300 hover:text-red-500 transition-colors p-1"
             >
               <Trash2 class="w-3.5 h-3.5" />

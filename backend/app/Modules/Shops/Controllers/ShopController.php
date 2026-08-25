@@ -150,43 +150,56 @@ class ShopController extends BaseController
 
         $levels = StockLevel::query()
             ->where('location_id', $locationId)
-            ->with(['product.category', 'product.images', 'location'])
+            ->with(['product.category', 'product.images', 'product.variants', 'variant', 'location'])
             ->get();
 
         $byProduct = [];
+        $variantStockMap = [];
+
         foreach ($levels as $level) {
             if (! $level->product) {
                 continue;
             }
-            $key = $level->product_id;
-            if (! isset($byProduct[$key])) {
-                $byProduct[$key] = [
-                    'product_id' => $level->product_id,
-                    'name' => $level->product->name,
-                    'sku' => $level->product->sku,
-                    'selling_price' => (int) $level->product->selling_price,
-                    'cost_price' => (int) $level->product->cost_price,
-                    'category_id' => $level->product->category_id,
-                    'primary_image_url' => $level->product->primary_image_url,
-                    'images' => $level->product->images,
+            $pId = $level->product_id;
+            $vId = $level->variant_id;
+            $avail = max(0, (int) $level->quantity_on_hand - (int) $level->quantity_committed);
+
+            if ($vId) {
+                $variantStockMap[$pId][$vId] = $avail;
+            }
+
+            if (! isset($byProduct[$pId])) {
+                $prod = $level->product;
+                $byProduct[$pId] = [
+                    'product_id' => $prod->id,
+                    'name' => $prod->name,
+                    'sku' => $prod->sku,
+                    'selling_price' => (int) $prod->selling_price,
+                    'cost_price' => (int) $prod->cost_price,
+                    'category_id' => $prod->category_id,
+                    'primary_image_url' => $prod->primary_image_url,
+                    'images' => $prod->images,
+                    'has_variants' => (bool) $prod->has_variants,
                     'quantity_on_hand' => 0,
                     'quantity_committed' => 0,
                     'available_quantity' => 0,
                     'location_id' => $locationId,
                     'location_name' => $level->location?->name,
+                    'raw_product' => $prod,
                 ];
             }
-            $byProduct[$key]['quantity_on_hand'] += (int) $level->quantity_on_hand;
-            $byProduct[$key]['quantity_committed'] += (int) $level->quantity_committed;
-            $byProduct[$key]['available_quantity'] =
-                $byProduct[$key]['quantity_on_hand'] - $byProduct[$key]['quantity_committed'];
+
+            $byProduct[$pId]['quantity_on_hand'] += (int) $level->quantity_on_hand;
+            $byProduct[$pId]['quantity_committed'] += (int) $level->quantity_committed;
+            $byProduct[$pId]['available_quantity'] =
+                $byProduct[$pId]['quantity_on_hand'] - $byProduct[$pId]['quantity_committed'];
         }
 
         // Include active products with zero stock at this location for adjustment & POS catalog UX
         $existingIds = array_keys($byProduct);
         $zeroProducts = Product::query()
             ->where('status', 'active')
-            ->with(['category', 'images'])
+            ->with(['category', 'images', 'variants'])
             ->when($existingIds !== [], fn ($q) => $q->whereNotIn('id', $existingIds))
             ->orderBy('name')
             ->limit(200)
@@ -202,15 +215,43 @@ class ShopController extends BaseController
                 'category_id' => $product->category_id,
                 'primary_image_url' => $product->primary_image_url,
                 'images' => $product->images,
+                'has_variants' => (bool) $product->has_variants,
                 'quantity_on_hand' => 0,
                 'quantity_committed' => 0,
                 'available_quantity' => 0,
                 'location_id' => $locationId,
                 'location_name' => $model->stockLocation?->name,
+                'raw_product' => $product,
             ];
         }
 
-        return $this->successResponse(array_values($byProduct));
+        $result = [];
+        foreach ($byProduct as $pId => $item) {
+            $prod = $item['raw_product'];
+            unset($item['raw_product']);
+
+            $variants = [];
+            if ($prod->relationLoaded('variants') && $prod->variants) {
+                foreach ($prod->variants as $variant) {
+                    $vStock = $variantStockMap[$pId][$variant->id] ?? 0;
+                    $variants[] = [
+                        'id' => $variant->id,
+                        'name' => $variant->name,
+                        'sku' => $variant->sku,
+                        'cost_price' => (int) $variant->cost_price,
+                        'selling_price' => (int) $variant->selling_price,
+                        'attribute_value_ids' => $variant->attribute_value_ids,
+                        'is_active' => (bool) $variant->is_active,
+                        'stock' => $vStock,
+                        'available_quantity' => $vStock,
+                    ];
+                }
+            }
+            $item['variants'] = $variants;
+            $result[] = $item;
+        }
+
+        return $this->successResponse($result);
     }
 
     public function adjustStock(Request $request, string $shop): JsonResponse
