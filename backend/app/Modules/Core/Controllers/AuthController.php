@@ -80,7 +80,51 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $user = null;
+        $tenant = null;
+
+        if (tenancy()->initialized) {
+            $tenant = tenancy()->tenant;
+            $user = User::where('email', $request->email)->first();
+        } else {
+            $tenantId = $request->header('X-Tenant-ID');
+            if ($tenantId) {
+                $candidate = Tenant::query()
+                    ->where(function ($q) use ($tenantId) {
+                        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $tenantId)) {
+                            $q->where('id', $tenantId);
+                        }
+                        $q->orWhere('slug', $tenantId);
+                    })
+                    ->first();
+
+                if ($candidate) {
+                    $found = $candidate->run(fn () => User::where('email', $request->email)->first());
+                    if ($found) {
+                        $tenant = $candidate;
+                        $user = $found;
+                        tenancy()->initialize($tenant);
+                    }
+                }
+            }
+
+            if (! $user) {
+                $tenants = Tenant::where('status', 'active')->get();
+                foreach ($tenants as $t) {
+                    try {
+                        $found = $t->run(fn () => User::where('email', $request->email)->first());
+                        if ($found) {
+                            $tenant = $t;
+                            $user = $found;
+                            tenancy()->initialize($tenant);
+                            break;
+                        }
+                    } catch (\Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+        }
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
@@ -97,7 +141,7 @@ class AuthController extends Controller
         if ($user->mfa_enabled) {
             // Generate a short-lived MFA challenge token
             $mfaToken = auth('api')
-                ->claims(['type' => 'mfa'])
+                ->claims(['type' => 'mfa', 'tenant_id' => $tenant?->getTenantKey()])
                 ->setTTL(5)
                 ->tokenById($user->id);
 
@@ -112,12 +156,12 @@ class AuthController extends Controller
         ]);
 
         $accessToken = auth('api')
-            ->claims(['type' => 'access'])
+            ->claims(['type' => 'access', 'tenant_id' => $tenant?->getTenantKey()])
             ->setTTL(15)
             ->login($user);
 
         $refreshToken = auth('api')
-            ->claims(['type' => 'refresh'])
+            ->claims(['type' => 'refresh', 'tenant_id' => $tenant?->getTenantKey()])
             ->setTTL(43200)
             ->tokenById($user->id);
 
@@ -126,6 +170,11 @@ class AuthController extends Controller
             'refresh_token' => $refreshToken,
             'token_type' => 'bearer',
             'expires_in' => 15 * 60,
+            'tenant' => $tenant ? [
+                'id' => $tenant->getTenantKey(),
+                'name' => $tenant->name,
+                'domain' => $tenant->slug,
+            ] : null,
         ]);
     }
 

@@ -60,8 +60,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(email: string, password: string) {
+    const tenantStore = useTenantStore()
     const response = await authApi.login({ email, password })
     setTokens(response.access_token, response.refresh_token)
+
+    if (response.tenant) {
+      tenantStore.setTenant({
+        id: response.tenant.id,
+        name: response.tenant.name,
+        domain: response.tenant.domain,
+      })
+    }
+
     await checkAuth()
     return response
   }

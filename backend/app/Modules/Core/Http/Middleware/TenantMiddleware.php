@@ -25,26 +25,26 @@ final class TenantMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
+        $tenant = $this->resolveTenant($request);
+
+        if ($tenant instanceof Tenant) {
+            tenancy()->initialize($tenant);
+            $this->applyTenantContext($tenant);
+
+            try {
+                return $next($request);
+            } finally {
+                tenancy()->end();
+            }
+        }
+
         if ($this->isCentralRoute($request)) {
             return $next($request);
         }
 
-        $tenant = $this->resolveTenant($request);
-
-        if (! $tenant instanceof Tenant) {
-            return new JsonResponse([
-                'message' => 'Tenant not found.',
-            ], 404);
-        }
-
-        tenancy()->initialize($tenant);
-        $this->applyTenantContext($tenant);
-
-        try {
-            return $next($request);
-        } finally {
-            tenancy()->end();
-        }
+        return new JsonResponse([
+            'message' => 'Tenant not found.',
+        ], 404);
     }
 
     private function resolveTenant(Request $request): ?Tenant
@@ -57,11 +57,11 @@ final class TenantMiddleware
     private function isCentralRoute(Request $request): bool
     {
         $centralRoutes = [
-            'api/auth/register',
             'api/health',
         ];
 
         return in_array($request->path(), $centralRoutes, true)
+            || str_starts_with($request->path(), 'api/auth')
             || str_starts_with($request->path(), 'api/store');
     }
 
