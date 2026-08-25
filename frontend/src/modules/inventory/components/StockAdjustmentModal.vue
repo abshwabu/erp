@@ -47,37 +47,49 @@ const { data: productStockLevels } = useQuery({
   enabled: computed(() => !!form.productId)
 })
 
+const { data: directProduct } = useQuery({
+  queryKey: ['inventory', 'product-detail-modal', computed(() => form.productId)],
+  queryFn: () => form.productId ? inventoryApi.getProduct(form.productId).then(res => res.data?.data || res.data) : Promise.resolve(null),
+  enabled: computed(() => !!form.productId)
+})
+
 const selectedProduct = computed(() => {
   if (!Array.isArray(products.value) || !form.productId) return null
   return products.value.find((p: any) => String(p.id) === String(form.productId))
 })
 
+const availableVariants = computed(() => {
+  const prod = directProduct.value || selectedProduct.value
+  return Array.isArray(prod?.variants) ? prod.variants : []
+})
+
 const hasVariants = computed(() => {
-  const prod = selectedProduct.value as any
-  return !!(prod?.has_variants || prod?.hasVariants)
+  const prod = directProduct.value || selectedProduct.value
+  return !!(prod?.has_variants || (Array.isArray(availableVariants.value) && availableVariants.value.length > 0))
 })
 
 const variantOptions = computed(() => {
-  const prod = selectedProduct.value as any
-  if (!prod || !Array.isArray(prod.variants)) return []
-  return prod.variants.map((v: any) => ({
+  return availableVariants.value.map((v: any) => ({
     label: `${v.name || v.sku || `Variant ${v.id}`}`,
     value: v.id
   }))
 })
 
 // Auto-select first variant on product select
-watch(selectedProduct, (newProduct: any) => {
-  if (newProduct && Array.isArray(newProduct.variants) && newProduct.variants.length > 0) {
-    // only change if current variant is not in list
-    const exists = newProduct.variants.some((v: any) => String(v.id) === String(form.variantId))
-    if (!exists && newProduct.variants[0]) {
-      form.variantId = newProduct.variants[0].id
+watch([availableVariants, () => props.variantId], ([newVariants, propVarId]) => {
+  if (propVarId) {
+    form.variantId = propVarId
+    return
+  }
+  if (Array.isArray(newVariants) && newVariants.length > 0) {
+    const exists = newVariants.some((v: any) => String(v.id) === String(form.variantId))
+    if (!exists && newVariants[0]) {
+      form.variantId = newVariants[0].id
     }
   } else {
     form.variantId = ''
   }
-})
+}, { immediate: true })
 
 const currentLocationStock = computed(() => {
   if (!Array.isArray(productStockLevels.value) || !form.locationId) return 0
@@ -161,7 +173,7 @@ const mutation = useMutation({
     errorMsg.value = ''
   },
   onError: (err: any) => {
-    errorMsg.value = err?.message || err.response?.data?.message || 'Failed to apply stock adjustment.'
+    errorMsg.value = err?.response?.data?.message || err?.message || 'Failed to apply stock adjustment.'
   }
 })
 
@@ -214,7 +226,6 @@ const handleSubmit = () => {
       />
 
       <UiSelect
-        v-slot:default
         v-if="hasVariants"
         v-model="form.variantId"
         label="Variant"
