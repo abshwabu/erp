@@ -114,6 +114,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.me()
       setUser(response.data, response.data.permissions)
+
+      const tenantStore = useTenantStore()
+      if (response.data.tenant_id && !tenantStore.tenantId) {
+        tenantStore.setTenant({
+          id: response.data.tenant_id,
+          name: 'Active Enterprise Workspace',
+          domain: 'tenant',
+        })
+      }
     } catch (error) {
       await logout()
       throw error

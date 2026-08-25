@@ -20,8 +20,9 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${authStore.accessToken}`
     }
 
-    if (tenantStore.tenantId) {
-      config.headers['X-Tenant-ID'] = tenantStore.tenantId
+    const tenantId = tenantStore.tenantId || authStore.user?.tenant_id
+    if (tenantId) {
+      config.headers['X-Tenant-ID'] = tenantId
     }
 
     return config
