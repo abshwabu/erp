@@ -34,7 +34,7 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import CreateEditProductModal from '../components/CreateEditProductModal.vue'
 import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, resolveImageUrl } from '@/utils/format'
 import type { Product, ProductFilters, ProductStatus } from '@/types/inventory'
 
 const queryClient = useQueryClient()
@@ -371,8 +371,8 @@ const hasActiveFilters = computed(() => {
         <template #cell(image)="{ item }">
           <div class="h-11 w-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
             <img
-              v-if="item.primary_image_url"
-              :src="item.primary_image_url"
+              v-if="resolveImageUrl(item.primary_image_url || item.images?.[0]?.url || item.images?.[0]?.path)"
+              :src="resolveImageUrl(item.primary_image_url || item.images?.[0]?.url || item.images?.[0]?.path)!"
               :alt="item.name"
               class="h-full w-full object-cover"
             />
@@ -495,8 +495,8 @@ const hasActiveFilters = computed(() => {
           <div>
             <div class="relative h-40 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center mb-3">
               <img
-                v-if="product.primary_image_url"
-                :src="product.primary_image_url"
+                v-if="resolveImageUrl(product.primary_image_url || (product as any).images?.[0]?.url || (product as any).images?.[0]?.path)"
+                :src="resolveImageUrl(product.primary_image_url || (product as any).images?.[0]?.url || (product as any).images?.[0]?.path)!"
                 :alt="product.name"
                 class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
               />

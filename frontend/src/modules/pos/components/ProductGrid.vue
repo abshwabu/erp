@@ -5,6 +5,7 @@ import { inventoryApi } from '@/api/inventory'
 import { shopsApi } from '@/api/shops'
 import { usePosStore } from '../stores/posStore'
 import { Search, Package, Check, Tag, Filter, Layers, RefreshCw, AlertCircle } from '@lucide/vue'
+import { resolveImageUrl } from '@/utils/format'
 
 const posStore = usePosStore()
 const searchQuery = ref('')
@@ -89,6 +90,7 @@ watch([shopStock, products, shopId], () => {
         sku: p.sku || `SKU-${p.product_id || p.id}`,
         stock: p.available_quantity ?? p.stock ?? 0,
         locationId: p.location_id || locationId.value,
+        image: p.primary_image_url || p.image || p.images?.[0]?.url || p.images?.[0]?.path || null,
       }))
     return
   }
@@ -102,7 +104,8 @@ watch([shopStock, products, shopId], () => {
         price: typeof p?.selling_price === 'number' ? (p.selling_price / 100) : (Number(p?.price) || 0),
         categoryId: p?.category_id || p?.category?.id || null,
         sku: p?.sku || `SKU-${p?.id}`,
-        stock: rawStock
+        stock: rawStock,
+        image: p?.primary_image_url || p?.image || p?.images?.[0]?.url || p?.images?.[0]?.path || null,
       }
     })
   } else {
@@ -201,8 +204,14 @@ function handleAddProduct(product: any) {
           >
             <Check class="h-8 w-8 text-emerald-600" />
           </div>
-          <div class="h-10 w-10 rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2">
-            <Package class="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+          <div class="h-12 w-12 rounded-xl bg-slate-100 group-hover:bg-blue-50 transition-colors flex items-center justify-center mb-2 overflow-hidden border border-slate-100">
+            <img
+              v-if="resolveImageUrl(product.image)"
+              :src="resolveImageUrl(product.image)!"
+              :alt="product.name"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
+            <Package v-else class="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
           </div>
           <div class="font-semibold text-xs sm:text-sm text-slate-900 line-clamp-2 min-h-[2.25rem] leading-snug">{{ product.name }}</div>
           <div class="text-[11px] text-slate-400 font-mono mt-1 truncate">{{ product.sku }}</div>
