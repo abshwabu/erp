@@ -80,20 +80,55 @@ const categoryList = computed(() => {
 watch([products, shopStock, shopId], () => {
   const rawProducts = Array.isArray(products.value) ? products.value : []
   const rawStock = Array.isArray(shopStock.value) ? shopStock.value : []
+  const hasActiveShop = Boolean(shopId.value || posStore.selectedShopId)
 
   // Create a fast lookup map for shop-specific stock levels
   const shopStockMap = new Map<string, any>()
   for (const s of rawStock) {
-    if (s && s.product_id) {
-      shopStockMap.set(String(s.product_id), s)
+    if (s && (s.product_id || s.id)) {
+      const pId = String(s.product_id || s.id)
+      shopStockMap.set(pId, s)
     }
   }
 
-  // Map products
-  const mappedCatalog = rawProducts.map((p: any) => {
+  // If shop is active and shopStock has arrived, prioritize shopStock items
+  if (hasActiveShop && rawStock.length > 0) {
+    posStore.catalog = rawStock.map((s: any) => {
+      const pId = String(s.product_id || s.id)
+      const generalProduct = rawProducts.find((p: any) => String(p.id) === pId)
+
+      const primaryImage =
+        s.primary_image_url ||
+        generalProduct?.primary_image_url ||
+        generalProduct?.image ||
+        s.image ||
+        s.images?.[0]?.url ||
+        generalProduct?.images?.[0]?.url ||
+        null
+
+      return {
+        id: pId,
+        name: s.name || generalProduct?.name || 'Unnamed Product',
+        price: typeof s.selling_price === 'number'
+          ? (s.selling_price / 100)
+          : (typeof generalProduct?.selling_price === 'number' ? generalProduct.selling_price / 100 : (Number(s.price) || 0)),
+        categoryId: s.category_id || generalProduct?.category_id || generalProduct?.category?.id || null,
+        sku: s.sku || generalProduct?.sku || `SKU-${pId}`,
+        stock: Number(s.available_quantity ?? s.quantity_on_hand ?? 0),
+        locationId: s.location_id || locationId.value,
+        image: primaryImage,
+      }
+    })
+    return
+  }
+
+  // Map from general products
+  posStore.catalog = rawProducts.map((p: any) => {
     const shopItem = shopStockMap.get(String(p.id))
-    const calculatedStock = shopItem
-      ? (shopItem.available_quantity ?? shopItem.stock ?? 0)
+
+    // When operating within a specific shop, stock is strictly that shop's available quantity
+    const calculatedStock = hasActiveShop
+      ? (shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0)
       : (typeof p?.available_quantity === 'number' ? p.available_quantity : (p?.stock ?? 0))
 
     const primaryImage =
@@ -117,22 +152,6 @@ watch([products, shopStock, shopId], () => {
       image: primaryImage,
     }
   })
-
-  // If rawProducts is empty but shopStock has products, fallback to shopStock
-  if (mappedCatalog.length === 0 && rawStock.length > 0) {
-    posStore.catalog = rawStock.map((s: any) => ({
-      id: s.product_id || s.id,
-      name: s.name || 'Unnamed Product',
-      price: typeof s.selling_price === 'number' ? s.selling_price / 100 : (Number(s.price) || 0),
-      categoryId: s.category_id || null,
-      sku: s.sku || `SKU-${s.product_id || s.id}`,
-      stock: s.available_quantity ?? s.stock ?? 0,
-      locationId: s.location_id || locationId.value,
-      image: s.primary_image_url || s.image || s.images?.[0]?.url || null,
-    }))
-  } else {
-    posStore.catalog = mappedCatalog
-  }
 }, { immediate: true })
 
 const filteredProducts = computed(() => {
