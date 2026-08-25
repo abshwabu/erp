@@ -30,6 +30,8 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+let refreshPromise: Promise<void> | null = null
+
 // Response interceptor
 apiClient.interceptors.response.use(
   (response) => response,
@@ -37,26 +39,43 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config
     const authStore = useAuthStore()
 
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized (exclude auth endpoints to avoid infinite loops)
+    const isAuthRoute =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/register') ||
+      originalRequest?.url?.includes('/auth/refresh')
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true
+
+      if (!refreshPromise) {
+        refreshPromise = authStore
+          .refreshAuthToken()
+          .finally(() => {
+            refreshPromise = null
+          })
+      }
+
       try {
-        await authStore.refreshAuthToken()
+        await refreshPromise
+        if (authStore.accessToken) {
+          originalRequest.headers = originalRequest.headers || {}
+          originalRequest.headers.Authorization = `Bearer ${authStore.accessToken}`
+        }
         return apiClient(originalRequest)
       } catch (refreshError) {
-        authStore.logout()
+        await authStore.logout()
         return Promise.reject(refreshError)
       }
     }
 
     // Handle 422 Validation Errors
     if (error.response?.status === 422) {
-      const errors = error.response.data.errors
-      // Convert Laravel style errors to a flat record if needed
+      const errors = error.response.data?.errors
       return Promise.reject({
         status: 422,
         errors,
-        message: error.response.data.message || 'Validation failed'
+        message: error.response.data?.message || 'Validation failed',
       })
     }
 

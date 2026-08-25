@@ -55,9 +55,10 @@ class AuthController extends Controller
         $user->assignRole('Owner');
 
         // 5. Generate tokens for the new user
+        $ttl = (int) config('jwt.ttl', 120);
         $accessToken = auth('api')
             ->claims(['type' => 'access', 'tenant_id' => $tenant->getTenantKey()])
-            ->setTTL(15)
+            ->setTTL($ttl)
             ->login($user);
 
         $refreshToken = auth('api')
@@ -69,7 +70,7 @@ class AuthController extends Controller
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
             'token_type' => 'bearer',
-            'expires_in' => 15 * 60,
+            'expires_in' => $ttl * 60,
             'tenant' => [
                 'id' => $tenant->getTenantKey(),
                 'name' => $tenant->name,
@@ -155,9 +156,10 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ]);
 
+        $ttl = (int) config('jwt.ttl', 120);
         $accessToken = auth('api')
             ->claims(['type' => 'access', 'tenant_id' => $tenant?->getTenantKey()])
-            ->setTTL(15)
+            ->setTTL($ttl)
             ->login($user);
 
         $refreshToken = auth('api')
@@ -169,7 +171,7 @@ class AuthController extends Controller
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
             'token_type' => 'bearer',
-            'expires_in' => 15 * 60,
+            'expires_in' => $ttl * 60,
             'tenant' => $tenant ? [
                 'id' => $tenant->getTenantKey(),
                 'name' => $tenant->name,
@@ -197,6 +199,22 @@ class AuthController extends Controller
                 ], 401);
             }
 
+            $tenantId = $payload->get('tenant_id');
+            if ($tenantId && ! tenancy()->initialized) {
+                $tenant = Tenant::query()
+                    ->where(function ($q) use ($tenantId) {
+                        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $tenantId)) {
+                            $q->where('id', $tenantId);
+                        }
+                        $q->orWhere('slug', $tenantId);
+                    })
+                    ->first();
+
+                if ($tenant) {
+                    tenancy()->initialize($tenant);
+                }
+            }
+
             $userId = $payload->get('sub');
             $user = User::find($userId);
 
@@ -212,15 +230,22 @@ class AuthController extends Controller
                 ], 403);
             }
 
+            $ttl = (int) config('jwt.ttl', 120);
+            $claims = ['type' => 'access'];
+            $resolvedTenantId = $user->tenant_id ?? $tenantId;
+            if ($resolvedTenantId) {
+                $claims['tenant_id'] = $resolvedTenantId;
+            }
+
             $newAccessToken = auth('api')
-                ->claims(['type' => 'access'])
-                ->setTTL(15)
+                ->claims($claims)
+                ->setTTL($ttl)
                 ->login($user);
 
             return response()->json([
                 'access_token' => $newAccessToken,
                 'token_type' => 'bearer',
-                'expires_in' => 15 * 60,
+                'expires_in' => $ttl * 60,
             ]);
         } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
             return response()->json([
