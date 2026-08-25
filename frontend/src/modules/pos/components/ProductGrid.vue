@@ -29,7 +29,8 @@ const { data: categories, isLoading: isCategoriesLoading } = useQuery<any[]>({
       return []
     }
   },
-  initialData: [],
+  staleTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: false,
 })
 
 // Null-safe shop stock query
@@ -48,7 +49,8 @@ const { data: shopStock, isLoading: isShopStockLoading } = useQuery<any[]>({
     }
   },
   enabled: computed(() => !!shopId.value),
-  initialData: [],
+  staleTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: false,
 })
 
 // Null-safe direct inventory products query (always fetched for complete catalog metadata)
@@ -65,7 +67,8 @@ const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
       return []
     }
   },
-  initialData: [],
+  staleTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: false,
 })
 
 const isLoading = computed(() => isCategoriesLoading.value || isShopStockLoading.value || isProductsLoading.value)
@@ -76,87 +79,72 @@ const categoryList = computed(() => {
   return [{ id: null, name: 'All Products' }, ...list]
 })
 
-// Unified Watcher: Merge catalog products with store-specific stock levels
-watch([products, shopStock, shopId], () => {
+// Declarative & Non-Flickering Catalog Computed Property
+const catalogItems = computed(() => {
   const rawProducts = Array.isArray(products.value) ? products.value : []
   const rawStock = Array.isArray(shopStock.value) ? shopStock.value : []
   const hasActiveShop = Boolean(shopId.value || posStore.selectedShopId)
 
-  // Create a fast lookup map for shop-specific stock levels
+  // Map shop items by product ID
   const shopStockMap = new Map<string, any>()
   for (const s of rawStock) {
     if (s && (s.product_id || s.id)) {
-      const pId = String(s.product_id || s.id)
-      shopStockMap.set(pId, s)
+      shopStockMap.set(String(s.product_id || s.id), s)
     }
   }
 
-  // If shop is active and shopStock has arrived, prioritize shopStock items
-  if (hasActiveShop && rawStock.length > 0) {
-    posStore.catalog = rawStock.map((s: any) => {
-      const pId = String(s.product_id || s.id)
-      const generalProduct = rawProducts.find((p: any) => String(p.id) === pId)
+  // Combine items: start with products, fallback to shop stock if products not loaded yet
+  const sourceList = rawProducts.length > 0 ? rawProducts : rawStock
 
-      const primaryImage =
-        s.primary_image_url ||
-        generalProduct?.primary_image_url ||
-        generalProduct?.image ||
-        s.image ||
-        s.images?.[0]?.url ||
-        generalProduct?.images?.[0]?.url ||
-        null
-
-      return {
-        id: pId,
-        name: s.name || generalProduct?.name || 'Unnamed Product',
-        price: typeof s.selling_price === 'number'
-          ? (s.selling_price / 100)
-          : (typeof generalProduct?.selling_price === 'number' ? generalProduct.selling_price / 100 : (Number(s.price) || 0)),
-        categoryId: s.category_id || generalProduct?.category_id || generalProduct?.category?.id || null,
-        sku: s.sku || generalProduct?.sku || `SKU-${pId}`,
-        stock: Number(s.available_quantity ?? s.quantity_on_hand ?? 0),
-        locationId: s.location_id || locationId.value,
-        image: primaryImage,
-      }
-    })
-    return
-  }
-
-  // Map from general products
-  posStore.catalog = rawProducts.map((p: any) => {
-    const shopItem = shopStockMap.get(String(p.id))
-
-    // When operating within a specific shop, stock is strictly that shop's available quantity
-    const calculatedStock = hasActiveShop
-      ? (shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0)
-      : (typeof p?.available_quantity === 'number' ? p.available_quantity : (p?.stock ?? 0))
+  return sourceList.map((item: any) => {
+    const pId = String(item.id || item.product_id || '')
+    const shopItem = shopStockMap.get(pId) || (item.product_id ? item : null)
+    const productItem = item.product_id ? rawProducts.find((p: any) => String(p.id) === pId) : item
 
     const primaryImage =
-      p?.primary_image_url ||
-      p?.image ||
+      productItem?.primary_image_url ||
       shopItem?.primary_image_url ||
-      p?.images?.[0]?.url ||
-      p?.images?.[0]?.path ||
+      productItem?.image ||
+      shopItem?.image ||
+      productItem?.images?.[0]?.url ||
+      shopItem?.images?.[0]?.url ||
       null
 
+    const price = typeof productItem?.selling_price === 'number'
+      ? (productItem.selling_price / 100)
+      : (typeof shopItem?.selling_price === 'number'
+        ? (shopItem.selling_price / 100)
+        : (Number(productItem?.price || shopItem?.price) || 0))
+
+    const categoryId = productItem?.category_id || productItem?.category?.id || shopItem?.category_id || null
+
+    const stock = hasActiveShop
+      ? (shopItem ? Number(shopItem.available_quantity ?? shopItem.quantity_on_hand ?? 0) : 0)
+      : (typeof productItem?.available_quantity === 'number'
+        ? productItem.available_quantity
+        : (Number(shopItem?.available_quantity ?? productItem?.stock) || 0))
+
     return {
-      id: p?.id || '',
-      name: p?.name || shopItem?.name || 'Unnamed Product',
-      price: typeof p?.selling_price === 'number'
-        ? (p.selling_price / 100)
-        : (typeof shopItem?.selling_price === 'number' ? shopItem.selling_price / 100 : (Number(p?.price) || 0)),
-      categoryId: p?.category_id || p?.category?.id || shopItem?.category_id || null,
-      sku: p?.sku || shopItem?.sku || `SKU-${p?.id}`,
-      stock: Number(calculatedStock) || 0,
+      id: pId,
+      name: productItem?.name || shopItem?.name || 'Unnamed Product',
+      price,
+      categoryId,
+      sku: productItem?.sku || shopItem?.sku || `SKU-${pId}`,
+      stock,
       locationId: shopItem?.location_id || locationId.value,
       image: primaryImage,
     }
   })
+})
+
+// Sync to Pinia store without blocking template reactivity
+watch(catalogItems, (items) => {
+  posStore.catalog = items
 }, { immediate: true })
 
 const filteredProducts = computed(() => {
-  const catalog = Array.isArray(posStore.catalog) ? posStore.catalog : []
-  return catalog.filter(p => {
+  const list = catalogItems.value
+  return list.filter(p => {
     if (!p) return false
     const matchesCategory = selectedCategoryId.value === null || String(p.categoryId) === String(selectedCategoryId.value)
     const nameStr = (p.name || '').toLowerCase()
