@@ -9,12 +9,14 @@ interface Props {
   disabled?: boolean
   required?: boolean
   id?: string
+  size?: 'sm' | 'md' | 'lg'
 }
 
 const emit = defineEmits(['update:modelValue'])
 
 withDefaults(defineProps<Props>(), {
   type: 'text',
+  size: 'md',
 })
 
 const handleInput = (event: Event) => {
@@ -24,12 +26,12 @@ const handleInput = (event: Event) => {
 </script>
 
 <template>
-  <div class="w-full">
-    <label v-if="label" :for="id" class="block text-sm font-medium text-slate-700 mb-1">
-      {{ label }} <span v-if="required" class="text-red-500">*</span>
+  <div class="w-full space-y-1.5 font-sans text-left">
+    <label v-if="label" :for="id" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+      {{ label }} <span v-if="required" class="text-red-500 font-bold">*</span>
     </label>
-    <div class="relative flex items-center">
-      <div v-if="$slots.prefix" class="absolute left-3 text-slate-400">
+    <div class="relative flex items-center group">
+      <div v-if="$slots.prefix" class="absolute left-3.5 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors">
         <slot name="prefix" />
       </div>
       <input
@@ -40,18 +42,19 @@ const handleInput = (event: Event) => {
         :disabled="disabled"
         :required="required"
         @input="handleInput"
-        class="block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
+        class="block w-full rounded-xl border bg-slate-50/60 hover:bg-white focus:bg-white text-sm font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 disabled:bg-slate-100/70 disabled:text-slate-400 disabled:cursor-not-allowed transition-all duration-200"
         :class="[
-          error ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-slate-300 text-slate-900',
-          $slots.prefix ? 'pl-10' : 'pl-3',
-          $slots.suffix ? 'pr-10' : 'pr-3',
+          size === 'sm' ? 'py-1.5 text-xs' : size === 'lg' ? 'py-3 text-base' : 'py-2.5 text-sm',
+          error ? 'border-red-300 ring-1 ring-red-500/20 focus:border-red-500 focus:ring-red-500/10 text-red-900' : 'border-slate-200/90',
+          $slots.prefix ? 'pl-10' : 'pl-3.5',
+          $slots.suffix ? 'pr-10' : 'pr-3.5',
         ]"
       />
-      <div v-if="$slots.suffix" class="absolute right-3 text-slate-400">
+      <div v-if="$slots.suffix" class="absolute right-3.5 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors">
         <slot name="suffix" />
       </div>
     </div>
-    <p v-if="error" class="mt-1 text-sm text-red-600">{{ error }}</p>
-    <p v-if="helpText && !error" class="mt-1 text-sm text-slate-500">{{ helpText }}</p>
+    <p v-if="error" class="text-[11px] font-semibold text-red-600 pl-1">{{ error }}</p>
+    <p v-if="helpText && !error" class="text-[11px] text-slate-400 pl-1">{{ helpText }}</p>
   </div>
 </template>

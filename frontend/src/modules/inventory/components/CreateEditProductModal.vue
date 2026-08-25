@@ -19,6 +19,13 @@ import {
   Tag,
   Boxes,
   ShieldCheck,
+  Briefcase,
+  Zap,
+  CheckCircle2,
+  QrCode,
+  Hash,
+  FileText,
+  Percent,
 } from '@lucide/vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -179,7 +186,7 @@ const validate = () => {
   Object.keys(errors).forEach((key) => delete errors[key])
 
   if (!form.name.trim()) errors.name = 'Product name is required'
-  if (!form.sku.trim() && !form.autoGenerateSku) errors.sku = 'SKU is required or toggle Auto-generate'
+  if (!form.sku.trim() && !form.autoGenerateSku) errors.sku = 'SKU is required'
   if (Number(form.sellingPrice) <= 0) errors.sellingPrice = 'Selling price must be greater than 0'
   if (Number(form.initialStock) < 0) errors.initialStock = 'Opening stock cannot be negative'
 
@@ -308,10 +315,10 @@ const handleSubmit = () => {
 }
 
 const tabs = [
-  { id: 'general', label: 'General', icon: Package },
+  { id: 'general', label: 'General Info', icon: Package },
   { id: 'pricing', label: 'Pricing & Margins', icon: DollarSign },
-  { id: 'variants', label: 'Variants & Options', icon: Layers },
-  { id: 'media', label: 'Media', icon: ImageIcon },
+  { id: 'variants', label: 'Variant Matrix', icon: Layers },
+  { id: 'media', label: 'Media Assets', icon: ImageIcon },
 ]
 
 function handleCategoryCreated(newCat: any) {
@@ -328,11 +335,11 @@ function handleCategoryCreated(newCat: any) {
     :title="isEdit ? 'Edit Product' : 'Add New Product'"
     size="2xl"
   >
-    <form id="productForm" @submit.prevent="handleSubmit">
+    <form id="productForm" @submit.prevent="handleSubmit" class="space-y-4">
       <TabGroup>
-        <div class="flex flex-col min-h-[520px] max-h-[640px]">
+        <div class="flex flex-col min-h-[480px]">
           <!-- Modern Tab Navigation -->
-          <TabList class="flex space-x-1.5 rounded-2xl bg-slate-100 p-1.5 mb-5 shrink-0 border border-slate-200/60 overflow-x-auto no-scrollbar">
+          <TabList class="flex space-x-1.5 rounded-2xl bg-slate-100/80 p-1 mb-5 shrink-0 border border-slate-200/60 overflow-x-auto no-scrollbar">
             <Tab
               v-for="tab in tabs"
               :key="tab.id"
@@ -342,17 +349,17 @@ function handleCategoryCreated(newCat: any) {
               <button
                 type="button"
                 :class="[
-                  'flex items-center justify-center gap-2 rounded-xl py-2 px-3 text-xs sm:text-sm font-bold transition-all duration-200 outline-none whitespace-nowrap flex-1',
+                  'flex items-center justify-center gap-2 rounded-xl py-2 px-3.5 text-xs sm:text-sm font-bold transition-all duration-200 outline-none whitespace-nowrap flex-1',
                   selected
                     ? 'bg-white text-blue-600 shadow-sm border border-slate-200/80 ring-1 ring-black/5'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/40'
                 ]"
               >
                 <component :is="tab.icon" class="w-4 h-4" />
                 <span>{{ tab.label }}</span>
                 <span
                   v-if="tab.id === 'variants' && form.hasVariants"
-                  class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-700"
+                  class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700"
                 >
                   {{ form.variants.length }}
                 </span>
@@ -361,15 +368,82 @@ function handleCategoryCreated(newCat: any) {
           </TabList>
 
           <!-- Tab Panels Container -->
-          <div class="flex-1 overflow-y-auto px-1 custom-scrollbar">
+          <div class="flex-1 px-0.5">
             <TabPanels>
               <!-- 1. GENERAL TAB -->
               <TabPanel class="space-y-4 outline-none">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Product Type Visual Segmented Cards -->
+                <div class="space-y-1.5">
+                  <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Product Classification</label>
+                  <div class="grid grid-cols-3 gap-2.5">
+                    <button
+                      type="button"
+                      @click="form.type = 'stockable'"
+                      :class="[
+                        'p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between',
+                        form.type === 'stockable'
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/10 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <Package :class="['w-4 h-4', form.type === 'stockable' ? 'text-blue-600' : 'text-slate-400']" />
+                        <CheckCircle2 v-if="form.type === 'stockable'" class="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div class="mt-2">
+                        <div class="text-xs font-bold text-slate-900">Stockable</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Physical inventory with stock tracking</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      @click="form.type = 'consumable'"
+                      :class="[
+                        'p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between',
+                        form.type === 'consumable'
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/10 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <Boxes :class="['w-4 h-4', form.type === 'consumable' ? 'text-blue-600' : 'text-slate-400']" />
+                        <CheckCircle2 v-if="form.type === 'consumable'" class="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div class="mt-2">
+                        <div class="text-xs font-bold text-slate-900">Consumable</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Supplies used without count reorder</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      @click="form.type = 'service'"
+                      :class="[
+                        'p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between',
+                        form.type === 'service'
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/10 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <Zap :class="['w-4 h-4', form.type === 'service' ? 'text-blue-600' : 'text-slate-400']" />
+                        <CheckCircle2 v-if="form.type === 'service'" class="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div class="mt-2">
+                        <div class="text-xs font-bold text-slate-900">Service</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Digital or labor (zero physical stock)</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Product Name & Category Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <UiInput
                     v-model="form.name"
                     label="Product Name"
-                    placeholder="e.g. Ergonomic Office Chair"
+                    placeholder="e.g. Ergonomic Standing Desk Pro"
                     :error="errors.name"
                     required
                   />
@@ -380,7 +454,7 @@ function handleCategoryCreated(newCat: any) {
                       <button
                         type="button"
                         @click="isCreateCategoryModalOpen = true"
-                        class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1"
+                        class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1 hover:underline"
                       >
                         <Plus class="w-3.5 h-3.5" /> New Category
                       </button>
@@ -395,115 +469,164 @@ function handleCategoryCreated(newCat: any) {
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <!-- SKU with Auto Generator -->
-                  <div class="space-y-1.5 sm:col-span-1">
+                <!-- SKU & Status -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- SKU Input with Toggle -->
+                  <div class="space-y-1.5">
                     <UiInput
                       v-model="form.sku"
                       label="SKU Identifier"
-                      placeholder="Auto-generated"
+                      placeholder="Auto-generated if left blank"
                       :disabled="form.autoGenerateSku"
                       :error="errors.sku"
                     />
-                    <label class="flex items-center text-xs text-slate-500 cursor-pointer pt-0.5">
-                      <input
-                        type="checkbox"
-                        v-model="form.autoGenerateSku"
-                        class="mr-2 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                      />
-                      <span>Auto-generate SKU</span>
-                    </label>
+                    <div class="flex items-center justify-between pt-0.5 px-1">
+                      <span class="text-[11px] text-slate-500">Auto-generate SKU</span>
+                      <button
+                        type="button"
+                        @click="form.autoGenerateSku = !form.autoGenerateSku"
+                        :class="[
+                          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                          form.autoGenerateSku ? 'bg-blue-600' : 'bg-slate-300'
+                        ]"
+                      >
+                        <span
+                          :class="[
+                            'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                            form.autoGenerateSku ? 'translate-x-4' : 'translate-x-0'
+                          ]"
+                        />
+                      </button>
+                    </div>
                   </div>
 
-                  <!-- Product Type -->
-                  <div class="space-y-1.5 sm:col-span-1">
-                    <UiSelect
-                      v-model="form.type"
-                      label="Product Type"
-                      :options="[
-                        { label: 'Stockable (Inventory Tracked)', value: 'stockable' },
-                        { label: 'Consumable (Office/Supplies)', value: 'consumable' },
-                        { label: 'Service (Non-Physical)', value: 'service' }
-                      ]"
-                    />
-                  </div>
+                  <!-- Status Selector -->
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Publish Status</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        @click="form.status = 'active'"
+                        :class="[
+                          'py-2 px-2.5 rounded-xl text-xs font-bold transition-all border text-center',
+                          form.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-500/10'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                        ]"
+                      >
+                        Active
+                      </button>
 
-                  <!-- Status -->
-                  <div class="space-y-1.5 sm:col-span-1">
-                    <UiSelect
-                      v-model="form.status"
-                      label="Status"
-                      :options="[
-                        { label: 'Active (Available for Sale)', value: 'active' },
-                        { label: 'Inactive (Draft/Hidden)', value: 'inactive' },
-                        { label: 'Archived (Discontinued)', value: 'archived' }
-                      ]"
-                    />
+                      <button
+                        type="button"
+                        @click="form.status = 'inactive'"
+                        :class="[
+                          'py-2 px-2.5 rounded-xl text-xs font-bold transition-all border text-center',
+                          form.status === 'inactive'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300 ring-2 ring-amber-500/10'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                        ]"
+                      >
+                        Draft
+                      </button>
+
+                      <button
+                        type="button"
+                        @click="form.status = 'archived'"
+                        :class="[
+                          'py-2 px-2.5 rounded-xl text-xs font-bold transition-all border text-center',
+                          form.status === 'archived'
+                            ? 'bg-slate-200 text-slate-800 border-slate-400 ring-2 ring-slate-500/10'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                        ]"
+                      >
+                        Archived
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Description -->
+                <!-- Description Input -->
                 <div class="space-y-1.5">
                   <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Product Description</label>
                   <textarea
                     v-model="form.description"
                     rows="3"
-                    class="block w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors shadow-2xs"
-                    placeholder="Provide detailed specifications, features, or internal handling instructions..."
+                    class="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm p-3 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs font-medium text-slate-900 placeholder:text-slate-400"
+                    placeholder="Add detailed specifications, product features, or handling instructions..."
                   ></textarea>
                 </div>
               </TabPanel>
 
               <!-- 2. PRICING & MARGINS TAB -->
-              <TabPanel class="space-y-5 outline-none">
+              <TabPanel class="space-y-4 outline-none">
                 <!-- Pricing Inputs -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <UiInput
-                    v-model.number="form.costPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    label="Cost Price ($)"
-                    placeholder="0.00"
-                  />
+                  <div class="space-y-1.5">
+                    <UiInput
+                      v-model.number="form.costPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      label="Cost Price ($)"
+                      placeholder="0.00"
+                    >
+                      <template #prefix>
+                        <span class="text-xs font-mono font-bold text-slate-400">$</span>
+                      </template>
+                    </UiInput>
+                    <p class="text-[11px] text-slate-400 pl-1">Your purchase or manufacturing cost.</p>
+                  </div>
 
-                  <UiInput
-                    v-model.number="form.sellingPrice"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    label="Selling Price ($)"
-                    placeholder="0.00"
-                    :error="errors.sellingPrice"
-                    required
-                  />
+                  <div class="space-y-1.5">
+                    <UiInput
+                      v-model.number="form.sellingPrice"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      label="Selling Price ($)"
+                      placeholder="0.00"
+                      :error="errors.sellingPrice"
+                      required
+                    >
+                      <template #prefix>
+                        <span class="text-xs font-mono font-bold text-slate-400">$</span>
+                      </template>
+                    </UiInput>
+                    <p class="text-[11px] text-slate-400 pl-1">Standard price for POS checkouts and web storefronts.</p>
+                  </div>
                 </div>
 
                 <!-- Live Margin & Markup Analytics Banner -->
-                <div class="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white border border-slate-800 shadow-md">
-                  <div class="flex items-center space-x-2 text-xs font-bold text-blue-300 uppercase tracking-wider mb-3">
-                    <BarChart2 class="w-4 h-4 text-blue-400" />
-                    <span>Real-Time Margin & Profit Analysis</span>
+                <div class="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white border border-slate-800 shadow-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2 text-xs font-bold text-blue-300 uppercase tracking-wider">
+                      <BarChart2 class="w-4 h-4 text-blue-400" />
+                      <span>Live Margin Intelligence</span>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-blue-200 font-mono">
+                      Dynamic
+                    </span>
                   </div>
 
-                  <div class="grid grid-cols-3 gap-4 text-center">
+                  <div class="grid grid-cols-3 gap-3 text-center">
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
-                      <span class="text-[10px] text-slate-300 uppercase font-bold block">Gross Profit</span>
-                      <span class="text-lg font-black text-emerald-400">
+                      <span class="text-[10px] text-slate-300 uppercase font-bold block">Profit / Unit</span>
+                      <span class="text-base sm:text-lg font-black text-emerald-400">
                         ${{ profitPerUnit.toFixed(2) }}
                       </span>
                     </div>
 
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
                       <span class="text-[10px] text-slate-300 uppercase font-bold block">Profit Margin</span>
-                      <span :class="['text-lg font-black', marginPct >= 20 ? 'text-emerald-400' : 'text-amber-400']">
+                      <span :class="['text-base sm:text-lg font-black', marginPct >= 20 ? 'text-emerald-400' : 'text-amber-400']">
                         {{ marginPct }}%
                       </span>
                     </div>
 
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
                       <span class="text-[10px] text-slate-300 uppercase font-bold block">Markup %</span>
-                      <span class="text-lg font-black text-blue-300">
+                      <span class="text-base sm:text-lg font-black text-blue-300">
                         {{ markupPct }}%
                       </span>
                     </div>
@@ -511,38 +634,50 @@ function handleCategoryCreated(newCat: any) {
                 </div>
 
                 <!-- Opening Stock (for simple products on create) -->
-                <div v-if="!isEdit && !form.hasVariants" class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
+                <div v-if="!isEdit && !form.hasVariants" class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
                   <div class="flex items-center space-x-2">
                     <Boxes class="w-4 h-4 text-blue-600" />
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Opening Stock Quantity</h4>
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Initial Opening Stock</h4>
                   </div>
                   <UiInput
                     v-model.number="form.initialStock"
                     type="number"
                     min="0"
                     step="1"
-                    placeholder="Enter available units on hand..."
+                    placeholder="0"
                     :error="errors.initialStock"
                   />
-                  <p class="text-[11px] text-slate-400">Stock will be credited to your default warehouse location immediately upon creation.</p>
+                  <p class="text-[11px] text-slate-500 leading-normal">
+                    Initial stock units will automatically be credited to your default warehouse inventory upon saving.
+                  </p>
                 </div>
               </TabPanel>
 
               <!-- 3. VARIANTS TAB -->
-              <TabPanel class="space-y-5 outline-none">
-                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <TabPanel class="space-y-4 outline-none">
+                <!-- Variant Matrix Switch -->
+                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 border border-slate-200">
                   <div class="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      v-model="form.hasVariants"
-                      id="hasVariants"
-                      class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
-                    />
+                    <button
+                      type="button"
+                      @click="form.hasVariants = !form.hasVariants"
+                      :class="[
+                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                        form.hasVariants ? 'bg-blue-600' : 'bg-slate-300'
+                      ]"
+                    >
+                      <span
+                        :class="[
+                          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                          form.hasVariants ? 'translate-x-5' : 'translate-x-0'
+                        ]"
+                      />
+                    </button>
                     <div>
-                      <label for="hasVariants" class="text-sm font-bold text-slate-900 cursor-pointer block">
+                      <label class="text-sm font-bold text-slate-900 cursor-pointer block">
                         Enable Multi-Variant Matrix
                       </label>
-                      <p class="text-xs text-slate-500">Configure multiple options such as Size, Color, Capacity, or Material.</p>
+                      <p class="text-xs text-slate-500">Manage independent SKUs, prices, and inventory for different Sizes, Colors, or Specs.</p>
                     </div>
                   </div>
 
@@ -553,18 +688,18 @@ function handleCategoryCreated(newCat: any) {
                     variant="outline"
                     @click="addVariantManually"
                   >
-                    <Plus class="h-3.5 w-3.5 mr-1" /> Add Manual SKU
+                    <Plus class="h-3.5 w-3.5 mr-1" /> Add SKU
                   </UiButton>
                 </div>
 
-                <div v-if="errors.variants" class="p-3 bg-red-50 text-red-700 text-xs font-semibold rounded-xl border border-red-200 flex items-center gap-2">
+                <div v-if="errors.variants" class="p-3 bg-red-50 text-red-700 text-xs font-semibold rounded-2xl border border-red-200 flex items-center gap-2">
                   <AlertCircle class="w-4 h-4 shrink-0 text-red-500" />
                   <span>{{ errors.variants }}</span>
                 </div>
 
                 <div v-if="form.hasVariants" class="space-y-4">
                   <!-- Variant Option Template Generator -->
-                  <div class="p-4 border border-slate-200 rounded-2xl bg-white space-y-3 shadow-2xs">
+                  <div class="p-4 border border-slate-200/90 rounded-2xl bg-white space-y-3 shadow-2xs">
                     <div class="flex justify-between items-center">
                       <h4 class="text-xs font-bold text-slate-700 tracking-wide uppercase">Option Attribute Rules</h4>
                       <button
@@ -580,26 +715,26 @@ function handleCategoryCreated(newCat: any) {
                       <div
                         v-for="(opt, idx) in optionTemplates"
                         :key="idx"
-                        class="flex gap-3 items-center bg-slate-50 p-2 rounded-xl border border-slate-200"
+                        class="flex gap-2.5 items-center bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80"
                       >
                         <div class="w-1/3">
                           <input
                             v-model="opt.name"
                             placeholder="Option (e.g. Size)"
-                            class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500"
+                            class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                           />
                         </div>
                         <div class="flex-1">
                           <input
                             v-model="opt.values"
                             placeholder="Comma-separated values (e.g. S, M, L, XL)"
-                            class="w-full text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500"
+                            class="w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                           />
                         </div>
                         <button
                           type="button"
                           @click="removeOptionTemplate(idx)"
-                          class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg"
+                          class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
                         >
                           <Trash2 class="w-4 h-4" />
                         </button>
@@ -631,13 +766,13 @@ function handleCategoryCreated(newCat: any) {
                       <div
                         v-for="(v, index) in form.variants"
                         :key="index"
-                        class="p-3.5 flex flex-col md:flex-row gap-3 items-start md:items-center relative group hover:bg-slate-50/70 transition-colors"
+                        class="p-3.5 flex flex-col md:flex-row gap-2.5 items-start md:items-center relative group hover:bg-slate-50/70 transition-colors"
                       >
                         <div class="w-full md:w-1/3">
                           <input
                             type="text"
                             v-model="v.name"
-                            class="block w-full border border-slate-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-slate-900 bg-white focus:ring-1 focus:ring-blue-500"
+                            class="block w-full border border-slate-200 rounded-lg py-1.5 px-2.5 text-xs font-bold text-slate-900 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                             placeholder="Variant Name"
                             required
                           />
@@ -647,7 +782,7 @@ function handleCategoryCreated(newCat: any) {
                             <input
                               type="text"
                               v-model="v.sku"
-                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-mono bg-white focus:ring-1 focus:ring-blue-500"
+                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-mono bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                               placeholder="SKU"
                               required
                             />
@@ -657,7 +792,7 @@ function handleCategoryCreated(newCat: any) {
                               type="number"
                               v-model.number="v.costPrice"
                               step="0.01"
-                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-1 focus:ring-blue-500"
+                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                               placeholder="Cost ($)"
                             />
                           </div>
@@ -666,7 +801,7 @@ function handleCategoryCreated(newCat: any) {
                               type="number"
                               v-model.number="v.sellingPrice"
                               step="0.01"
-                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-bold bg-white focus:ring-1 focus:ring-blue-500"
+                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-bold bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                               placeholder="Sale ($)"
                               required
                             />
@@ -675,13 +810,13 @@ function handleCategoryCreated(newCat: any) {
                             <input
                               type="number"
                               v-model.number="v.stock"
-                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-1 focus:ring-blue-500"
+                              class="block w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                               placeholder="Stock"
                             />
                             <button
                               type="button"
                               @click="removeVariant(index)"
-                              class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg shrink-0"
+                              class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg shrink-0 transition-colors"
                             >
                               <Trash2 class="h-3.5 w-3.5" />
                             </button>
@@ -698,18 +833,18 @@ function handleCategoryCreated(newCat: any) {
                 </div>
               </TabPanel>
 
-              <!-- 4. MEDIA TAB -->
+              <!-- 4. MEDIA ASSETS TAB -->
               <TabPanel class="space-y-4 outline-none">
-                <div class="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/50 space-y-3">
-                  <div class="p-3 bg-white rounded-full w-12 h-12 mx-auto shadow-2xs flex items-center justify-center">
+                <div class="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-slate-50/50 space-y-3">
+                  <div class="p-3.5 bg-white rounded-2xl w-12 h-12 mx-auto shadow-xs flex items-center justify-center border border-slate-100">
                     <ImageIcon class="w-6 h-6 text-slate-400" />
                   </div>
                   <div>
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Product Imagery</h4>
-                    <p class="text-xs text-slate-400 mt-0.5">Upload product showcase images for POS terminals and customer storefronts.</p>
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Product Cover & Imagery</h4>
+                    <p class="text-xs text-slate-400 mt-0.5">Showcase your products on POS registers, digital invoices, and storefronts.</p>
                   </div>
-                  <UiButton type="button" size="sm" variant="outline">
-                    Browse Files
+                  <UiButton type="button" size="sm" variant="outline" class="shadow-2xs">
+                    Browse File Assets
                   </UiButton>
                 </div>
               </TabPanel>
@@ -720,9 +855,9 @@ function handleCategoryCreated(newCat: any) {
     </form>
 
     <template #footer>
-      <div class="flex items-center justify-between w-full pt-2">
+      <div class="flex items-center justify-between w-full">
         <div class="text-xs text-slate-400 font-medium">
-          <span v-if="form.sku" class="font-mono">SKU: {{ form.sku }}</span>
+          <span v-if="form.sku" class="font-mono bg-slate-100 px-2 py-1 rounded-lg">SKU: {{ form.sku }}</span>
         </div>
 
         <div class="flex items-center space-x-2">
@@ -734,7 +869,7 @@ function handleCategoryCreated(newCat: any) {
             form="productForm"
             size="sm"
             :loading="mutation.isPending.value"
-            class="shadow-sm"
+            class="shadow-sm font-bold"
           >
             <Check class="w-4 h-4 mr-1.5" />
             {{ isEdit ? 'Save Changes' : 'Create Product' }}

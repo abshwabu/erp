@@ -28,7 +28,7 @@ const close = () => {
 
 <template>
   <TransitionRoot as="template" :show="modelValue">
-    <Dialog as="div" class="relative z-50" @close="close">
+    <Dialog as="div" class="relative z-50 font-sans" @close="close">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -38,11 +38,11 @@ const close = () => {
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" />
+        <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" />
       </TransitionChild>
 
       <div class="fixed inset-0 z-10 overflow-y-auto">
-        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="flex min-h-full items-center justify-center p-3 sm:p-6 text-center">
           <TransitionChild
             as="template"
             enter="ease-out duration-300"
@@ -53,7 +53,7 @@ const close = () => {
             leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
             <DialogPanel
-              class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 w-full"
+              class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl ring-1 ring-black/5 transition-all w-full my-6 flex flex-col max-h-[90vh]"
               :class="[
                 {
                   'sm:max-w-sm': size === 'sm',
@@ -61,29 +61,32 @@ const close = () => {
                   'sm:max-w-lg': size === 'lg',
                   'sm:max-w-xl': size === 'xl',
                   'sm:max-w-2xl': size === '2xl',
-                  'sm:max-w-7xl': size === 'full',
+                  'sm:max-w-5xl': size === 'full',
                 },
               ]"
             >
-              <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <div class="flex items-center justify-between mb-4">
-                  <DialogTitle v-if="title" as="h3" class="text-lg font-medium leading-6 text-slate-900">
-                    {{ title }}
-                  </DialogTitle>
-                  <button
-                    type="button"
-                    class="rounded-md bg-white text-slate-400 hover:text-slate-500 focus:outline-none"
-                    @click="close"
-                  >
-                    <span class="sr-only">Close</span>
-                    <X class="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-                <div>
-                  <slot />
-                </div>
+              <!-- Modal Header -->
+              <div class="px-6 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                <DialogTitle v-if="title" as="h3" class="text-lg font-black text-slate-900 tracking-tight">
+                  {{ title }}
+                </DialogTitle>
+                <button
+                  type="button"
+                  class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+                  @click="close"
+                >
+                  <span class="sr-only">Close</span>
+                  <X class="h-4 w-4" />
+                </button>
               </div>
-              <div v-if="$slots.footer" class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+
+              <!-- Modal Body -->
+              <div class="px-6 py-4 overflow-y-auto flex-1 custom-scrollbar">
+                <slot />
+              </div>
+
+              <!-- Modal Footer -->
+              <div v-if="$slots.footer" class="bg-slate-50/80 px-6 py-3.5 border-t border-slate-100 shrink-0">
                 <slot name="footer" />
               </div>
             </DialogPanel>
