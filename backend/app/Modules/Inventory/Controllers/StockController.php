@@ -8,7 +8,9 @@ use App\Http\Controllers\BaseController;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\ReorderSetting;
 use App\Modules\Inventory\Models\StockLevel;
+use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Resources\ProductResource;
 use App\Modules\Inventory\Services\StockService;
 use Illuminate\Http\JsonResponse;
@@ -267,64 +269,152 @@ class StockController extends BaseController
      * GET /api/inventory/stock/low
      * List products at or below their reorder limits.
      */
-    public function low(): JsonResponse
+    public function low(Request $request): JsonResponse
     {
-        $settings = ReorderSetting::with(['product.stockLevels', 'location'])->get();
-        $lowStockMap = [];
+        $locationId = $request->query('location_id');
+        $warehouseId = $request->query('warehouse_id');
 
+        $locationsQuery = StockLocation::query()->where('is_active', '!=', false)->with('warehouse');
+        if ($locationId) {
+            $locationsQuery->where('id', $locationId);
+        }
+        if ($warehouseId) {
+            $locationsQuery->where('warehouse_id', $warehouseId);
+        }
+        $locations = $locationsQuery->orderBy('name')->get();
+
+        $settings = ReorderSetting::with(['product.stockLevels', 'location'])->get();
+        $products = Product::where('status', 'active')->with(['stockLevels', 'variants'])->get();
+
+        $lowStockItems = [];
+
+        // 1. Process explicit reorder settings
         foreach ($settings as $setting) {
-            if (!$setting->product) {
+            $statusVal = $setting->product?->status instanceof \BackedEnum
+                ? $setting->product->status->value
+                : ($setting->product?->status ?? '');
+
+            if (! $setting->product || $statusVal !== 'active') {
                 continue;
             }
 
-            $available = $this->stockService->getAvailableQty($setting->product, $setting->location);
+            // If setting is tied to a specific location
+            if ($setting->location_id) {
+                $loc = $setting->location ?? $locations->first(fn ($l) => (string) $l->id === (string) $setting->location_id);
+                if (! $loc) {
+                    continue;
+                }
 
-            if ($available <= $setting->min_quantity) {
-                $key = $setting->product_id . '_' . ($setting->location_id ?? 'all');
-                $lowStockMap[$key] = [
-                    'product_id' => $setting->product->id,
-                    'product_name' => $setting->product->name,
-                    'sku' => $setting->product->sku,
-                    'location_id' => $setting->location_id,
-                    'location_name' => $setting->location->name ?? 'All Locations',
-                    'min_quantity' => (int) $setting->min_quantity,
-                    'max_quantity' => (int) $setting->max_quantity,
-                    'reorder_quantity' => (int) $setting->reorder_quantity,
-                    'available_quantity' => (int) $available,
-                ];
+                $available = (int) $this->stockService->getAvailableQty($setting->product, $loc);
+                if ($available <= (int) $setting->min_quantity) {
+                    $key = $setting->product_id . '_' . $loc->id;
+                    $lowStockItems[$key] = [
+                        'product_id' => $setting->product->id,
+                        'product_name' => $setting->product->name,
+                        'sku' => $setting->product->sku,
+                        'warehouse_id' => $loc->warehouse_id,
+                        'warehouse_name' => $loc->warehouse?->name ?? $loc->name,
+                        'location_id' => $loc->id,
+                        'location_name' => $loc->name,
+                        'min_quantity' => (int) $setting->min_quantity,
+                        'max_quantity' => $setting->max_quantity ? (int) $setting->max_quantity : null,
+                        'reorder_quantity' => $setting->reorder_quantity ? (int) $setting->reorder_quantity : null,
+                        'available_quantity' => $available,
+                    ];
+                }
+            } else {
+                // Global setting applied to each warehouse/location separately
+                foreach ($locations as $loc) {
+                    $available = (int) $this->stockService->getAvailableQty($setting->product, $loc);
+                    if ($available <= (int) $setting->min_quantity) {
+                        $key = $setting->product_id . '_' . $loc->id;
+                        $lowStockItems[$key] = [
+                            'product_id' => $setting->product->id,
+                            'product_name' => $setting->product->name,
+                            'sku' => $setting->product->sku,
+                            'warehouse_id' => $loc->warehouse_id,
+                            'warehouse_name' => $loc->warehouse?->name ?? $loc->name,
+                            'location_id' => $loc->id,
+                            'location_name' => $loc->name,
+                            'min_quantity' => (int) $setting->min_quantity,
+                            'max_quantity' => $setting->max_quantity ? (int) $setting->max_quantity : null,
+                            'reorder_quantity' => $setting->reorder_quantity ? (int) $setting->reorder_quantity : null,
+                            'available_quantity' => $available,
+                        ];
+                    }
+                }
             }
         }
 
-        $products = Product::with('stockLevels')->get();
+        // 2. Evaluate products and variants per warehouse/location for out-of-stock / zero-stock items
         foreach ($products as $product) {
-            $hasSetting = $settings->contains(fn ($s) => $s->product_id === $product->id);
-            if ($hasSetting) {
-                continue;
-            }
+            foreach ($locations as $loc) {
+                if ($product->has_variants && $product->relationLoaded('variants') && $product->variants->isNotEmpty()) {
+                    foreach ($product->variants as $variant) {
+                        $vKey = $product->id . '_' . $variant->id . '_' . $loc->id;
+                        if (isset($lowStockItems[$vKey])) {
+                            continue;
+                        }
 
-            $available = $product->relationLoaded('stockLevels')
-                ? (int) ($product->stockLevels->sum('quantity_on_hand') - $product->stockLevels->sum('quantity_committed'))
-                : 0;
+                        $sl = $product->stockLevels
+                            ->where('location_id', $loc->id)
+                            ->where('variant_id', $variant->id)
+                            ->first();
 
-            // Only flag zero/out-of-stock when no reorder setting exists (no magic "5" threshold)
-            if ($available <= 0) {
-                $key = $product->id . '_all';
-                $lowStockMap[$key] = [
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'sku' => $product->sku,
-                    'location_id' => null,
-                    'location_name' => 'All Locations',
-                    'min_quantity' => 0,
-                    'max_quantity' => null,
-                    'reorder_quantity' => null,
-                    'available_quantity' => $available,
-                ];
+                        $vAvailable = $sl ? max(0, (int) $sl->quantity_on_hand - (int) $sl->quantity_committed) : 0;
+
+                        if ($vAvailable <= 0) {
+                            $lowStockItems[$vKey] = [
+                                'product_id' => $product->id,
+                                'product_name' => $product->name . ' (' . $variant->name . ')',
+                                'variant_id' => $variant->id,
+                                'variant_name' => $variant->name,
+                                'sku' => $variant->sku ?: $product->sku,
+                                'warehouse_id' => $loc->warehouse_id,
+                                'warehouse_name' => $loc->warehouse?->name ?? $loc->name,
+                                'location_id' => $loc->id,
+                                'location_name' => $loc->name,
+                                'min_quantity' => 0,
+                                'max_quantity' => null,
+                                'reorder_quantity' => null,
+                                'available_quantity' => $vAvailable,
+                            ];
+                        }
+                    }
+                } else {
+                    $key = $product->id . '_' . $loc->id;
+                    if (isset($lowStockItems[$key])) {
+                        continue;
+                    }
+
+                    $locLevels = $product->stockLevels->where('location_id', $loc->id);
+                    $onHand = (int) $locLevels->sum('quantity_on_hand');
+                    $committed = (int) $locLevels->sum('quantity_committed');
+                    $available = max(0, $onHand - $committed);
+
+                    if ($available <= 0) {
+                        $lowStockItems[$key] = [
+                            'product_id' => $product->id,
+                            'product_name' => $product->name,
+                            'variant_id' => null,
+                            'variant_name' => null,
+                            'sku' => $product->sku,
+                            'warehouse_id' => $loc->warehouse_id,
+                            'warehouse_name' => $loc->warehouse?->name ?? $loc->name,
+                            'location_id' => $loc->id,
+                            'location_name' => $loc->name,
+                            'min_quantity' => 0,
+                            'max_quantity' => null,
+                            'reorder_quantity' => null,
+                            'available_quantity' => $available,
+                        ];
+                    }
+                }
             }
         }
 
         return response()->json([
-            'data' => array_values($lowStockMap),
+            'data' => array_values($lowStockItems),
         ]);
     }
 

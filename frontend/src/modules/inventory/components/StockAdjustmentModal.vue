@@ -11,6 +11,8 @@ import { Info } from '@lucide/vue'
 interface Props {
   modelValue: boolean
   productId?: string
+  locationId?: string
+  variantId?: string
 }
 
 const props = defineProps<Props>()
@@ -21,8 +23,8 @@ const errorMsg = ref('')
 
 const form = reactive({
   productId: props.productId || '' as string,
-  variantId: '' as string,
-  locationId: '' as string,
+  variantId: props.variantId || '' as string,
+  locationId: props.locationId || '' as string,
   quantity: 1,
   type: 'add' as 'add' | 'remove',
   reason: 'stock_take',
@@ -115,7 +117,7 @@ const locationOptions = computed(() => {
   return [{ label: 'Main Warehouse (WH-MAIN)', value: '' }]
 })
 
-watch([products, locations, productStockLevels, () => props.productId], () => {
+watch([products, locations, productStockLevels, () => props.productId, () => props.locationId, () => props.variantId], () => {
   if (props.productId) {
     form.productId = props.productId
   } else if (Array.isArray(products.value) && products.value.length > 0 && !form.productId) {
@@ -123,8 +125,9 @@ watch([products, locations, productStockLevels, () => props.productId], () => {
     if (firstProd) form.productId = firstProd.id
   }
 
-  // Select location with highest stock by default if available
-  if (Array.isArray(locations.value) && locations.value.length > 0 && !form.locationId) {
+  if (props.locationId) {
+    form.locationId = props.locationId
+  } else if (Array.isArray(locations.value) && locations.value.length > 0 && !form.locationId) {
     if (Array.isArray(productStockLevels.value) && productStockLevels.value.length > 0) {
       const sorted = [...productStockLevels.value].sort((a: any, b: any) => (b.available_quantity || 0) - (a.available_quantity || 0))
       if (sorted[0]?.location_id) {
@@ -134,6 +137,10 @@ watch([products, locations, productStockLevels, () => props.productId], () => {
     }
     const firstLoc = locations.value[0]
     if (firstLoc) form.locationId = firstLoc.id
+  }
+
+  if (props.variantId) {
+    form.variantId = props.variantId
   }
 }, { immediate: true })
 

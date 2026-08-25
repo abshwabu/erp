@@ -91,7 +91,11 @@ export interface StockMovement {
 export interface LowStockItem {
   product_id: string
   product_name: string
+  variant_id?: string | null
+  variant_name?: string | null
   sku: string
+  warehouse_id?: string | null
+  warehouse_name?: string | null
   location_id?: string | null
   location_name?: string
   min_quantity: number
