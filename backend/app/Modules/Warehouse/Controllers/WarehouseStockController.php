@@ -32,6 +32,11 @@ class WarehouseStockController extends BaseController
             'serial_number' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $product = \App\Modules\Inventory\Models\Product::findOrFail($validated['product_id']);
+        if ($product->has_variants && empty($validated['variant_id'])) {
+            return $this->errorResponse('Please select a product variant to receive.', 422);
+        }
+
         try {
             $movement = $this->stockService->receiveStock(
                 $validated['product_id'],
@@ -63,6 +68,11 @@ class WarehouseStockController extends BaseController
             'quantity' => ['required', 'integer', 'min:1'],
             'variant_id' => ['nullable', 'uuid', 'exists:product_variants,id'],
         ]);
+
+        $product = \App\Modules\Inventory\Models\Product::findOrFail($validated['product_id']);
+        if ($product->has_variants && empty($validated['variant_id'])) {
+            return $this->errorResponse('Please select a product variant to transfer.', 422);
+        }
 
         try {
             $movements = $this->stockService->transferStock(
