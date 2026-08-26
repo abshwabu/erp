@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Modules\Manufacturing\Controllers;
 
 use App\Http\Controllers\BaseController;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Manufacturing\Models\WorkOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WorkOrderController extends BaseController
 {
+    public function __construct(
+        private readonly StockService $stockService
+    ) {}
+
     public function index(): JsonResponse
     {
-        $orders = WorkOrder::with('bom:id,name,product_id', 'bom.product:id,name,sku')
+        $orders = WorkOrder::with('bom:id,name,product_id,output_quantity', 'bom.product:id,name,sku,cost_price,selling_price', 'bom.lines.material:id,name,sku')
             ->orderByDesc('created_at')
-            ->paginate(25);
+            ->get();
 
         return $this->successResponse($orders);
     }
@@ -42,7 +47,7 @@ class WorkOrderController extends BaseController
             'notes'         => $data['notes'] ?? null,
         ]);
 
-        return $this->createdResponse($order->load('bom:id,name'));
+        return $this->createdResponse($order->load('bom:id,name,product_id,output_quantity', 'bom.product:id,name,sku', 'bom.lines.material:id,name,sku'));
     }
 
     public function show(string $id): JsonResponse
@@ -66,15 +71,29 @@ class WorkOrderController extends BaseController
             'started_at' => now(),
         ]);
 
-        return $this->successResponse($order);
+        return $this->successResponse($order->load('bom.lines.material', 'bom.product'));
     }
 
-    public function complete(string $id): JsonResponse
+    public function complete(Request $request, string $id): JsonResponse
     {
-        $order = WorkOrder::findOrFail($id);
+        $validated = $request->validate([
+            'location_id' => ['nullable', 'uuid', 'exists:stock_locations,id'],
+        ]);
+
+        $order = WorkOrder::with(['bom.lines.material', 'bom.product'])->findOrFail($id);
 
         if ($order->status !== 'in_progress') {
             return $this->errorResponse('Only in-progress work orders can be completed.', 422);
+        }
+
+        if (! empty($validated['location_id']) && $order->bom?->product_id) {
+            $this->stockService->receiveStock(
+                $order->bom->product_id,
+                $validated['location_id'],
+                (int) $order->quantity,
+                (int) ($order->bom->product->cost_price ?? 0),
+                ['type' => 'manufacturing_production', 'work_order_id' => $order->id]
+            );
         }
 
         $order->update([
@@ -82,6 +101,34 @@ class WorkOrderController extends BaseController
             'completed_at' => now(),
         ]);
 
+        return $this->successResponse($order->fresh(['bom.lines.material', 'bom.product']));
+    }
+
+    public function cancel(string $id): JsonResponse
+    {
+        $order = WorkOrder::findOrFail($id);
+
+        if (in_array($order->status, ['completed', 'cancelled'], true)) {
+            return $this->errorResponse('Work order cannot be cancelled in its current state.', 422);
+        }
+
+        $order->update([
+            'status' => 'cancelled',
+        ]);
+
         return $this->successResponse($order);
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        $order = WorkOrder::findOrFail($id);
+
+        if ($order->status === 'in_progress') {
+            return $this->errorResponse('Cannot delete an in-progress work order.', 422);
+        }
+
+        $order->delete();
+
+        return $this->noContentResponse();
     }
 }

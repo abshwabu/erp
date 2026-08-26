@@ -14,9 +14,9 @@ class BomController extends BaseController
 {
     public function index(): JsonResponse
     {
-        $boms = BillOfMaterial::with('product:id,name,sku', 'lines.material:id,name,sku')
+        $boms = BillOfMaterial::with('product:id,name,sku,cost_price,selling_price', 'lines.material:id,name,sku,cost_price')
             ->orderByDesc('created_at')
-            ->paginate(25);
+            ->get();
 
         return $this->successResponse($boms);
     }
@@ -28,6 +28,7 @@ class BomController extends BaseController
             'name'            => ['required', 'string', 'max:255'],
             'description'     => ['nullable', 'string'],
             'output_quantity' => ['sometimes', 'integer', 'min:1'],
+            'status'          => ['nullable', 'in:draft,active,archived'],
             'lines'           => ['required', 'array', 'min:1'],
             'lines.*.material_id' => ['required', 'uuid', 'exists:products,id'],
             'lines.*.quantity'    => ['required', 'integer', 'min:1'],
@@ -40,7 +41,7 @@ class BomController extends BaseController
             'name'            => $data['name'],
             'description'     => $data['description'] ?? null,
             'output_quantity' => $data['output_quantity'] ?? 1,
-            'status'          => 'draft',
+            'status'          => $data['status'] ?? 'draft',
         ]);
 
         foreach ($data['lines'] as $line) {
@@ -53,12 +54,12 @@ class BomController extends BaseController
             ]);
         }
 
-        return $this->createdResponse($bom->load('lines.material:id,name,sku'));
+        return $this->createdResponse($bom->load('lines.material:id,name,sku,cost_price', 'product:id,name,sku'));
     }
 
     public function show(string $id): JsonResponse
     {
-        $bom = BillOfMaterial::with('product:id,name,sku', 'lines.material:id,name,sku')
+        $bom = BillOfMaterial::with('product:id,name,sku,cost_price,selling_price', 'lines.material:id,name,sku,cost_price')
             ->findOrFail($id);
 
         return $this->successResponse($bom);
@@ -74,6 +75,22 @@ class BomController extends BaseController
 
         $bom->update(['status' => 'active']);
 
+        return $this->successResponse($bom->load('lines.material', 'product'));
+    }
+
+    public function archive(string $id): JsonResponse
+    {
+        $bom = BillOfMaterial::findOrFail($id);
+        $bom->update(['status' => 'archived']);
+
         return $this->successResponse($bom);
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        $bom = BillOfMaterial::findOrFail($id);
+        $bom->delete();
+
+        return $this->noContentResponse();
     }
 }
