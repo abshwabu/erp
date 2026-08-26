@@ -10,10 +10,22 @@ export interface Supplier {
 export interface PurchaseOrderLine {
   id?: string
   product_id?: string | null
+  variant_id?: string | null
   description: string
   quantity: number
   unit_cost_cents: number
   received_quantity?: number
+  product?: {
+    id: string
+    name: string
+    sku: string
+    has_variants?: boolean
+  }
+  variant?: {
+    id: string
+    name: string
+    sku: string
+  }
 }
 
 export interface PurchaseOrder {
@@ -46,8 +58,9 @@ export const procurementApi = {
     number?: string
     status?: string
     lines: Array<{
-      product_id?: string | null
-      description: string
+      product_id: string
+      variant_id?: string | null
+      description?: string
       quantity: number
       unit_cost_cents: number
     }>

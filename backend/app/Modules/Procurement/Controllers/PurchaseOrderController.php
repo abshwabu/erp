@@ -20,7 +20,7 @@ class PurchaseOrderController extends BaseController
     public function index(): JsonResponse
     {
         $orders = PurchaseOrder::query()
-            ->with(['supplier', 'lines'])
+            ->with(['supplier', 'lines.product.category', 'lines.variant'])
             ->orderByDesc('order_date')
             ->orderByDesc('created_at')
             ->get();
@@ -36,8 +36,9 @@ class PurchaseOrderController extends BaseController
             'status' => ['nullable', 'in:draft,ordered,received,cancelled'],
             'order_date' => ['required', 'date'],
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.product_id' => ['nullable', 'uuid', 'exists:products,id'],
-            'lines.*.description' => ['required', 'string', 'max:255'],
+            'lines.*.product_id' => ['required', 'uuid', 'exists:products,id'],
+            'lines.*.variant_id' => ['nullable', 'uuid', 'exists:product_variants,id'],
+            'lines.*.description' => ['nullable', 'string', 'max:255'],
             'lines.*.quantity' => ['required', 'numeric', 'min:0.0001'],
             'lines.*.unit_cost_cents' => ['required', 'integer', 'min:0'],
         ]);
@@ -57,16 +58,26 @@ class PurchaseOrderController extends BaseController
             ]);
 
             foreach ($validated['lines'] as $line) {
+                $product = \App\Modules\Inventory\Models\Product::find($line['product_id']);
+                $variant = ! empty($line['variant_id'])
+                    ? \App\Modules\Inventory\Models\ProductVariant::find($line['variant_id'])
+                    : null;
+
+                $desc = ! empty($line['description'])
+                    ? $line['description']
+                    : ($variant ? "{$product?->name} - {$variant->name}" : ($product?->name ?? 'Product Item'));
+
                 $order->lines()->create([
-                    'product_id' => $line['product_id'] ?? null,
-                    'description' => $line['description'],
+                    'product_id' => $line['product_id'],
+                    'variant_id' => $line['variant_id'] ?? null,
+                    'description' => $desc,
                     'quantity' => $line['quantity'],
                     'unit_cost_cents' => $line['unit_cost_cents'],
                     'received_quantity' => 0,
                 ]);
             }
 
-            return $order->load(['supplier', 'lines']);
+            return $order->load(['supplier', 'lines.product.category', 'lines.variant']);
         });
 
         return $this->createdResponse($order);
@@ -78,7 +89,7 @@ class PurchaseOrderController extends BaseController
             'location_id' => ['nullable', 'uuid', 'exists:stock_locations,id'],
         ]);
 
-        $order = PurchaseOrder::with('lines')->findOrFail($id);
+        $order = PurchaseOrder::with(['lines.product', 'lines.variant'])->findOrFail($id);
 
         if (in_array($order->status, ['received', 'cancelled'], true)) {
             return $this->errorResponse('Purchase order cannot be received in its current status.', 422);
@@ -97,7 +108,11 @@ class PurchaseOrderController extends BaseController
                         $validated['location_id'],
                         (int) ceil($remaining),
                         (int) $line->unit_cost_cents,
-                        ['type' => 'purchase_order', 'id' => $order->id]
+                        ['type' => 'purchase_order', 'id' => $order->id],
+                        null,
+                        null,
+                        null,
+                        $line->variant_id
                     );
                 }
 
@@ -108,7 +123,7 @@ class PurchaseOrderController extends BaseController
 
             $order->update(['status' => 'received']);
 
-            return $order->fresh(['supplier', 'lines']);
+            return $order->fresh(['supplier', 'lines.product.category', 'lines.variant']);
         });
 
         return $this->successResponse($order);
