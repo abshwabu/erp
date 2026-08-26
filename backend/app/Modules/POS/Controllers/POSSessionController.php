@@ -164,7 +164,6 @@ class POSSessionController extends BaseController
 
         $terminal = POSTerminal::findOrFail($data['terminal_id']);
         $shopsExist = Schema::hasTable('shops') && Shop::query()->exists();
-
         $shopId = $data['shop_id'] ?? $terminal->shop_id;
 
         if ($shopsExist) {
@@ -181,7 +180,6 @@ class POSSessionController extends BaseController
             if (! $shop->is_active) {
                 return $this->errorResponse('Selected shop is inactive.', 422);
             }
-        }
 
             // Keep terminal location aligned with shop
             if ((string) $terminal->location_id !== (string) $shop->stock_location_id) {
