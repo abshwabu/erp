@@ -33,6 +33,9 @@ Route::prefix('api/ecommerce')->middleware('auth:api,sanctum')->group(function (
     Route::get('orders', [ChannelController::class, 'orders'])
         ->middleware('permission:ecommerce.orders.view');
 
+    Route::patch('orders/{id}/fulfill', [ChannelController::class, 'fulfillOrder'])
+        ->middleware('permission:ecommerce.orders.fulfill');
+
     // Storefront Builder & CMS
     Route::get('storefronts', [StorefrontController::class, 'index'])
         ->middleware('permission:ecommerce.storefront.view');

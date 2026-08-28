@@ -25,6 +25,9 @@ class EcommerceOrder extends Model
         'currency',
         'payment_status',
         'fulfillment_status',
+        'tracking_number',
+        'shipping_carrier',
+        'notes',
         'items',
     ];
 

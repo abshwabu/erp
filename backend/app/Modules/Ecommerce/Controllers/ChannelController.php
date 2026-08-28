@@ -119,6 +119,22 @@ class ChannelController extends BaseController
         return $this->createdResponse($order);
     }
 
+    public function fulfillOrder(Request $request, string $id): JsonResponse
+    {
+        $order = EcommerceOrder::with('channel:id,name')->findOrFail($id);
+
+        $data = $request->validate([
+            'fulfillment_status' => ['required', 'in:unfulfilled,shipped,fulfilled,cancelled'],
+            'tracking_number'    => ['nullable', 'string', 'max:255'],
+            'shipping_carrier'   => ['nullable', 'string', 'max:255'],
+            'notes'              => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $order->update($data);
+
+        return $this->successResponse($order->fresh('channel:id,name'));
+    }
+
     public function destroy(string $id): JsonResponse
     {
         $channel = EcommerceChannel::findOrFail($id);

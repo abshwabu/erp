@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import api from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import StorefrontBuilder from '../components/StorefrontBuilder.vue'
+import FulfillmentModal from '../components/FulfillmentModal.vue'
 import {
   Globe,
   ShoppingCart,
@@ -18,6 +19,7 @@ import {
   Layers,
   Palette,
   Eye,
+  Truck,
 } from '@lucide/vue'
 
 interface EcommerceChannel {
@@ -38,6 +40,9 @@ interface EcommerceOrder {
   currency: string
   payment_status: string
   fulfillment_status: string
+  tracking_number?: string
+  shipping_carrier?: string
+  notes?: string
   created_at: string
   channel?: { name: string }
 }
@@ -80,6 +85,19 @@ const newChannel = ref({
   api_key: '',
   api_secret: '',
 })
+
+// Fulfillment modal
+const isFulfillmentModalOpen = ref(false)
+const selectedOrder = ref<EcommerceOrder | null>(null)
+
+function openFulfillmentModal(order: EcommerceOrder) {
+  selectedOrder.value = order
+  isFulfillmentModalOpen.value = true
+}
+
+async function onFulfilled() {
+  await fetchData()
+}
 
 async function fetchData() {
   loading.value = true
@@ -378,12 +396,21 @@ onMounted(fetchData)
           </div>
 
           <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-[10px]">
-            <span class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold uppercase">
-              {{ ord.payment_status }}
-            </span>
-            <span class="px-2 py-0.5 rounded-full font-semibold border uppercase" :class="fulfillmentColors[ord.fulfillment_status] ?? 'bg-gray-100'">
-              {{ ord.fulfillment_status }}
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold uppercase">
+                {{ ord.payment_status }}
+              </span>
+              <span class="px-2 py-0.5 rounded-full font-semibold border uppercase" :class="fulfillmentColors[ord.fulfillment_status] ?? 'bg-gray-100'">
+                {{ ord.fulfillment_status }}
+              </span>
+            </div>
+            <button
+              @click="openFulfillmentModal(ord)"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold transition-colors"
+            >
+              <Truck class="w-3 h-3" />
+              Fulfill
+            </button>
           </div>
         </div>
       </div>
@@ -400,6 +427,7 @@ onMounted(fetchData)
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fulfillment</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 text-sm">
@@ -421,11 +449,30 @@ onMounted(fetchData)
                 </span>
               </td>
               <td class="px-6 py-4">
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border" :class="fulfillmentColors[ord.fulfillment_status] ?? 'bg-gray-100'">
-                  {{ ord.fulfillment_status }}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border" :class="fulfillmentColors[ord.fulfillment_status] ?? 'bg-gray-100'">
+                    {{ ord.fulfillment_status }}
+                  </span>
+                  <span v-if="ord.tracking_number" class="text-[10px] text-gray-400 font-mono" :title="'Tracking: ' + ord.tracking_number">
+                    📦 {{ ord.tracking_number.substring(0, 12) }}{{ ord.tracking_number.length > 12 ? '…' : '' }}
+                  </span>
+                </div>
               </td>
               <td class="px-6 py-4 text-gray-400">{{ ord.created_at?.substring(0, 10) }}</td>
+              <td class="px-6 py-4 text-right">
+                <button
+                  @click="openFulfillmentModal(ord)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                  :class="[
+                    ord.fulfillment_status === 'fulfilled'
+                      ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  ]"
+                >
+                  <Truck class="w-3.5 h-3.5" />
+                  {{ ord.fulfillment_status === 'fulfilled' ? 'Update' : 'Fulfill' }}
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -564,6 +611,13 @@ onMounted(fetchData)
         </form>
       </div>
     </div>
+
+    <!-- Fulfillment Modal -->
+    <FulfillmentModal
+      v-model="isFulfillmentModalOpen"
+      :order="selectedOrder"
+      @fulfilled="onFulfilled"
+    />
 
     <!-- Fullscreen Drag & Drop Page Builder Overlay -->
     <StorefrontBuilder
