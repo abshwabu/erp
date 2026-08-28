@@ -116,6 +116,10 @@ class ChannelController extends BaseController
 
         $channel->update(['last_sync_at' => now()]);
 
+        if ($order->fulfillment_status !== 'cancelled') {
+            app(\App\Modules\Ecommerce\Services\EcommerceStockService::class)->deductOrderStock($order);
+        }
+
         return $this->createdResponse($order);
     }
 
@@ -130,7 +134,15 @@ class ChannelController extends BaseController
             'notes'              => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $previousStatus = $order->fulfillment_status;
         $order->update($data);
+
+        $stockService = app(\App\Modules\Ecommerce\Services\EcommerceStockService::class);
+        if ($order->fulfillment_status === 'cancelled' && $previousStatus !== 'cancelled') {
+            $stockService->restoreOrderStock($order);
+        } elseif ($order->fulfillment_status !== 'cancelled') {
+            $stockService->deductOrderStock($order);
+        }
 
         return $this->successResponse($order->fresh('channel:id,name'));
     }

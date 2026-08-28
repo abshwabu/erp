@@ -144,6 +144,9 @@ class PublicStorefrontController extends BaseController
             'items'              => $data['items'],
         ]);
 
+        // Reflect sale immediately on inventory stock levels
+        app(\App\Modules\Ecommerce\Services\EcommerceStockService::class)->deductOrderStock($order);
+
         return $this->createdResponse([
             'order_number' => $order->order_number,
             'total_cents'  => $order->total_cents,
