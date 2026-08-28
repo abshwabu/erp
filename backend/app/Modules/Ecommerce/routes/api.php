@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Route;
 // Authenticated Merchant / Tenant Builder Routes
 Route::prefix('api/ecommerce')->middleware('auth:api,sanctum')->group(function () {
     Route::get('channels', [ChannelController::class, 'index'])
-        ->middleware('permission:ecommerce.channels.view');
+        ->middleware('permission:ecommerce.channels.view|ecommerce.channels.manage');
 
     Route::post('channels', [ChannelController::class, 'store'])
         ->middleware('permission:ecommerce.channels.manage');
 
     Route::get('channels/{id}', [ChannelController::class, 'show'])
-        ->middleware('permission:ecommerce.channels.view');
+        ->middleware('permission:ecommerce.channels.view|ecommerce.channels.manage');
 
     Route::put('channels/{id}', [ChannelController::class, 'update'])
         ->middleware('permission:ecommerce.channels.manage');
@@ -31,29 +31,29 @@ Route::prefix('api/ecommerce')->middleware('auth:api,sanctum')->group(function (
         ->middleware('permission:ecommerce.channels.manage');
 
     Route::get('orders', [ChannelController::class, 'orders'])
-        ->middleware('permission:ecommerce.orders.view');
+        ->middleware('permission:ecommerce.orders.view|ecommerce.channels.view|ecommerce.channels.manage');
 
     Route::patch('orders/{id}/fulfill', [ChannelController::class, 'fulfillOrder'])
-        ->middleware('permission:ecommerce.orders.fulfill');
+        ->middleware('permission:ecommerce.orders.fulfill|ecommerce.channels.manage|ecommerce.orders.view|ecommerce.channels.view');
 
     // Storefront Builder & CMS
     Route::get('storefronts', [StorefrontController::class, 'index'])
-        ->middleware('permission:ecommerce.storefront.view');
+        ->middleware('permission:ecommerce.storefront.view|ecommerce.channels.view|ecommerce.storefront.manage');
 
     Route::post('storefronts', [StorefrontController::class, 'store'])
-        ->middleware('permission:ecommerce.storefront.manage');
+        ->middleware('permission:ecommerce.storefront.manage|ecommerce.channels.manage');
 
     Route::get('storefronts/{id}', [StorefrontController::class, 'show'])
-        ->middleware('permission:ecommerce.storefront.view');
+        ->middleware('permission:ecommerce.storefront.view|ecommerce.channels.view|ecommerce.storefront.manage');
 
     Route::put('storefronts/{id}', [StorefrontController::class, 'update'])
-        ->middleware('permission:ecommerce.storefront.manage');
+        ->middleware('permission:ecommerce.storefront.manage|ecommerce.channels.manage');
 
     Route::put('storefronts/{id}/pages/{pageId}', [StorefrontController::class, 'updatePageSections'])
-        ->middleware('permission:ecommerce.storefront.manage');
+        ->middleware('permission:ecommerce.storefront.manage|ecommerce.channels.manage');
 
     Route::delete('storefronts/{id}', [StorefrontController::class, 'destroy'])
-        ->middleware('permission:ecommerce.storefront.manage');
+        ->middleware('permission:ecommerce.storefront.manage|ecommerce.channels.manage');
 });
 
 // Public Customer-Facing Storefront Routes (No auth required)

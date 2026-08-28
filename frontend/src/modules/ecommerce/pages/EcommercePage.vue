@@ -102,15 +102,27 @@ async function onFulfilled() {
 async function fetchData() {
   loading.value = true
   try {
-    const [channelsRes, ordersRes, storefrontsRes] = await Promise.all([
+    const [channelsResult, ordersResult, storefrontsResult] = await Promise.allSettled([
       api.get('/ecommerce/channels'),
       api.get('/ecommerce/orders'),
       api.get('/ecommerce/storefronts'),
     ])
-    channels.value = channelsRes.data?.data || channelsRes.data || []
-    const rawOrders = ordersRes.data?.data || ordersRes.data || []
-    orders.value = Array.isArray(rawOrders) ? rawOrders : rawOrders.data || []
-    storefronts.value = storefrontsRes.data?.data || storefrontsRes.data || []
+
+    if (channelsResult.status === 'fulfilled') {
+      const res = channelsResult.value
+      channels.value = res.data?.data || res.data || []
+    }
+
+    if (ordersResult.status === 'fulfilled') {
+      const res = ordersResult.value
+      const rawOrders = res.data?.data || res.data || []
+      orders.value = Array.isArray(rawOrders) ? rawOrders : rawOrders.data || []
+    }
+
+    if (storefrontsResult.status === 'fulfilled') {
+      const res = storefrontsResult.value
+      storefronts.value = res.data?.data || res.data || []
+    }
   } catch (e: any) {
     console.error('Failed to load ecommerce data', e)
   } finally {
