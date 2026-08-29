@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { salesApi, type Invoice, type InvoiceStatus } from '@/api/sales'
+import { salesApi, type Invoice, type InvoiceStatus, type Customer } from '@/api/sales'
 import { inventoryApi } from '@/api/inventory'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -16,11 +16,18 @@ import {
   FileText,
   Users,
   Trash2,
+  Edit2,
   Package,
   Percent,
   Check,
   ChevronDown,
   Sparkles,
+  Receipt,
+  Mail,
+  Phone,
+  Eye,
+  DollarSign,
+  AlertCircle,
 } from '@lucide/vue'
 
 const queryClient = useQueryClient()
@@ -28,8 +35,13 @@ const activeTab = ref<'invoices' | 'customers'>('invoices')
 const searchQuery = ref('')
 const isInvoiceModalOpen = ref(false)
 const isCustomerModalOpen = ref(false)
+const isEditCustomerModalOpen = ref(false)
+const isCustomerDetailModalOpen = ref(false)
 const isPaymentModalOpen = ref(false)
+
 const selectedInvoice = ref<Invoice | null>(null)
+const selectedCustomer = ref<Customer | null>(null)
+const editingCustomerId = ref<string | null>(null)
 const errorMessage = ref('')
 
 const today = new Date().toISOString().slice(0, 10)
@@ -134,7 +146,34 @@ const createCustomerMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to create customer'
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to create customer'
+  },
+})
+
+const updateCustomerMutation = useMutation({
+  mutationFn: ({ id, data }: { id: string; data: any }) =>
+    salesApi.updateCustomer(id, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
+    queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    isEditCustomerModalOpen.value = false
+    editingCustomerId.value = null
+    customerForm.value = { name: '', email: '', phone: '' }
+    errorMessage.value = ''
+  },
+  onError: (err: any) => {
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to update customer'
+  },
+})
+
+const deleteCustomerMutation = useMutation({
+  mutationFn: (id: string) => salesApi.deleteCustomer(id),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
+    errorMessage.value = ''
+  },
+  onError: (err: any) => {
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to delete customer'
   },
 })
 
@@ -157,13 +196,14 @@ const createInvoiceMutation = useMutation({
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
     isInvoiceModalOpen.value = false
     resetInvoiceForm()
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to create invoice'
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to create invoice'
   },
 })
 
@@ -171,10 +211,11 @@ const markSentMutation = useMutation({
   mutationFn: (id: string) => salesApi.markSent(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to mark invoice as sent'
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to mark invoice as sent'
   },
 })
 
@@ -187,13 +228,14 @@ const recordPaymentMutation = useMutation({
     }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
     isPaymentModalOpen.value = false
     selectedInvoice.value = null
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to record payment'
+    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to record payment'
   },
 })
 
@@ -237,9 +279,11 @@ const invoiceColumns = [
 ]
 
 const customerColumns = [
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'phone', label: 'Phone' },
+  { key: 'name', label: 'Customer Name' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'invoices_count', label: 'Invoices', align: 'center' as const },
+  { key: 'financials', label: 'Financial Summary' },
+  { key: 'actions', label: 'Actions', align: 'right' as const },
 ]
 
 // Real-time calculations
@@ -293,9 +337,12 @@ const resetInvoiceForm = () => {
   }
 }
 
-const openInvoiceModal = () => {
+const openInvoiceModal = (presetCustomerId?: string) => {
   errorMessage.value = ''
   resetInvoiceForm()
+  if (presetCustomerId) {
+    invoiceForm.value.customer_id = presetCustomerId
+  }
   isInvoiceModalOpen.value = true
 }
 
@@ -303,6 +350,43 @@ const openCustomerModal = () => {
   errorMessage.value = ''
   customerForm.value = { name: '', email: '', phone: '' }
   isCustomerModalOpen.value = true
+}
+
+const openEditCustomerModal = (customer: Customer) => {
+  errorMessage.value = ''
+  editingCustomerId.value = customer.id
+  customerForm.value = {
+    name: customer.name,
+    email: customer.email || '',
+    phone: customer.phone || '',
+  }
+  isEditCustomerModalOpen.value = true
+}
+
+const handleSaveCustomerEdit = () => {
+  if (!editingCustomerId.value || !customerForm.value.name) return
+  updateCustomerMutation.mutate({
+    id: editingCustomerId.value,
+    data: {
+      name: customerForm.value.name,
+      email: customerForm.value.email || null,
+      phone: customerForm.value.phone || null,
+    },
+  })
+}
+
+const handleDeleteCustomer = (customer: Customer) => {
+  if ((customer.invoices_count ?? 0) > 0) {
+    alert(`Cannot delete "${customer.name}" because they have ${customer.invoices_count} invoice(s) on record.`)
+    return
+  }
+  if (!confirm(`Are you sure you want to delete customer "${customer.name}"?`)) return
+  deleteCustomerMutation.mutate(customer.id)
+}
+
+const viewCustomerInvoices = (customer: Customer) => {
+  searchQuery.value = customer.name
+  activeTab.value = 'invoices'
 }
 
 const addLine = () => {
@@ -351,6 +435,7 @@ const markPaid = async (invoice: Invoice) => {
       reference: 'Marked paid',
     })
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
   } catch (err: any) {
     errorMessage.value = err?.message || 'Failed to mark invoice as paid'
@@ -373,45 +458,51 @@ const cents = (value: number) => formatCurrency(value / 100)
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-900">Sales & Invoicing</h1>
-        <p class="text-slate-500">Create customer invoices, search inventory products, and record payments.</p>
+        <p class="text-slate-500">Manage customers, invoices, line items with inventory search, and accounting payments.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="openCustomerModal">
           <Users class="h-4 w-4 mr-2" /> New Customer
         </UiButton>
-        <UiButton @click="openInvoiceModal">
+        <UiButton @click="openInvoiceModal()">
           <Plus class="h-4 w-4 mr-2" /> New Invoice
         </UiButton>
       </div>
     </div>
 
-    <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-      {{ errorMessage }}
+    <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+      <span>{{ errorMessage }}</span>
+      <button type="button" @click="errorMessage = ''" class="text-red-500 hover:text-red-700 font-bold ml-2">✕</button>
     </div>
 
+    <!-- Tabs -->
     <div class="flex gap-2 border-b border-slate-200">
       <button
-        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
-        :class="activeTab === 'invoices' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2"
+        :class="activeTab === 'invoices' ? 'border-primary-600 text-primary-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'"
         @click="activeTab = 'invoices'"
       >
-        <span class="inline-flex items-center gap-2"><FileText class="h-4 w-4" /> Invoices</span>
+        <FileText class="h-4 w-4" />
+        <span>Invoices ({{ invoices?.length || 0 }})</span>
       </button>
       <button
-        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
-        :class="activeTab === 'customers' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2"
+        :class="activeTab === 'customers' ? 'border-primary-600 text-primary-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'"
         @click="activeTab = 'customers'"
       >
-        <span class="inline-flex items-center gap-2"><Users class="h-4 w-4" /> Customers</span>
+        <Users class="h-4 w-4" />
+        <span>Customers ({{ customers?.length || 0 }})</span>
       </button>
     </div>
 
-    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-      <UiInput v-model="searchQuery" :placeholder="activeTab === 'invoices' ? 'Search invoices...' : 'Search customers...'" class="w-full max-w-sm">
+    <!-- Search Input -->
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+      <UiInput v-model="searchQuery" :placeholder="activeTab === 'invoices' ? 'Search invoices by number, customer, status…' : 'Search customers by name, email, phone…'" class="w-full max-w-sm">
         <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
       </UiInput>
     </div>
 
+    <!-- Invoices Table -->
     <UiTable
       v-if="activeTab === 'invoices'"
       :columns="invoiceColumns"
@@ -419,28 +510,35 @@ const cents = (value: number) => formatCurrency(value / 100)
       :loading="invoicesLoading"
     >
       <template #cell(number)="{ item }">
-        <div class="font-medium text-slate-900">{{ item.number }}</div>
+        <div class="font-bold text-slate-900 font-mono text-sm">{{ item.number }}</div>
       </template>
       <template #cell(customer)="{ item }">
-        <div class="text-slate-700">{{ item.customer?.name || '—' }}</div>
+        <button
+          type="button"
+          @click="viewCustomerInvoices(item.customer)"
+          class="text-left font-medium text-blue-600 hover:underline"
+          :title="'View invoices for ' + (item.customer?.name || '')"
+        >
+          {{ item.customer?.name || '—' }}
+        </button>
       </template>
       <template #cell(issue_date)="{ item }">
-        <span class="text-slate-600">{{ formatDate(item.issue_date) }}</span>
+        <span class="text-slate-600 text-xs font-medium">{{ formatDate(item.issue_date) }}</span>
       </template>
       <template #cell(due_date)="{ item }">
-        <span class="text-slate-600">{{ formatDate(item.due_date) }}</span>
+        <span class="text-slate-600 text-xs font-medium">{{ formatDate(item.due_date) }}</span>
       </template>
       <template #cell(total)="{ item }">
-        <div class="text-right font-medium text-slate-900">{{ cents(item.total_cents) }}</div>
-        <div v-if="item.amount_paid_cents > 0" class="text-right text-xs text-slate-500">
+        <div class="text-right font-bold text-slate-900 font-mono">{{ cents(item.total_cents) }}</div>
+        <div v-if="item.amount_paid_cents > 0" class="text-right text-[11px] text-emerald-600 font-semibold">
           Paid {{ cents(item.amount_paid_cents) }}
         </div>
       </template>
       <template #cell(status)="{ item }">
-        <UiBadge :variant="statusVariant(item.status)">{{ item.status }}</UiBadge>
+        <UiBadge :variant="statusVariant(item.status)" class="capitalize font-bold">{{ item.status }}</UiBadge>
       </template>
       <template #cell(actions)="{ item }">
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-1.5">
           <UiButton
             v-if="item.status === 'draft'"
             variant="outline"
@@ -469,6 +567,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       </template>
     </UiTable>
 
+    <!-- Customers Table with Actions & Stats -->
     <UiTable
       v-else
       :columns="customerColumns"
@@ -476,13 +575,92 @@ const cents = (value: number) => formatCurrency(value / 100)
       :loading="customersLoading"
     >
       <template #cell(name)="{ item }">
-        <div class="font-medium text-slate-900">{{ item.name }}</div>
+        <div class="py-1">
+          <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <span>{{ item.name }}</span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono">ID: {{ item.id.substring(0, 8) }}…</span>
+        </div>
       </template>
-      <template #cell(email)="{ item }">
-        <span class="text-slate-600">{{ item.email || '—' }}</span>
+
+      <template #cell(contact)="{ item }">
+        <div class="space-y-0.5 text-xs text-slate-600">
+          <div v-if="item.email" class="flex items-center gap-1.5">
+            <Mail class="w-3.5 h-3.5 text-slate-400" />
+            <a :href="'mailto:' + item.email" class="hover:text-blue-600 hover:underline">{{ item.email }}</a>
+          </div>
+          <div v-if="item.phone" class="flex items-center gap-1.5">
+            <Phone class="w-3.5 h-3.5 text-slate-400" />
+            <span>{{ item.phone }}</span>
+          </div>
+          <span v-if="!item.email && !item.phone" class="text-slate-400 italic">No contact info</span>
+        </div>
       </template>
-      <template #cell(phone)="{ item }">
-        <span class="text-slate-600">{{ item.phone || '—' }}</span>
+
+      <template #cell(invoices_count)="{ item }">
+        <button
+          type="button"
+          @click="viewCustomerInvoices(item)"
+          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+        >
+          <Receipt class="w-3.5 h-3.5" />
+          <span>{{ item.invoices_count ?? 0 }}</span>
+        </button>
+      </template>
+
+      <template #cell(financials)="{ item }">
+        <div class="text-xs space-y-0.5 font-mono">
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-slate-400">Invoiced:</span>
+            <span class="font-bold text-slate-900">{{ cents(item.total_invoiced_cents ?? 0) }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-slate-400">Paid:</span>
+            <span class="font-semibold text-emerald-600">{{ cents(item.total_paid_cents ?? 0) }}</span>
+          </div>
+          <div v-if="(item.outstanding_cents ?? 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
+            <span class="text-amber-600 font-bold">Due:</span>
+            <span class="font-bold text-amber-600">{{ cents(item.outstanding_cents ?? 0) }}</span>
+          </div>
+        </div>
+      </template>
+
+      <!-- Customer Action Buttons -->
+      <template #cell(actions)="{ item }">
+        <div class="flex items-center justify-end gap-1.5">
+          <!-- Create Invoice for Customer -->
+          <UiButton
+            size="sm"
+            variant="outline"
+            class="text-xs"
+            @click="openInvoiceModal(item.id)"
+            title="Create Invoice for this customer"
+          >
+            <Plus class="w-3.5 h-3.5 mr-1 text-primary-600" />
+            Invoice
+          </UiButton>
+
+          <!-- Edit Customer -->
+          <button
+            type="button"
+            class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+            @click="openEditCustomerModal(item)"
+            title="Edit Customer"
+          >
+            <Edit2 class="w-4 h-4" />
+          </button>
+
+          <!-- Delete Customer -->
+          <button
+            type="button"
+            class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+            :disabled="(item.invoices_count ?? 0) > 0"
+            @click="handleDeleteCustomer(item)"
+            :title="(item.invoices_count ?? 0) > 0 ? 'Cannot delete customer with invoices' : 'Delete Customer'"
+          >
+            <Trash2 class="w-4 h-4" />
+          </button>
+        </div>
       </template>
     </UiTable>
 
@@ -761,6 +939,25 @@ const cents = (value: number) => formatCurrency(value / 100)
             @click="createCustomerMutation.mutate()"
           >
             Save Customer
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
+
+    <!-- Edit Customer Modal -->
+    <UiModal v-model="isEditCustomerModalOpen" title="Edit Customer" size="md">
+      <div class="space-y-4">
+        <UiInput v-model="customerForm.name" label="Name" placeholder="Acme Corp" />
+        <UiInput v-model="customerForm.email" type="email" label="Email" placeholder="billing@acme.com" />
+        <UiInput v-model="customerForm.phone" label="Phone" placeholder="+1 555 0100" />
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <UiButton variant="outline" @click="isEditCustomerModalOpen = false">Cancel</UiButton>
+          <UiButton
+            :loading="updateCustomerMutation.isPending.value"
+            :disabled="!customerForm.name"
+            @click="handleSaveCustomerEdit"
+          >
+            Update Customer
           </UiButton>
         </div>
       </div>

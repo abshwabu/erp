@@ -5,6 +5,11 @@ export interface Customer {
   name: string
   email?: string | null
   phone?: string | null
+  invoices_count?: number
+  total_invoiced_cents?: number
+  total_paid_cents?: number
+  outstanding_cents?: number
+  invoices?: Invoice[]
   created_at?: string
   updated_at?: string
 }
@@ -80,6 +85,14 @@ export const salesApi = {
 
   createCustomer(payload: CreateCustomerPayload) {
     return apiClient.post<{ data: Customer }>('/sales/customers', payload)
+  },
+
+  updateCustomer(id: string, payload: Partial<CreateCustomerPayload>) {
+    return apiClient.put<{ data: Customer }>(`/sales/customers/${id}`, payload)
+  },
+
+  deleteCustomer(id: string) {
+    return apiClient.delete(`/sales/customers/${id}`)
   },
 
   getCustomer(id: string) {
