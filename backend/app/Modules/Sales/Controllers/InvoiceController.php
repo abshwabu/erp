@@ -83,6 +83,11 @@ class InvoiceController extends BaseController
                 $invoice->lines()->create($lineRow);
             }
 
+            // Post to Accounting if issued/sent
+            if ($invoice->status === 'sent') {
+                app(\App\Modules\Sales\Services\SalesAccountingService::class)->postInvoiceJournal($invoice);
+            }
+
             return $invoice->load(['customer', 'lines', 'payments']);
         });
 
@@ -109,6 +114,9 @@ class InvoiceController extends BaseController
         }
 
         $invoice->update(['status' => 'sent']);
+
+        // Post to Accounting General Ledger & Financial Reports
+        app(\App\Modules\Sales\Services\SalesAccountingService::class)->postInvoiceJournal($invoice);
 
         return $this->successResponse($invoice->fresh(['customer', 'lines', 'payments']));
     }
@@ -138,7 +146,7 @@ class InvoiceController extends BaseController
         }
 
         $invoice = DB::transaction(function () use ($invoice, $validated) {
-            InvoicePayment::create([
+            $payment = InvoicePayment::create([
                 'invoice_id' => $invoice->id,
                 'amount_cents' => (int) $validated['amount_cents'],
                 'method' => $validated['method'],
@@ -154,6 +162,9 @@ class InvoiceController extends BaseController
             }
 
             $invoice->update($updates);
+
+            // Post to Accounting Cash/Bank & Settle Accounts Receivable
+            app(\App\Modules\Sales\Services\SalesAccountingService::class)->postPaymentJournal($payment, $invoice);
 
             return $invoice->fresh(['customer', 'lines', 'payments']);
         });
