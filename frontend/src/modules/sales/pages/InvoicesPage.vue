@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { salesApi, type Invoice, type InvoiceStatus } from '@/api/sales'
+import { inventoryApi } from '@/api/inventory'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -9,7 +10,18 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import { formatCurrency, formatDate } from '@/utils/format'
-import { Plus, Search, FileText, Users, Trash2 } from '@lucide/vue'
+import {
+  Plus,
+  Search,
+  FileText,
+  Users,
+  Trash2,
+  Package,
+  Percent,
+  Check,
+  ChevronDown,
+  Sparkles,
+} from '@lucide/vue'
 
 const queryClient = useQueryClient()
 const activeTab = ref<'invoices' | 'customers'>('invoices')
@@ -23,14 +35,34 @@ const errorMessage = ref('')
 const today = new Date().toISOString().slice(0, 10)
 const dueDefault = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
+interface InvoiceLineItem {
+  product_id?: string
+  sku?: string
+  description: string
+  quantity: number
+  unit_price: number
+  search_query?: string
+  is_dropdown_open?: boolean
+}
+
 const invoiceForm = ref({
   customer_id: '',
   status: 'sent' as 'draft' | 'sent',
   issue_date: today,
   due_date: dueDefault,
-  tax_dollars: 0,
+  tax_percent: 0,
   notes: '',
-  lines: [{ description: '', quantity: 1, unit_price: 0 }],
+  lines: [
+    {
+      product_id: '',
+      sku: '',
+      description: '',
+      quantity: 1,
+      unit_price: 0,
+      search_query: '',
+      is_dropdown_open: false,
+    },
+  ] as InvoiceLineItem[],
 })
 
 const customerForm = ref({
@@ -45,6 +77,7 @@ const paymentForm = ref({
   reference: '',
 })
 
+// Queries
 const { data: invoices, isLoading: invoicesLoading } = useQuery({
   queryKey: ['sales', 'invoices'],
   queryFn: () => salesApi.getInvoices().then((res) => res.data.data),
@@ -55,6 +88,37 @@ const { data: customers, isLoading: customersLoading } = useQuery({
   queryFn: () => salesApi.getCustomers().then((res) => res.data.data),
 })
 
+const { data: productsData, isLoading: productsLoading } = useQuery({
+  queryKey: ['inventory', 'products-lookup'],
+  queryFn: () => inventoryApi.getProducts({ status: 'active' }, 1).then((res) => res.data.data),
+})
+
+const allProducts = computed(() => productsData.value || [])
+
+// Filter products based on search term in line item
+function getFilteredProducts(query: string) {
+  const q = (query || '').toLowerCase().trim()
+  if (!q) return allProducts.value.slice(0, 8)
+  return allProducts.value
+    .filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(q))
+    )
+    .slice(0, 8)
+}
+
+function selectProductForLine(line: InvoiceLineItem, product: any) {
+  line.product_id = product.id
+  line.sku = product.sku
+  line.description = product.name
+  line.search_query = product.name
+  line.unit_price = Number(((product.selling_price || 0) / 100).toFixed(2))
+  line.is_dropdown_open = false
+}
+
+// Mutations
 const createCustomerMutation = useMutation({
   mutationFn: () =>
     salesApi.createCustomer({
@@ -75,22 +139,25 @@ const createCustomerMutation = useMutation({
 })
 
 const createInvoiceMutation = useMutation({
-  mutationFn: () =>
-    salesApi.createInvoice({
+  mutationFn: () => {
+    const taxCents = Math.round(invoiceTaxDollars.value * 100)
+    return salesApi.createInvoice({
       customer_id: invoiceForm.value.customer_id,
       status: invoiceForm.value.status,
       issue_date: invoiceForm.value.issue_date,
       due_date: invoiceForm.value.due_date,
-      tax_cents: Math.round(Number(invoiceForm.value.tax_dollars || 0) * 100),
+      tax_cents: taxCents,
       notes: invoiceForm.value.notes || null,
       lines: invoiceForm.value.lines.map((line) => ({
-        description: line.description,
+        description: line.description || line.search_query || 'Item',
         quantity: Number(line.quantity),
         unit_price_cents: Math.round(Number(line.unit_price || 0) * 100),
       })),
-    }),
+    })
+  },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['accounting'] })
     isInvoiceModalOpen.value = false
     resetInvoiceForm()
     errorMessage.value = ''
@@ -104,6 +171,7 @@ const markSentMutation = useMutation({
   mutationFn: (id: string) => salesApi.markSent(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['accounting'] })
   },
   onError: (err: any) => {
     errorMessage.value = err?.message || 'Failed to mark invoice as sent'
@@ -119,6 +187,7 @@ const recordPaymentMutation = useMutation({
     }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['accounting'] })
     isPaymentModalOpen.value = false
     selectedInvoice.value = null
     errorMessage.value = ''
@@ -173,6 +242,7 @@ const customerColumns = [
   { key: 'phone', label: 'Phone' },
 ]
 
+// Real-time calculations
 const invoiceSubtotal = computed(() =>
   invoiceForm.value.lines.reduce(
     (sum, line) => sum + Number(line.quantity || 0) * Number(line.unit_price || 0),
@@ -180,9 +250,19 @@ const invoiceSubtotal = computed(() =>
   )
 )
 
+const invoiceTaxDollars = computed(() => {
+  const rate = Math.max(0, Number(invoiceForm.value.tax_percent || 0))
+  return (invoiceSubtotal.value * rate) / 100
+})
+
 const invoiceTotal = computed(
-  () => invoiceSubtotal.value + Number(invoiceForm.value.tax_dollars || 0)
+  () => invoiceSubtotal.value + invoiceTaxDollars.value
 )
+
+function getLineEffectivePriceWithTax(unitPrice: number) {
+  const rate = Math.max(0, Number(invoiceForm.value.tax_percent || 0))
+  return unitPrice * (1 + rate / 100)
+}
 
 const statusVariant = (status: InvoiceStatus) => {
   if (status === 'paid') return 'success'
@@ -197,9 +277,19 @@ const resetInvoiceForm = () => {
     status: 'sent',
     issue_date: today,
     due_date: dueDefault,
-    tax_dollars: 0,
+    tax_percent: 0,
     notes: '',
-    lines: [{ description: '', quantity: 1, unit_price: 0 }],
+    lines: [
+      {
+        product_id: '',
+        sku: '',
+        description: '',
+        quantity: 1,
+        unit_price: 0,
+        search_query: '',
+        is_dropdown_open: false,
+      },
+    ],
   }
 }
 
@@ -216,7 +306,15 @@ const openCustomerModal = () => {
 }
 
 const addLine = () => {
-  invoiceForm.value.lines.push({ description: '', quantity: 1, unit_price: 0 })
+  invoiceForm.value.lines.push({
+    product_id: '',
+    sku: '',
+    description: '',
+    quantity: 1,
+    unit_price: 0,
+    search_query: '',
+    is_dropdown_open: false,
+  })
 }
 
 const removeLine = (index: number) => {
@@ -253,6 +351,7 @@ const markPaid = async (invoice: Invoice) => {
       reference: 'Marked paid',
     })
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
+    queryClient.invalidateQueries({ queryKey: ['accounting'] })
   } catch (err: any) {
     errorMessage.value = err?.message || 'Failed to mark invoice as paid'
   }
@@ -274,7 +373,7 @@ const cents = (value: number) => formatCurrency(value / 100)
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-900">Sales & Invoicing</h1>
-        <p class="text-slate-500">Create customer invoices and record payments.</p>
+        <p class="text-slate-500">Create customer invoices, search inventory products, and record payments.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="openCustomerModal">
@@ -387,9 +486,10 @@ const cents = (value: number) => formatCurrency(value / 100)
       </template>
     </UiTable>
 
-    <!-- Create Invoice -->
-    <UiModal v-model="isInvoiceModalOpen" title="New Invoice" size="xl">
-      <div class="space-y-4">
+    <!-- Create Invoice Modal -->
+    <UiModal v-model="isInvoiceModalOpen" title="New Sales Invoice" size="2xl">
+      <div class="space-y-5">
+        <!-- Customer & Date Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex gap-2 items-end">
             <UiSelect
@@ -405,56 +505,240 @@ const cents = (value: number) => formatCurrency(value / 100)
             v-model="invoiceForm.status"
             label="Status"
             :options="[
+              { label: 'Sent (Posted to Accounting)', value: 'sent' },
               { label: 'Draft', value: 'draft' },
-              { label: 'Sent', value: 'sent' },
             ]"
           />
           <UiInput v-model="invoiceForm.issue_date" type="date" label="Issue Date" />
           <UiInput v-model="invoiceForm.due_date" type="date" label="Due Date" />
         </div>
 
+        <!-- Line Items with Inventory Product Search -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-slate-900">Line items</h3>
-            <UiButton variant="outline" size="sm" type="button" @click="addLine">Add Line</UiButton>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Line Items</h3>
+              <p class="text-xs text-slate-400">Search products from your inventory catalog or type custom items.</p>
+            </div>
+            <UiButton variant="outline" size="sm" type="button" @click="addLine">
+              <Plus class="w-3.5 h-3.5 mr-1" /> Add Line
+            </UiButton>
           </div>
-          <div
-            v-for="(line, index) in invoiceForm.lines"
-            :key="index"
-            class="grid grid-cols-12 gap-2 items-end"
-          >
-            <div class="col-span-12 md:col-span-5">
-              <UiInput v-model="line.description" label="Description" placeholder="Service or product" />
-            </div>
-            <div class="col-span-4 md:col-span-2">
-              <UiInput v-model="line.quantity" type="number" label="Qty" />
-            </div>
-            <div class="col-span-5 md:col-span-3">
-              <UiInput v-model="line.unit_price" type="number" label="Unit Price" step="0.01" />
-            </div>
-            <div class="col-span-3 md:col-span-2 flex justify-end pb-1">
-              <UiButton variant="ghost" size="sm" type="button" class="text-red-500" @click="removeLine(index)">
-                <Trash2 class="h-4 w-4" />
-              </UiButton>
+
+          <div class="space-y-3">
+            <div
+              v-for="(line, index) in invoiceForm.lines"
+              :key="index"
+              class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-slate-50 space-y-2.5 transition-colors"
+            >
+              <div class="grid grid-cols-12 gap-3 items-start">
+                <!-- Product / Description Combobox -->
+                <div class="col-span-12 md:col-span-6 relative">
+                  <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Product / Description <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="text"
+                      v-model="line.description"
+                      placeholder="Type or search inventory products…"
+                      @focus="line.is_dropdown_open = true"
+                      @input="line.is_dropdown_open = true"
+                      class="block w-full rounded-xl border border-slate-200 bg-white text-sm py-2.5 pl-3 pr-8 font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                    />
+                    <button
+                      type="button"
+                      @click="line.is_dropdown_open = !line.is_dropdown_open"
+                      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <ChevronDown class="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <!-- Product Search Dropdown -->
+                  <div
+                    v-if="line.is_dropdown_open"
+                    class="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white rounded-xl shadow-xl border border-slate-200 py-1 max-h-56 overflow-y-auto"
+                  >
+                    <div class="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                      <span>Inventory Catalog</span>
+                      <button
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 text-xs"
+                        @click.stop="line.is_dropdown_open = false"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div v-if="productsLoading" class="p-3 text-xs text-slate-400 text-center">
+                      Loading products…
+                    </div>
+
+                    <template v-else>
+                      <button
+                        v-for="prod in getFilteredProducts(line.description)"
+                        :key="prod.id"
+                        type="button"
+                        @click="selectProductForLine(line, prod)"
+                        class="w-full px-3 py-2 text-left hover:bg-blue-50/80 flex items-center justify-between gap-2 border-b border-slate-50 last:border-0 transition-colors"
+                      >
+                        <div class="min-w-0">
+                          <p class="text-xs font-bold text-slate-900 truncate">{{ prod.name }}</p>
+                          <p class="text-[11px] text-slate-400 font-mono">SKU: {{ prod.sku || 'N/A' }}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                          <span class="text-xs font-black text-slate-900">
+                            {{ formatCurrency((prod.selling_price || 0) / 100) }}
+                          </span>
+                          <p class="text-[10px] text-emerald-600 font-medium">
+                            {{ prod.available_quantity ?? prod.quantity_on_hand ?? 0 }} in stock
+                          </p>
+                        </div>
+                      </button>
+
+                      <div
+                        v-if="getFilteredProducts(line.description).length === 0"
+                        class="p-3 text-xs text-slate-500 text-center"
+                      >
+                        No inventory matches. Custom item description will be used.
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Linked product pill -->
+                  <div v-if="line.sku" class="mt-1 flex items-center gap-1.5 text-[11px] text-blue-600">
+                    <Package class="w-3 h-3" />
+                    <span class="font-mono font-semibold">{{ line.sku }}</span>
+                  </div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="col-span-4 md:col-span-2">
+                  <UiInput
+                    v-model="line.quantity"
+                    type="number"
+                    label="Qty"
+                    min="0.01"
+                    step="1"
+                  />
+                </div>
+
+                <!-- Unit Price -->
+                <div class="col-span-5 md:col-span-3">
+                  <UiInput
+                    v-model="line.unit_price"
+                    type="number"
+                    label="Unit Price ($)"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+
+                <!-- Remove Button -->
+                <div class="col-span-3 md:col-span-1 flex justify-end pt-6">
+                  <button
+                    type="button"
+                    class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-30"
+                    :disabled="invoiceForm.lines.length === 1"
+                    @click="removeLine(index)"
+                    title="Remove line"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <!-- Line Summary -->
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200/50">
+                <span>
+                  Line Subtotal: <strong class="text-slate-800">{{ formatCurrency(Number(line.quantity || 0) * Number(line.unit_price || 0)) }}</strong>
+                </span>
+                <span v-if="Number(invoiceForm.tax_percent || 0) > 0" class="text-slate-600">
+                  Unit Price + {{ invoiceForm.tax_percent }}% Tax: <strong class="text-slate-900">{{ formatCurrency(getLineEffectivePriceWithTax(Number(line.unit_price || 0))) }}</strong>
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <UiInput v-model="invoiceForm.tax_dollars" type="number" label="Tax" step="0.01" />
-          <UiInput v-model="invoiceForm.notes" label="Notes" placeholder="Optional" class="md:col-span-2" />
+        <!-- Tax in Percentage Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100">
+          <div class="space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              Tax Rate (%) <span class="text-slate-400 font-normal">Calculated & added to subtotal</span>
+            </label>
+            <div class="relative">
+              <input
+                v-model="invoiceForm.tax_percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="0"
+                class="block w-full rounded-xl border border-slate-200 bg-white text-sm py-2.5 pl-3 pr-10 font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+              />
+              <div class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                %
+              </div>
+            </div>
+
+            <!-- Quick Preset Percentages -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[11px] font-semibold text-slate-500 mr-1">Presets:</span>
+              <button
+                v-for="rate in [0, 5, 10, 15, 18, 20]"
+                :key="rate"
+                type="button"
+                @click="invoiceForm.tax_percent = rate"
+                :class="[
+                  'px-2 py-0.5 rounded-lg text-xs font-bold transition-all',
+                  Number(invoiceForm.tax_percent) === rate
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100',
+                ]"
+              >
+                {{ rate }}%
+              </button>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Invoice Notes</label>
+            <textarea
+              v-model="invoiceForm.notes"
+              rows="2"
+              class="block w-full rounded-xl border border-slate-200 bg-white text-xs p-2.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400 font-medium text-slate-900"
+              placeholder="Payment terms, bank details, or thank you message…"
+            ></textarea>
+          </div>
         </div>
 
-        <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm flex justify-between">
-          <span class="text-slate-500">Subtotal {{ formatCurrency(invoiceSubtotal) }} · Tax {{ formatCurrency(Number(invoiceForm.tax_dollars || 0)) }}</span>
-          <span class="font-semibold text-slate-900">Total {{ formatCurrency(invoiceTotal) }}</span>
+        <!-- Real-time Financial Breakdown -->
+        <div class="rounded-2xl bg-slate-900 text-white p-4 space-y-2 shadow-sm">
+          <div class="flex items-center justify-between text-xs text-slate-300">
+            <span>Subtotal (Net)</span>
+            <span class="font-mono font-bold">{{ formatCurrency(invoiceSubtotal) }}</span>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-300">
+            <span>Tax ({{ Number(invoiceForm.tax_percent || 0) }}%)</span>
+            <span class="font-mono font-bold text-amber-300">+ {{ formatCurrency(invoiceTaxDollars) }}</span>
+          </div>
+
+          <div class="pt-2 border-t border-slate-700/80 flex items-center justify-between text-sm">
+            <span class="font-bold">Total Invoice Amount</span>
+            <span class="font-black text-lg text-emerald-400 font-mono">{{ formatCurrency(invoiceTotal) }}</span>
+          </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <!-- Modal Actions -->
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
           <UiButton variant="outline" @click="isInvoiceModalOpen = false">Cancel</UiButton>
           <UiButton
             :loading="createInvoiceMutation.isPending.value"
-            :disabled="!invoiceForm.customer_id || invoiceForm.lines.some((l) => !l.description)"
+            :disabled="!invoiceForm.customer_id || invoiceForm.lines.some((l) => !l.description && !l.search_query)"
             @click="createInvoiceMutation.mutate()"
           >
             Create Invoice
@@ -463,7 +747,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       </div>
     </UiModal>
 
-    <!-- Create Customer -->
+    <!-- Create Customer Modal -->
     <UiModal v-model="isCustomerModalOpen" title="New Customer" size="md">
       <div class="space-y-4">
         <UiInput v-model="customerForm.name" label="Name" placeholder="Acme Corp" />
@@ -482,7 +766,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       </div>
     </UiModal>
 
-    <!-- Record Payment -->
+    <!-- Record Payment Modal -->
     <UiModal v-model="isPaymentModalOpen" title="Record Payment" size="md">
       <div class="space-y-4">
         <p v-if="selectedInvoice" class="text-sm text-slate-500">
