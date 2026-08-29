@@ -14,14 +14,16 @@ class CustomerController extends BaseController
     public function index(): JsonResponse
     {
         $customers = Customer::query()
-            ->withCount('invoices')
-            ->withSum(['invoices as total_invoiced_cents' => fn ($q) => $q->where('status', '!=', 'void')], 'total_cents')
-            ->withSum(['invoices as total_paid_cents' => fn ($q) => $q->where('status', '!=', 'void')], 'amount_paid_cents')
+            ->withCount(['invoices' => fn ($q) => $q->where('status', '!=', 'void')])
+            ->withSum(['invoices as total_invoiced_cents' => fn ($q) => $q->whereIn('status', ['sent', 'paid'])], 'total_cents')
+            ->withSum(['invoices as total_paid_cents' => fn ($q) => $q->whereIn('status', ['sent', 'paid'])], 'amount_paid_cents')
             ->orderBy('name')
             ->get()
             ->map(function (Customer $customer) {
                 $totalInvoiced = (int) ($customer->total_invoiced_cents ?? 0);
                 $totalPaid = (int) ($customer->total_paid_cents ?? 0);
+                $customer->total_invoiced_cents = $totalInvoiced;
+                $customer->total_paid_cents = $totalPaid;
                 $customer->outstanding_cents = max(0, $totalInvoiced - $totalPaid);
                 return $customer;
             });
@@ -46,8 +48,8 @@ class CustomerController extends BaseController
     {
         $customer = Customer::with(['invoices' => fn ($q) => $q->orderByDesc('issue_date')->with('payments')])->findOrFail($id);
 
-        $totalInvoiced = (int) $customer->invoices->where('status', '!=', 'void')->sum('total_cents');
-        $totalPaid = (int) $customer->invoices->where('status', '!=', 'void')->sum('amount_paid_cents');
+        $totalInvoiced = (int) $customer->invoices->whereIn('status', ['sent', 'paid'])->sum('total_cents');
+        $totalPaid = (int) $customer->invoices->whereIn('status', ['sent', 'paid'])->sum('amount_paid_cents');
 
         $customer->total_invoiced_cents = $totalInvoiced;
         $customer->total_paid_cents = $totalPaid;

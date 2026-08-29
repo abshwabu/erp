@@ -29,7 +29,16 @@ class InvoiceController extends BaseController
             $query->where('customer_id', $customerId);
         }
 
-        return $this->successResponse($query->get());
+        $invoices = $query->get()->map(function (Invoice $invoice) {
+            $invoice->subtotal_cents = (int) $invoice->subtotal_cents;
+            $invoice->tax_cents = (int) $invoice->tax_cents;
+            $invoice->total_cents = (int) $invoice->total_cents;
+            $invoice->amount_paid_cents = (int) $invoice->amount_paid_cents;
+            $invoice->outstanding_cents = max(0, $invoice->total_cents - $invoice->amount_paid_cents);
+            return $invoice;
+        });
+
+        return $this->successResponse($invoices);
     }
 
     public function store(Request $request): JsonResponse
@@ -97,6 +106,11 @@ class InvoiceController extends BaseController
     public function show(string $id): JsonResponse
     {
         $invoice = Invoice::with(['customer', 'lines', 'payments'])->findOrFail($id);
+        $invoice->subtotal_cents = (int) $invoice->subtotal_cents;
+        $invoice->tax_cents = (int) $invoice->tax_cents;
+        $invoice->total_cents = (int) $invoice->total_cents;
+        $invoice->amount_paid_cents = (int) $invoice->amount_paid_cents;
+        $invoice->outstanding_cents = max(0, $invoice->total_cents - $invoice->amount_paid_cents);
 
         return $this->successResponse($invoice);
     }

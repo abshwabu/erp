@@ -28,6 +28,10 @@ import {
   Eye,
   DollarSign,
   AlertCircle,
+  TrendingUp,
+  CreditCard,
+  Clock,
+  CheckCircle2,
 } from '@lucide/vue'
 
 const queryClient = useQueryClient()
@@ -36,11 +40,9 @@ const searchQuery = ref('')
 const isInvoiceModalOpen = ref(false)
 const isCustomerModalOpen = ref(false)
 const isEditCustomerModalOpen = ref(false)
-const isCustomerDetailModalOpen = ref(false)
 const isPaymentModalOpen = ref(false)
 
 const selectedInvoice = ref<Invoice | null>(null)
-const selectedCustomer = ref<Customer | null>(null)
 const editingCustomerId = ref<string | null>(null)
 const errorMessage = ref('')
 
@@ -106,6 +108,45 @@ const { data: productsData, isLoading: productsLoading } = useQuery({
 })
 
 const allProducts = computed(() => productsData.value || [])
+
+// High-Level Financial Summary Stats across Invoices
+const financialSummary = computed(() => {
+  const list = invoices.value || []
+  let totalInvoicedCents = 0
+  let totalCollectedCents = 0
+  let totalOutstandingCents = 0
+  let overdueCents = 0
+  let overdueCount = 0
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+
+  for (const inv of list) {
+    if (inv.status === 'void') continue
+
+    const total = Number(inv.total_cents || 0)
+    const paid = Number(inv.amount_paid_cents || 0)
+    const due = Math.max(0, total - paid)
+
+    if (inv.status === 'sent' || inv.status === 'paid') {
+      totalInvoicedCents += total
+      totalCollectedCents += paid
+      totalOutstandingCents += due
+
+      if (due > 0 && inv.due_date && inv.due_date < todayStr) {
+        overdueCents += due
+        overdueCount++
+      }
+    }
+  }
+
+  return {
+    totalInvoicedCents,
+    totalCollectedCents,
+    totalOutstandingCents,
+    overdueCents,
+    overdueCount,
+  }
+})
 
 // Filter products based on search term in line item
 function getFilteredProducts(query: string) {
@@ -271,16 +312,16 @@ const filteredCustomers = computed(() => {
 const invoiceColumns = [
   { key: 'number', label: 'Invoice #' },
   { key: 'customer', label: 'Customer' },
-  { key: 'issue_date', label: 'Issue Date' },
-  { key: 'due_date', label: 'Due Date' },
-  { key: 'total', label: 'Total' },
+  { key: 'dates', label: 'Dates' },
+  { key: 'breakdown', label: 'Subtotal / Tax', align: 'right' as const },
+  { key: 'total', label: 'Total Amount', align: 'right' as const },
   { key: 'status', label: 'Status' },
-  { key: 'actions', label: '' },
+  { key: 'actions', label: 'Actions', align: 'right' as const },
 ]
 
 const customerColumns = [
   { key: 'name', label: 'Customer Name' },
-  { key: 'contact', label: 'Contact' },
+  { key: 'contact', label: 'Contact Details' },
   { key: 'invoices_count', label: 'Invoices', align: 'center' as const },
   { key: 'financials', label: 'Financial Summary' },
   { key: 'actions', label: 'Actions', align: 'right' as const },
@@ -384,7 +425,8 @@ const handleDeleteCustomer = (customer: Customer) => {
   deleteCustomerMutation.mutate(customer.id)
 }
 
-const viewCustomerInvoices = (customer: Customer) => {
+const viewCustomerInvoices = (customer?: Customer | null) => {
+  if (!customer) return
   searchQuery.value = customer.name
   activeTab.value = 'invoices'
 }
@@ -408,7 +450,10 @@ const removeLine = (index: number) => {
 
 const openPaymentModal = (invoice: Invoice) => {
   selectedInvoice.value = invoice
-  const outstanding = (invoice.total_cents - invoice.amount_paid_cents) / 100
+  const total = Number(invoice.total_cents || 0)
+  const paid = Number(invoice.amount_paid_cents || 0)
+  const outstanding = Math.max(0, total - paid) / 100
+
   paymentForm.value = {
     amount_dollars: outstanding,
     method: 'cash',
@@ -427,8 +472,11 @@ const markPaid = async (invoice: Invoice) => {
       current = sent.data.data
     }
     if (current.status === 'paid') return
-    const outstanding = current.total_cents - current.amount_paid_cents
+    const total = Number(current.total_cents || 0)
+    const paid = Number(current.amount_paid_cents || 0)
+    const outstanding = Math.max(0, total - paid)
     if (outstanding <= 0) return
+
     await salesApi.recordPayment(current.id, {
       amount_cents: outstanding,
       method: 'cash',
@@ -450,15 +498,19 @@ const submitPayment = () => {
   })
 }
 
-const cents = (value: number) => formatCurrency(value / 100)
+const cents = (value: any) => {
+  const num = Number(value || 0)
+  return formatCurrency(num / 100)
+}
 </script>
 
 <template>
   <div class="space-y-6">
+    <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-900">Sales & Invoicing</h1>
-        <p class="text-slate-500">Manage customers, invoices, line items with inventory search, and accounting payments.</p>
+        <p class="text-slate-500">Manage customer billing, receivables, line items with inventory search, and accounting payments.</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="openCustomerModal">
@@ -470,9 +522,69 @@ const cents = (value: number) => formatCurrency(value / 100)
       </div>
     </div>
 
+    <!-- Error Alert -->
     <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
       <span>{{ errorMessage }}</span>
       <button type="button" @click="errorMessage = ''" class="text-red-500 hover:text-red-700 font-bold ml-2">✕</button>
+    </div>
+
+    <!-- Financial KPI Summary Cards -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- Total Invoiced -->
+      <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Invoiced</p>
+          <div class="p-2 rounded-xl bg-blue-50 text-blue-600">
+            <Receipt class="w-4 h-4" />
+          </div>
+        </div>
+        <p class="mt-2 text-2xl font-black text-slate-900 font-mono">
+          {{ cents(financialSummary.totalInvoicedCents) }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Issued & sent invoices</p>
+      </div>
+
+      <!-- Total Collected -->
+      <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Collected</p>
+          <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+            <CheckCircle2 class="w-4 h-4" />
+          </div>
+        </div>
+        <p class="mt-2 text-2xl font-black text-emerald-600 font-mono">
+          {{ cents(financialSummary.totalCollectedCents) }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Payments recorded in accounting</p>
+      </div>
+
+      <!-- Outstanding Receivables -->
+      <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Outstanding Balance</p>
+          <div class="p-2 rounded-xl bg-amber-50 text-amber-600">
+            <Clock class="w-4 h-4" />
+          </div>
+        </div>
+        <p class="mt-2 text-2xl font-black text-amber-600 font-mono">
+          {{ cents(financialSummary.totalOutstandingCents) }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Unpaid customer balances</p>
+      </div>
+
+      <!-- Overdue Amount -->
+      <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Overdue Invoices</p>
+          <div class="p-2 rounded-xl bg-red-50 text-red-600">
+            <AlertCircle class="w-4 h-4" />
+          </div>
+        </div>
+        <p class="mt-2 text-2xl font-black text-red-600 font-mono">
+          {{ cents(financialSummary.overdueCents) }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">{{ financialSummary.overdueCount }} invoice(s) past due date</p>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -512,6 +624,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       <template #cell(number)="{ item }">
         <div class="font-bold text-slate-900 font-mono text-sm">{{ item.number }}</div>
       </template>
+
       <template #cell(customer)="{ item }">
         <button
           type="button"
@@ -522,21 +635,35 @@ const cents = (value: number) => formatCurrency(value / 100)
           {{ item.customer?.name || '—' }}
         </button>
       </template>
-      <template #cell(issue_date)="{ item }">
-        <span class="text-slate-600 text-xs font-medium">{{ formatDate(item.issue_date) }}</span>
-      </template>
-      <template #cell(due_date)="{ item }">
-        <span class="text-slate-600 text-xs font-medium">{{ formatDate(item.due_date) }}</span>
-      </template>
-      <template #cell(total)="{ item }">
-        <div class="text-right font-bold text-slate-900 font-mono">{{ cents(item.total_cents) }}</div>
-        <div v-if="item.amount_paid_cents > 0" class="text-right text-[11px] text-emerald-600 font-semibold">
-          Paid {{ cents(item.amount_paid_cents) }}
+
+      <template #cell(dates)="{ item }">
+        <div class="text-xs space-y-0.5">
+          <p class="text-slate-700">Issued: <span class="font-medium">{{ formatDate(item.issue_date) }}</span></p>
+          <p class="text-slate-400">Due: <span class="font-medium">{{ formatDate(item.due_date) }}</span></p>
         </div>
       </template>
+
+      <template #cell(breakdown)="{ item }">
+        <div class="text-right text-xs space-y-0.5 font-mono">
+          <p class="text-slate-600">Net: {{ cents(item.subtotal_cents) }}</p>
+          <p v-if="Number(item.tax_cents || 0) > 0" class="text-amber-600">+ Tax: {{ cents(item.tax_cents) }}</p>
+        </div>
+      </template>
+
+      <template #cell(total)="{ item }">
+        <div class="text-right font-bold text-slate-900 font-mono text-sm">{{ cents(item.total_cents) }}</div>
+        <div v-if="Number(item.amount_paid_cents || 0) > 0" class="text-right text-[11px] text-emerald-600 font-semibold font-mono">
+          Paid {{ cents(item.amount_paid_cents) }}
+        </div>
+        <div v-if="Math.max(0, Number(item.total_cents || 0) - Number(item.amount_paid_cents || 0)) > 0 && item.status !== 'void'" class="text-right text-[11px] text-amber-600 font-bold font-mono">
+          Due {{ cents(Math.max(0, Number(item.total_cents || 0) - Number(item.amount_paid_cents || 0))) }}
+        </div>
+      </template>
+
       <template #cell(status)="{ item }">
         <UiBadge :variant="statusVariant(item.status)" class="capitalize font-bold">{{ item.status }}</UiBadge>
       </template>
+
       <template #cell(actions)="{ item }">
         <div class="flex justify-end gap-1.5">
           <UiButton
@@ -567,7 +694,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       </template>
     </UiTable>
 
-    <!-- Customers Table with Actions & Stats -->
+    <!-- Customers Table with Actions & Accurate Stats -->
     <UiTable
       v-else
       :columns="customerColumns"
@@ -611,16 +738,20 @@ const cents = (value: number) => formatCurrency(value / 100)
       <template #cell(financials)="{ item }">
         <div class="text-xs space-y-0.5 font-mono">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-slate-400">Invoiced:</span>
-            <span class="font-bold text-slate-900">{{ cents(item.total_invoiced_cents ?? 0) }}</span>
+            <span class="text-slate-400">Total Invoiced:</span>
+            <span class="font-bold text-slate-900">{{ cents(item.total_invoiced_cents) }}</span>
           </div>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-slate-400">Paid:</span>
-            <span class="font-semibold text-emerald-600">{{ cents(item.total_paid_cents ?? 0) }}</span>
+            <span class="text-slate-400">Total Paid:</span>
+            <span class="font-semibold text-emerald-600">{{ cents(item.total_paid_cents) }}</span>
           </div>
-          <div v-if="(item.outstanding_cents ?? 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
-            <span class="text-amber-600 font-bold">Due:</span>
-            <span class="font-bold text-amber-600">{{ cents(item.outstanding_cents ?? 0) }}</span>
+          <div v-if="Number(item.outstanding_cents || 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
+            <span class="text-amber-600 font-bold">Outstanding:</span>
+            <span class="font-bold text-amber-600">{{ cents(item.outstanding_cents) }}</span>
+          </div>
+          <div v-else-if="Number(item.total_invoiced_cents || 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
+            <span class="text-emerald-600 font-medium">Status:</span>
+            <span class="font-bold text-emerald-600">✓ Fully Settled</span>
           </div>
         </div>
       </template>
@@ -968,7 +1099,7 @@ const cents = (value: number) => formatCurrency(value / 100)
       <div class="space-y-4">
         <p v-if="selectedInvoice" class="text-sm text-slate-500">
           Invoice {{ selectedInvoice.number }} · Outstanding
-          {{ cents(selectedInvoice.total_cents - selectedInvoice.amount_paid_cents) }}
+          {{ cents(Math.max(0, Number(selectedInvoice.total_cents || 0) - Number(selectedInvoice.amount_paid_cents || 0))) }}
         </p>
         <UiInput v-model="paymentForm.amount_dollars" type="number" label="Amount" step="0.01" />
         <UiSelect
