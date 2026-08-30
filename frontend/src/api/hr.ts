@@ -24,6 +24,9 @@ export const hrApi = {
   updateDepartment: (id: string, data: Partial<Department>) => apiClient.patch<Department>(`/hr/departments/${id}`, data),
   deleteDepartment: (id: string) => apiClient.delete(`/hr/departments/${id}`),
   getPositions: () => apiClient.get<Position[]>('/hr/positions'),
+  createPosition: (data: Partial<Position>) => apiClient.post<Position>('/hr/positions', data),
+  updatePosition: (id: string, data: Partial<Position>) => apiClient.patch<Position>(`/hr/positions/${id}`, data),
+  deletePosition: (id: string) => apiClient.delete(`/hr/positions/${id}`),
   
   // Attendance
   getAttendance: (params?: any) => apiClient.get<AttendanceLog[]>('/hr/attendance', { params }),

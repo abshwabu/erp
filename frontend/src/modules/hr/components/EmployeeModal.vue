@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import { User, Briefcase, Plus, Trash2, Heart } from '@lucide/vue'
+import { User, Briefcase, Plus, Trash2, Heart, Building2, Award } from '@lucide/vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'saved'])
 
+const queryClient = useQueryClient()
+
+// Queries
 const { data: departments } = useQuery({
   queryKey: ['hr', 'departments'],
   queryFn: () => hrApi.getDepartments().then((res) => res.data),
@@ -34,6 +37,7 @@ const managerOptions = computed(() => [
   })),
 ])
 
+// Main Employee Form
 const form = ref({
   first_name: '',
   last_name: '',
@@ -54,6 +58,91 @@ const form = ref({
 const loading = ref(false)
 const errors = ref<Record<string, string[]>>({})
 const generalError = ref('')
+
+// Quick Department Creation State
+const isQuickDeptModalOpen = ref(false)
+const quickDeptForm = ref({
+  name: '',
+  code: '',
+  parent_id: '',
+})
+const quickDeptError = ref('')
+
+// Quick Position Creation State
+const isQuickPositionModalOpen = ref(false)
+const quickPositionForm = ref({
+  title: '',
+  department_id: '',
+  job_grade: '',
+  description: '',
+})
+const quickPositionError = ref('')
+
+// Department Mutation
+const createDeptMutation = useMutation({
+  mutationFn: (data: any) => hrApi.createDepartment(data),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: ['hr', 'departments'] })
+    form.value.department_id = res.data.id
+    isQuickDeptModalOpen.value = false
+    quickDeptForm.value = { name: '', code: '', parent_id: '' }
+    quickDeptError.value = ''
+  },
+  onError: (err: any) => {
+    quickDeptError.value = err?.response?.data?.message || err?.message || 'Failed to create department'
+  },
+})
+
+// Position Mutation
+const createPositionMutation = useMutation({
+  mutationFn: (data: any) => hrApi.createPosition(data),
+  onSuccess: (res) => {
+    queryClient.invalidateQueries({ queryKey: ['hr', 'positions'] })
+    form.value.position_id = res.data.id
+    isQuickPositionModalOpen.value = false
+    quickPositionForm.value = { title: '', department_id: '', job_grade: '', description: '' }
+    quickPositionError.value = ''
+  },
+  onError: (err: any) => {
+    quickPositionError.value = err?.response?.data?.message || err?.message || 'Failed to create position'
+  },
+})
+
+const openQuickDeptModal = () => {
+  quickDeptError.value = ''
+  quickDeptForm.value = { name: '', code: '', parent_id: '' }
+  isQuickDeptModalOpen.value = true
+}
+
+const openQuickPositionModal = () => {
+  quickPositionError.value = ''
+  quickPositionForm.value = {
+    title: '',
+    department_id: form.value.department_id || (departments.value?.[0]?.id ?? ''),
+    job_grade: '',
+    description: '',
+  }
+  isQuickPositionModalOpen.value = true
+}
+
+const handleSaveQuickDept = () => {
+  if (!quickDeptForm.value.name) return
+  createDeptMutation.mutate({
+    name: quickDeptForm.value.name,
+    code: quickDeptForm.value.code || null,
+    parent_id: quickDeptForm.value.parent_id || null,
+  })
+}
+
+const handleSaveQuickPosition = () => {
+  if (!quickPositionForm.value.title || !quickPositionForm.value.department_id) return
+  createPositionMutation.mutate({
+    title: quickPositionForm.value.title,
+    department_id: quickPositionForm.value.department_id,
+    job_grade: quickPositionForm.value.job_grade || null,
+    description: quickPositionForm.value.description || null,
+  })
+}
 
 const addContact = () => {
   form.value.emergency_contacts.push({ name: '', relationship: '', phone: '' })
@@ -176,19 +265,37 @@ const genders = [
           <UiInput v-model="form.start_date" label="Start Date" type="date" :error="errors.start_date?.[0]" required />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiSelect
-            v-model="form.department_id"
-            label="Department"
-            :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
-            :error="errors.department_id?.[0]"
-          />
-          <UiSelect
-            v-model="form.position_id"
-            label="Position"
-            :options="[{ label: 'Select Position', value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
-            :error="errors.position_id?.[0]"
-          />
+          <!-- Department Select with + New Button -->
+          <div class="flex gap-2 items-end">
+            <UiSelect
+              v-model="form.department_id"
+              label="Department"
+              :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+              :error="errors.department_id?.[0]"
+              placeholder="Select Department"
+              class="flex-1"
+            />
+            <UiButton variant="outline" type="button" size="md" @click="openQuickDeptModal" title="Create New Department">
+              <Plus class="w-3.5 h-3.5 mr-1" /> New
+            </UiButton>
+          </div>
+
+          <!-- Position Select with + New Button -->
+          <div class="flex gap-2 items-end">
+            <UiSelect
+              v-model="form.position_id"
+              label="Position"
+              :options="[{ label: 'Select Position', value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
+              :error="errors.position_id?.[0]"
+              placeholder="Select Position"
+              class="flex-1"
+            />
+            <UiButton variant="outline" type="button" size="md" @click="openQuickPositionModal" title="Create New Position">
+              <Plus class="w-3.5 h-3.5 mr-1" /> New
+            </UiButton>
+          </div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UiSelect v-model="form.employment_type" label="Employment Type" :options="employmentTypes" />
           <UiSelect
@@ -240,6 +347,64 @@ const genders = [
           :disabled="!form.first_name || !form.last_name || !form.email"
         >
           Create Employee
+        </UiButton>
+      </div>
+    </div>
+  </UiModal>
+
+  <!-- Quick Create Department Sub-Modal -->
+  <UiModal v-model="isQuickDeptModalOpen" title="New Department" size="md">
+    <div class="space-y-4">
+      <div v-if="quickDeptError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+        {{ quickDeptError }}
+      </div>
+      <UiInput v-model="quickDeptForm.name" label="Department Name" placeholder="e.g. Engineering, Sales" required />
+      <UiInput v-model="quickDeptForm.code" label="Department Code" placeholder="e.g. ENG" />
+      <UiSelect
+        v-model="quickDeptForm.parent_id"
+        label="Parent Department"
+        :options="[{ label: 'None (Top Level)', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+        placeholder="None"
+      />
+      <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <UiButton variant="outline" type="button" @click="isQuickDeptModalOpen = false">Cancel</UiButton>
+        <UiButton
+          type="button"
+          :loading="createDeptMutation.isPending.value"
+          :disabled="!quickDeptForm.name"
+          @click="handleSaveQuickDept"
+        >
+          Save Department
+        </UiButton>
+      </div>
+    </div>
+  </UiModal>
+
+  <!-- Quick Create Position Sub-Modal -->
+  <UiModal v-model="isQuickPositionModalOpen" title="New Position" size="md">
+    <div class="space-y-4">
+      <div v-if="quickPositionError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+        {{ quickPositionError }}
+      </div>
+      <UiInput v-model="quickPositionForm.title" label="Position Title" placeholder="e.g. Senior Software Engineer" required />
+      <UiSelect
+        v-model="quickPositionForm.department_id"
+        label="Department"
+        :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+        placeholder="Select Department"
+        required
+      />
+      <UiInput v-model="quickPositionForm.job_grade" label="Job Grade" placeholder="e.g. L4, Mid-Level" />
+      <UiInput v-model="quickPositionForm.description" label="Description" placeholder="Brief role summary" />
+      <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <UiButton variant="outline" type="button" @click="isQuickPositionModalOpen = false">Cancel</UiButton>
+        <UiButton
+          type="button"
+          :loading="createPositionMutation.isPending.value"
+          :disabled="!quickPositionForm.title || !quickPositionForm.department_id"
+          @click="handleSaveQuickPosition"
+        >
+          Save Position
         </UiButton>
       </div>
     </div>
