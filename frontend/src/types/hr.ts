@@ -3,14 +3,34 @@ export type EmployeeStatus = 'active' | 'on-leave' | 'suspended' | 'terminated'
 export type Gender = 'male' | 'female' | 'other'
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'on-leave' | 'holiday'
+export type DocumentType = 'cv' | 'contract' | 'education' | 'id_proof' | 'certification' | 'tax' | 'other'
+
+export interface EmployeeDocument {
+  id: string
+  employee_id: string
+  title: string
+  document_type: DocumentType
+  file_path: string
+  file_name: string
+  file_size: number
+  file_type?: string
+  file_url?: string
+  expiry_date?: string
+  notes?: string
+  uploaded_by_user_id?: string
+  created_at: string
+  updated_at: string
+}
 
 export interface Department {
   id: string
   name: string
+  code?: string
   parent_id?: string
   manager_id?: string
   cost_center?: string
   headcount_budget?: number
+  employees_count?: number
   created_at: string
   updated_at: string
   parent?: Department
@@ -21,9 +41,11 @@ export interface Position {
   id: string
   title: string
   department_id: string
+  job_grade?: string
   job_description?: string
   requirements?: string
   pay_grade_range?: string
+  employees_count?: number
   created_at: string
   updated_at: string
   department?: Department

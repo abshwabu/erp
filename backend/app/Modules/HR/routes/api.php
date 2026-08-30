@@ -8,6 +8,7 @@ use App\Modules\HR\Controllers\AttendanceController;
 use App\Modules\HR\Controllers\LeaveController;
 use App\Modules\HR\Controllers\DepartmentController;
 use App\Modules\HR\Controllers\PositionController;
+use App\Modules\HR\Controllers\EmployeeDocumentController;
 
 Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     // Employees
@@ -18,6 +19,13 @@ Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     Route::delete('employees/{id}', [EmployeeController::class, 'destroy']);
     Route::get('employees/{id}/leave-balances', [EmployeeController::class, 'leaveBalances']);
     Route::get('employees/{id}/attendance', [EmployeeController::class, 'attendance']);
+
+    // Employee Documents
+    Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index']);
+    Route::post('employees/{id}/documents', [EmployeeDocumentController::class, 'store']);
+    Route::get('employees/{id}/documents/{documentId}', [EmployeeDocumentController::class, 'show']);
+    Route::get('employees/{id}/documents/{documentId}/download', [EmployeeDocumentController::class, 'download']);
+    Route::delete('employees/{id}/documents/{documentId}', [EmployeeDocumentController::class, 'destroy']);
 
     // Departments
     Route::get('departments', [DepartmentController::class, 'index']);

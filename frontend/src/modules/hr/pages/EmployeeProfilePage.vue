@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import type { Employee } from '@/types/hr'
+import type { Employee, DocumentType, EmployeeDocument } from '@/types/hr'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -13,6 +13,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import LeaveRequestModal from '../components/LeaveRequestModal.vue'
+import UploadDocumentModal from '../components/UploadDocumentModal.vue'
 import {
   User,
   Calendar,
@@ -31,6 +32,15 @@ import {
   AlertCircle,
   Building2,
   Award,
+  Download,
+  ExternalLink,
+  FileSpreadsheet,
+  FileCheck,
+  FileCode,
+  File,
+  ShieldCheck,
+  GraduationCap,
+  CreditCard,
 } from '@lucide/vue'
 
 const route = useRoute()
@@ -74,17 +84,25 @@ const { data: leaveRequests } = useQuery({
   queryFn: () => hrApi.getEmployeeLeaveRequests(employeeId).then((res) => res.data),
 })
 
+const { data: documents, isLoading: isLoadingDocs } = useQuery({
+  queryKey: ['hr', 'employees', employeeId, 'documents'],
+  queryFn: () => hrApi.getEmployeeDocuments(employeeId).then((res) => res.data),
+})
+
 const activeTab = ref<'profile' | 'leave' | 'attendance' | 'documents'>('profile')
 const tabs = [
   { id: 'profile', label: 'Profile & Employment', icon: User },
+  { id: 'documents', label: 'Documents & Files', icon: FileText },
   { id: 'leave', label: 'Leave Balances & History', icon: Calendar },
   { id: 'attendance', label: 'Attendance Timesheet', icon: Clock },
 ]
 
 const isLeaveModalOpen = ref(false)
+const isUploadDocModalOpen = ref(false)
 const isEditing = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
+const selectedDocFilter = ref<string>('all')
 
 const editForm = ref({
   first_name: '',
@@ -136,6 +154,13 @@ const createPositionMutation = useMutation({
   },
   onError: (err: any) => {
     quickPositionError.value = err?.response?.data?.message || err?.message || 'Failed to create position'
+  },
+})
+
+const deleteDocMutation = useMutation({
+  mutationFn: (docId: string) => hrApi.deleteEmployeeDocument(employeeId, docId),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['hr', 'employees', employeeId, 'documents'] })
   },
 })
 
@@ -260,26 +285,81 @@ const saveProfile = async () => {
   }
 }
 
-// Attendance Calendar Logic
-const currentMonth = ref(new Date())
-const calendarDays = computed(() => {
-  const year = currentMonth.value.getFullYear()
-  const month = currentMonth.value.getMonth()
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-
-  const days = []
-  for (let i = 0; i < firstDay.getDay(); i++) days.push(null)
-  for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i))
-  return days
+// Document Management Logic
+const filteredDocuments = computed(() => {
+  if (!documents.value) return []
+  if (selectedDocFilter.value === 'all') return documents.value
+  return documents.value.filter((d) => d.document_type === selectedDocFilter.value)
 })
 
-const getAttendanceForDate = (date: Date) => {
-  if (!date || !attendanceLogs.value) return null
-  const d = date.toISOString().split('T')[0]
-  return (attendanceLogs.value as any[]).find((l: any) => l.date === d || (l.logged_at && l.logged_at.slice(0, 10) === d))
+const docTypeCounts = computed(() => {
+  const list = documents.value || []
+  return {
+    all: list.length,
+    cv: list.filter((d) => d.document_type === 'cv').length,
+    contract: list.filter((d) => d.document_type === 'contract').length,
+    education: list.filter((d) => d.document_type === 'education').length,
+    id_proof: list.filter((d) => d.document_type === 'id_proof').length,
+    certification: list.filter((d) => d.document_type === 'certification').length,
+    tax: list.filter((d) => d.document_type === 'tax').length,
+    other: list.filter((d) => d.document_type === 'other').length,
+  }
+})
+
+const formatBytes = (bytes: number) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
+const getDocTypeBadge = (type: string) => {
+  switch (type) {
+    case 'cv':
+      return { label: 'CV / Resume', variant: 'info' as const, icon: FileText }
+    case 'contract':
+      return { label: 'Contract', variant: 'success' as const, icon: ShieldCheck }
+    case 'education':
+      return { label: 'Education / Degree', variant: 'purple' as const, icon: GraduationCap }
+    case 'id_proof':
+      return { label: 'ID / Passport', variant: 'warning' as const, icon: CreditCard }
+    case 'certification':
+      return { label: 'Certification', variant: 'info' as const, icon: Award }
+    case 'tax':
+      return { label: 'Tax Document', variant: 'default' as const, icon: FileSpreadsheet }
+    default:
+      return { label: 'Document', variant: 'default' as const, icon: File }
+  }
+}
+
+const deleteDocument = (doc: EmployeeDocument) => {
+  if (confirm(`Are you sure you want to delete "${doc.title}"?`)) {
+    deleteDocMutation.mutate(doc.id)
+  }
+}
+
+const downloadDocFile = async (doc: EmployeeDocument) => {
+  try {
+    const res = await hrApi.downloadEmployeeDocument(employeeId, doc.id)
+    const blob = new Blob([res.data])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = doc.file_name || `${doc.title}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Download failed, opening file url directly', err)
+    if (doc.file_url) {
+      window.open(doc.file_url, '_blank')
+    }
+  }
+}
+
+// Attendance & Leave Logic
 const leaveColumns = [
   { key: 'leave_type', label: 'Type' },
   { key: 'dates', label: 'Dates' },
@@ -358,7 +438,10 @@ const genderOptions = [
         </div>
       </div>
 
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
+        <UiButton variant="outline" size="sm" type="button" @click="isUploadDocModalOpen = true">
+          <Plus class="w-3.5 h-3.5 mr-1.5" /> Upload Document
+        </UiButton>
         <template v-if="isEditing">
           <UiButton variant="outline" size="sm" type="button" @click="cancelEditing" :disabled="isSaving">Cancel</UiButton>
           <UiButton size="sm" type="button" @click="saveProfile" :loading="isSaving">Save Changes</UiButton>
@@ -382,6 +465,12 @@ const genderOptions = [
       >
         <component :is="tab.icon" class="h-4 w-4" />
         <span>{{ tab.label }}</span>
+        <span
+          v-if="tab.id === 'documents' && documents?.length"
+          class="ml-1 px-1.5 py-0.5 text-[10px] font-mono rounded-full bg-slate-100 text-slate-600 font-bold"
+        >
+          {{ documents.length }}
+        </span>
       </button>
     </div>
 
@@ -592,6 +681,164 @@ const genderOptions = [
       </div>
     </div>
 
+    <!-- Tab Content: Documents & Files -->
+    <div v-if="activeTab === 'documents'" class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Employee Documents & Dossier</h2>
+          <p class="text-xs text-slate-500">Secure storage for CVs, employment contracts, degree certificates, and IDs.</p>
+        </div>
+        <UiButton size="sm" @click="isUploadDocModalOpen = true">
+          <Plus class="h-4 w-4 mr-2" /> Upload Document
+        </UiButton>
+      </div>
+
+      <!-- Filter Categories Bar -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          @click="selectedDocFilter = 'all'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          All Files ({{ docTypeCounts.all }})
+        </button>
+        <button
+          type="button"
+          @click="selectedDocFilter = 'cv'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'cv' ? 'bg-blue-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          CV & Resume ({{ docTypeCounts.cv }})
+        </button>
+        <button
+          type="button"
+          @click="selectedDocFilter = 'contract'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'contract' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          Contracts ({{ docTypeCounts.contract }})
+        </button>
+        <button
+          type="button"
+          @click="selectedDocFilter = 'education'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'education' ? 'bg-purple-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          Degrees & Education ({{ docTypeCounts.education }})
+        </button>
+        <button
+          type="button"
+          @click="selectedDocFilter = 'id_proof'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'id_proof' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          ID & Passport ({{ docTypeCounts.id_proof }})
+        </button>
+        <button
+          type="button"
+          @click="selectedDocFilter = 'certification'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+          :class="selectedDocFilter === 'certification' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'"
+        >
+          Certifications ({{ docTypeCounts.certification }})
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="isLoadingDocs" class="flex justify-center py-12">
+        <UiSpinner size="md" />
+      </div>
+
+      <!-- Documents Grid -->
+      <div v-else-if="filteredDocuments.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          v-for="doc in filteredDocuments"
+          :key="doc.id"
+          class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all group"
+        >
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-700">
+                  <component :is="getDocTypeBadge(doc.document_type).icon" class="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm line-clamp-1" :title="doc.title">{{ doc.title }}</h3>
+                  <p class="text-[11px] font-mono text-slate-400 line-clamp-1">{{ doc.file_name }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <UiBadge :variant="getDocTypeBadge(doc.document_type).variant" class="text-[10px] font-bold">
+                {{ getDocTypeBadge(doc.document_type).label }}
+              </UiBadge>
+              <span class="text-[11px] font-mono text-slate-500">{{ formatBytes(doc.file_size) }}</span>
+              <span v-if="doc.expiry_date" class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                Expires: {{ new Date(doc.expiry_date).toLocaleDateString() }}
+              </span>
+            </div>
+
+            <p v-if="doc.notes" class="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+              {{ doc.notes }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between pt-4 mt-3 border-t border-slate-100 text-xs">
+            <span class="text-[11px] text-slate-400">
+              {{ new Date(doc.created_at).toLocaleDateString() }}
+            </span>
+
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                @click="downloadDocFile(doc)"
+                class="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                title="Download Document"
+              >
+                <Download class="w-4 h-4" />
+              </button>
+              <a
+                v-if="doc.file_url"
+                :href="doc.file_url"
+                target="_blank"
+                rel="noopener"
+                class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                title="Open in new tab"
+              >
+                <ExternalLink class="w-4 h-4" />
+              </a>
+              <button
+                type="button"
+                @click="deleteDocument(doc)"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Delete Document"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 mx-auto flex items-center justify-center text-slate-400">
+          <FileText class="w-8 h-8" />
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">No documents found</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+            Upload employment contracts, CV/resumes, degree certificates, and identification documents for this employee.
+          </p>
+        </div>
+        <UiButton size="sm" @click="isUploadDocModalOpen = true">
+          <Plus class="w-4 h-4 mr-1.5" /> Upload Document
+        </UiButton>
+      </div>
+    </div>
+
     <!-- Tab Content: Leave -->
     <div v-if="activeTab === 'leave'" class="space-y-6">
       <div class="flex justify-between items-center">
@@ -679,6 +926,13 @@ const genderOptions = [
       v-model="isLeaveModalOpen"
       :employee-id="employeeId"
       @saved="queryClient.invalidateQueries({ queryKey: ['hr', 'employees', employeeId] })"
+    />
+
+    <!-- Upload Document Modal -->
+    <UploadDocumentModal
+      v-model="isUploadDocModalOpen"
+      :employee-id="employeeId"
+      @saved="queryClient.invalidateQueries({ queryKey: ['hr', 'employees', employeeId, 'documents'] })"
     />
 
     <!-- Quick Create Department Sub-Modal -->

@@ -7,7 +7,8 @@ import type {
   LeaveRequest, 
   LeaveType, 
   LeaveBalance,
-  AttendanceSummary
+  AttendanceSummary,
+  EmployeeDocument
 } from '@/types/hr'
 
 export const hrApi = {
@@ -18,6 +19,18 @@ export const hrApi = {
   updateEmployee: (id: string, data: Partial<Employee>) => apiClient.patch<Employee>(`/hr/employees/${id}`, data),
   deleteEmployee: (id: string) => apiClient.delete(`/hr/employees/${id}`),
   
+  // Employee Documents
+  getEmployeeDocuments: (employeeId: string, params?: any) => 
+    apiClient.get<EmployeeDocument[]>(`/hr/employees/${employeeId}/documents`, { params }),
+  uploadEmployeeDocument: (employeeId: string, formData: FormData) => 
+    apiClient.post<EmployeeDocument>(`/hr/employees/${employeeId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  deleteEmployeeDocument: (employeeId: string, documentId: string) => 
+    apiClient.delete(`/hr/employees/${employeeId}/documents/${documentId}`),
+  downloadEmployeeDocument: (employeeId: string, documentId: string) =>
+    apiClient.get(`/hr/employees/${employeeId}/documents/${documentId}/download`, { responseType: 'blob' }),
+
   // Org Structure
   getDepartments: () => apiClient.get<Department[]>('/hr/departments'),
   createDepartment: (data: Partial<Department>) => apiClient.post<Department>('/hr/departments', data),

@@ -58,4 +58,9 @@ class Employee extends Model
     {
         return $this->belongsTo(Employee::class, 'manager_id');
     }
+
+    public function documents()
+    {
+        return $this->hasMany(EmployeeDocument::class, 'employee_id')->orderBy('created_at', 'desc');
+    }
 }
