@@ -31,6 +31,7 @@ import {
   Headphones,
   Globe,
   Plug,
+  Briefcase,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -102,6 +103,7 @@ const navigationGroups = [
           { name: 'Attendance', to: '/hr/attendance', icon: markRaw(UserCheck) },
           { name: 'Leave Management', to: '/hr/leave', icon: markRaw(Calendar) },
           { name: 'Org Chart', to: '/hr/org-chart', icon: markRaw(BarChart2) },
+          { name: 'Job Opportunities', to: '/hr/jobs', icon: markRaw(Briefcase) },
         ]
       },
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },

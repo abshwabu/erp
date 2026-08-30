@@ -44,6 +44,12 @@ const router = createRouter({
       meta: { title: 'Online Store', requiresAuth: false }
     },
     {
+      path: '/careers/:slug',
+      name: 'public-career-job',
+      component: () => import('@/views/careers/PublicJobApplicationPage.vue'),
+      meta: { title: 'Career Opportunity', requiresAuth: false }
+    },
+    {
       path: '/',
       component: AppLayout,
       meta: { requiresAuth: true },
@@ -167,6 +173,12 @@ const router = createRouter({
           name: 'hr-org-chart',
           component: () => import('@/modules/hr/pages/OrgChartPage.vue'),
           meta: { title: 'Org Chart', permission: 'hr.employees.view' }
+        },
+        {
+          path: 'hr/jobs',
+          name: 'hr-jobs',
+          component: () => import('@/modules/hr/pages/JobOpportunitiesPage.vue'),
+          meta: { title: 'Job Opportunities & Recruitment', permission: 'hr.employees.view' }
         },
         // Sales Module
         {

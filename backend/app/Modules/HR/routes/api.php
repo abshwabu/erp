@@ -9,7 +9,15 @@ use App\Modules\HR\Controllers\LeaveController;
 use App\Modules\HR\Controllers\DepartmentController;
 use App\Modules\HR\Controllers\PositionController;
 use App\Modules\HR\Controllers\EmployeeDocumentController;
+use App\Modules\HR\Controllers\RecruitmentController;
 
+// ── Public Careers / Job Application Form Routes ──────────────────────────────
+Route::prefix('api/public/careers')->group(function () {
+    Route::get('jobs/{idOrSlug}', [RecruitmentController::class, 'publicShow']);
+    Route::post('jobs/{idOrSlug}/apply', [RecruitmentController::class, 'publicSubmit']);
+});
+
+// ── Authenticated HR Routes ──────────────────────────────────────────────────
 Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     // Employees
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -56,4 +64,17 @@ Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     Route::patch('leave/requests/{id}/approve', [LeaveController::class, 'approve']);
     Route::patch('leave/requests/{id}/reject', [LeaveController::class, 'reject']);
     Route::patch('leave/requests/{id}/cancel', [LeaveController::class, 'cancel']);
+
+    // Job Opportunities & Recruitment
+    Route::get('jobs/stats', [RecruitmentController::class, 'stats']);
+    Route::get('jobs', [RecruitmentController::class, 'index']);
+    Route::post('jobs', [RecruitmentController::class, 'store']);
+    Route::get('jobs/{id}', [RecruitmentController::class, 'show']);
+    Route::patch('jobs/{id}', [RecruitmentController::class, 'update']);
+    Route::delete('jobs/{id}', [RecruitmentController::class, 'destroy']);
+
+    // Job Applications
+    Route::get('jobs/{id}/applications', [RecruitmentController::class, 'applications']);
+    Route::patch('jobs/{id}/applications/{applicationId}', [RecruitmentController::class, 'updateApplication']);
+    Route::delete('jobs/{id}/applications/{applicationId}', [RecruitmentController::class, 'deleteApplication']);
 });
