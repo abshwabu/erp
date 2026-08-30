@@ -6,7 +6,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import { User, Briefcase, Plus, Trash2, Heart, Building2, Award } from '@lucide/vue'
+import { User, Briefcase, Plus, Trash2, Heart } from '@lucide/vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'saved'])
@@ -264,35 +264,46 @@ const genders = [
           <UiInput v-model="form.employee_number" label="Employee ID" placeholder="Leave blank for auto-number" :error="errors.employee_number?.[0]" />
           <UiInput v-model="form.start_date" label="Start Date" type="date" :error="errors.start_date?.[0]" required />
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Department Select with + New Button -->
-          <div class="flex gap-2 items-end">
+          <!-- Department Select with inline Header + New link button -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Department</label>
+              <button
+                type="button"
+                @click="openQuickDeptModal"
+                class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1 hover:underline"
+              >
+                <Plus class="w-3.5 h-3.5" /> New Department
+              </button>
+            </div>
             <UiSelect
               v-model="form.department_id"
-              label="Department"
               :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
               :error="errors.department_id?.[0]"
               placeholder="Select Department"
-              class="flex-1"
             />
-            <UiButton variant="outline" type="button" size="md" @click="openQuickDeptModal" title="Create New Department">
-              <Plus class="w-3.5 h-3.5 mr-1" /> New
-            </UiButton>
           </div>
 
-          <!-- Position Select with + New Button -->
-          <div class="flex gap-2 items-end">
+          <!-- Position Select with inline Header + New link button -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Position</label>
+              <button
+                type="button"
+                @click="openQuickPositionModal"
+                class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1 hover:underline"
+              >
+                <Plus class="w-3.5 h-3.5" /> New Position
+              </button>
+            </div>
             <UiSelect
               v-model="form.position_id"
-              label="Position"
               :options="[{ label: 'Select Position', value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
               :error="errors.position_id?.[0]"
               placeholder="Select Position"
-              class="flex-1"
             />
-            <UiButton variant="outline" type="button" size="md" @click="openQuickPositionModal" title="Create New Position">
-              <Plus class="w-3.5 h-3.5 mr-1" /> New
-            </UiButton>
           </div>
         </div>
 
