@@ -27,6 +27,7 @@ import {
   CreditCard,
   Building2,
   Sparkles,
+  RefreshCw,
 } from '@lucide/vue'
 
 const queryClient = useQueryClient()
@@ -42,7 +43,7 @@ const runFilter = ref<'all' | 'processed' | 'draft'>('all')
 const form = ref({
   period_start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
   period_end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
-  auto_process: false,
+  auto_process: true,
 })
 
 // Queries
@@ -63,13 +64,25 @@ const { data: selectedRunData, isLoading: isLoadingSelectedRun } = useQuery({
   enabled: () => !!selectedRunId.value,
 })
 
-// Auto-select first run if none selected
+// Active run selection
 const activeRun = computed(() => {
   if (selectedRunData.value) return selectedRunData.value
   if (!selectedRunId.value && runs.value && runs.value.length > 0) {
     return runs.value[0]
   }
   return runs.value?.find((r) => r.id === selectedRunId.value) || null
+})
+
+// Detect primary currency from payslips or employees
+const activeCurrency = computed(() => {
+  const payslips = activeRun.value?.payslips || []
+  if (payslips.length > 0 && payslips[0]?.employee?.salary_currency) {
+    return payslips[0].employee.salary_currency
+  }
+  if (previewData.value?.currency) {
+    return previewData.value.currency
+  }
+  return 'USD'
 })
 
 const filteredRuns = computed(() => {
@@ -96,24 +109,24 @@ const stats = computed(() => {
   const processedRuns = list.filter((r) => r.status === 'processed')
 
   const totalProcessedNet = processedRuns.reduce(
-    (sum, r) => sum + (r.payslips_sum_net_cents || 0),
+    (sum, r) => sum + (Number(r.payslips_sum_net_cents) || 0),
     0
   )
 
   const latestRun = processedRuns[0]
-  const latestNet = latestRun ? (latestRun.payslips_sum_net_cents || 0) : 0
+  const latestNet = latestRun ? (Number(latestRun.payslips_sum_net_cents) || 0) : 0
 
   const draftCount = list.filter((r) => r.status === 'draft').length
 
   return [
     {
       label: 'Total Processed Payout',
-      value: `$${(totalProcessedNet / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatCurrency(totalProcessedNet, activeCurrency.value),
       icon: markRaw(DollarSign),
     },
     {
       label: 'Latest Run Net Pay',
-      value: latestRun ? `$${(latestNet / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+      value: latestRun ? formatCurrency(latestNet, activeCurrency.value) : '—',
       icon: markRaw(Banknote),
     },
     {
@@ -145,9 +158,9 @@ const createMutation = useMutation({
 
 const processMutation = useMutation({
   mutationFn: (id: string) => payrollApi.processRun(id),
-  onSuccess: (res) => {
+  onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['payroll'] })
-    toast.success('Payroll run processed successfully')
+    toast.success('Payroll recalculated with current employee salaries')
   },
   onError: (err: any) => {
     toast.error(err?.response?.data?.message || 'Failed to process payroll run')
@@ -161,19 +174,25 @@ const deleteMutation = useMutation({
     if (selectedRunId.value) {
       selectedRunId.value = null
     }
-    toast.success('Draft payroll run deleted')
+    toast.success('Payroll run deleted')
   },
   onError: (err: any) => {
     toast.error(err?.response?.data?.message || 'Failed to delete payroll run')
   },
 })
 
+const handleDeleteRun = (run: PayrollRun) => {
+  if (confirm(`Are you sure you want to delete the payroll run for ${run.period_start} → ${run.period_end}?`)) {
+    deleteMutation.mutate(run.id)
+  }
+}
+
 const openCreateModal = () => {
   const now = new Date()
   form.value = {
     period_start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
     period_end: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10),
-    auto_process: false,
+    auto_process: true,
   }
   isCreateModalOpen.value = true
 }
@@ -203,8 +222,9 @@ const printPayslip = () => {
   window.print()
 }
 
-const formatCurrency = (cents: number, currency: string = 'USD') => {
-  return `${currency} ${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatCurrency = (cents: number | string, currency: string = 'USD') => {
+  const val = (Number(cents) || 0) / 100
+  return `${currency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 </script>
 
@@ -243,7 +263,7 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
               <button
                 type="button"
                 @click="runFilter = 'all'"
-                class="px-2.5 py-1 rounded-md transition-colors"
+                class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
                 All
@@ -251,7 +271,7 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
               <button
                 type="button"
                 @click="runFilter = 'processed'"
-                class="px-2.5 py-1 rounded-md transition-colors"
+                class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'processed' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
                 Processed
@@ -259,7 +279,7 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
               <button
                 type="button"
                 @click="runFilter = 'draft'"
-                class="px-2.5 py-1 rounded-md transition-colors"
+                class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'draft' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
                 Draft
@@ -302,20 +322,26 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
                   {{ run.payslips_count || (run.payslips?.length ?? 0) }} Employees
                 </span>
                 <span class="font-mono font-bold text-slate-900 text-sm">
-                  {{ formatCurrency(run.payslips_sum_net_cents || 0) }}
+                  {{ formatCurrency(run.payslips_sum_net_cents || 0, activeCurrency) }}
                 </span>
               </div>
 
-              <div v-if="run.status === 'draft'" class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  @click.stop="deleteMutation.mutate(run.id)"
-                  class="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 hover:bg-red-50 rounded-md transition-colors"
+                  @click.stop="handleDeleteRun(run)"
+                  class="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                 >
-                  Delete Draft
+                  Delete
                 </button>
-                <UiButton size="sm" @click.stop="processMutation.mutate(run.id)" :loading="processMutation.isPending.value">
-                  Process Now
+                <UiButton
+                  size="sm"
+                  variant="outline"
+                  @click.stop="processMutation.mutate(run.id)"
+                  :loading="processMutation.isPending.value && selectedRunId === run.id"
+                >
+                  <RefreshCw class="w-3 h-3 mr-1" />
+                  {{ run.status === 'processed' ? 'Recalculate' : 'Process Now' }}
                 </UiButton>
               </div>
             </div>
@@ -350,9 +376,15 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
               </p>
             </div>
 
-            <div v-if="activeRun.status === 'draft'" class="flex items-center gap-2">
-              <UiButton size="sm" @click="processMutation.mutate(activeRun.id)" :loading="processMutation.isPending.value">
-                Process Payroll Run
+            <div class="flex items-center gap-2">
+              <UiButton
+                size="sm"
+                variant="outline"
+                @click="processMutation.mutate(activeRun.id)"
+                :loading="processMutation.isPending.value"
+              >
+                <RefreshCw class="w-3.5 h-3.5 mr-1.5" />
+                {{ activeRun.status === 'processed' ? 'Recalculate Salaries' : 'Process Payroll Run' }}
               </UiButton>
             </div>
           </div>
@@ -362,14 +394,14 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
             <div class="p-4 bg-emerald-50/70 border border-emerald-100 rounded-xl">
               <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Total Net Disbursed</span>
               <p class="text-xl font-black font-mono text-emerald-950 mt-1">
-                {{ formatCurrency(activeRun.payslips_sum_net_cents || 0) }}
+                {{ formatCurrency(activeRun.payslips_sum_net_cents || 0, activeCurrency) }}
               </p>
             </div>
 
             <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Total Gross Salary</span>
               <p class="text-xl font-black font-mono text-slate-900 mt-1">
-                {{ formatCurrency(activeRun.payslips_sum_gross_cents || 0) }}
+                {{ formatCurrency(activeRun.payslips_sum_gross_cents || 0, activeCurrency) }}
               </p>
             </div>
 
@@ -420,7 +452,7 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
                 <div class="flex items-center gap-4">
                   <div class="text-right">
                     <span class="font-mono font-bold text-slate-900 text-sm">
-                      {{ formatCurrency(slip.net_cents, slip.employee?.salary_currency || 'USD') }}
+                      {{ formatCurrency(slip.net_cents, slip.employee?.salary_currency || activeCurrency) }}
                     </span>
                     <p class="text-[10px] text-slate-400 capitalize">
                       {{ slip.employee?.payment_method?.replace('_', ' ') || 'Bank Transfer' }}
@@ -510,11 +542,15 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
           <div v-else-if="previewData" class="space-y-2">
             <div class="flex items-center justify-between text-xs text-slate-600">
               <span>Estimated Total Gross Salary:</span>
-              <span class="font-mono font-bold text-slate-900">{{ formatCurrency(previewData.total_gross_cents) }}</span>
+              <span class="font-mono font-bold text-slate-900">
+                {{ formatCurrency(previewData.total_gross_cents, previewData.currency) }}
+              </span>
             </div>
             <div class="flex items-center justify-between text-xs text-slate-600">
               <span>Estimated Net Disbursement:</span>
-              <span class="font-mono font-bold text-emerald-700">{{ formatCurrency(previewData.total_net_cents) }}</span>
+              <span class="font-mono font-bold text-emerald-700">
+                {{ formatCurrency(previewData.total_net_cents, previewData.currency) }}
+              </span>
             </div>
           </div>
         </div>
@@ -593,19 +629,19 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
                 <tr>
                   <td class="px-4 py-2.5 text-slate-800 font-medium">Base Salary</td>
                   <td class="px-4 py-2.5 text-right font-mono font-bold text-slate-900">
-                    {{ formatCurrency(selectedPayslip.gross_cents, selectedPayslip.employee?.salary_currency || 'USD') }}
+                    {{ formatCurrency(selectedPayslip.gross_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
                 </tr>
                 <tr>
                   <td class="px-4 py-2.5 text-slate-500">Statutory Deductions & Taxes</td>
                   <td class="px-4 py-2.5 text-right font-mono text-slate-500">
-                    {{ formatCurrency(selectedPayslip.deductions_cents, selectedPayslip.employee?.salary_currency || 'USD') }}
+                    {{ formatCurrency(selectedPayslip.deductions_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
                 </tr>
                 <tr class="bg-emerald-50/50 font-bold">
                   <td class="px-4 py-3 text-emerald-950 font-bold">Net Payout</td>
                   <td class="px-4 py-3 text-right font-mono font-black text-emerald-950 text-sm">
-                    {{ formatCurrency(selectedPayslip.net_cents, selectedPayslip.employee?.salary_currency || 'USD') }}
+                    {{ formatCurrency(selectedPayslip.net_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
                 </tr>
               </tbody>

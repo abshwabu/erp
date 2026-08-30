@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class PayrollRunController extends BaseController
 {
-    private const DEFAULT_GROSS_CENTS = 100000; // $1,000.00 default fallback
+    private const DEFAULT_GROSS_CENTS = 100000; // 1,000.00 default fallback
 
     public function index(): JsonResponse
     {
@@ -63,8 +63,12 @@ class PayrollRunController extends BaseController
         $totalNetCents = $previewData->sum('net_cents');
         $totalGrossCents = $previewData->sum('gross_cents');
 
+        // Dominant currency among employees
+        $primaryCurrency = $employees->first()?->salary_currency ?? 'USD';
+
         return $this->successResponse([
             'employee_count' => $employees->count(),
+            'currency' => $primaryCurrency,
             'total_gross_cents' => $totalGrossCents,
             'total_net_cents' => $totalNetCents,
             'employees' => $previewData,
@@ -110,32 +114,27 @@ class PayrollRunController extends BaseController
     {
         $run = PayrollRun::findOrFail($id);
 
-        if ($run->status === 'processed') {
-            return $this->errorResponse('Payroll run has already been processed.', 422);
-        }
-
         $run = DB::transaction(function () use ($run) {
             $employees = Employee::query()
                 ->with(['department', 'position'])
                 ->where('status', 'active')
                 ->get();
 
+            // Clear old payslips to cleanly recompute with latest employee salaries
+            $run->payslips()->delete();
+
             foreach ($employees as $employee) {
                 $gross = $this->resolveGrossCents($employee);
                 $deductions = 0;
                 $net = $gross - $deductions;
 
-                Payslip::updateOrCreate(
-                    [
-                        'payroll_run_id' => $run->id,
-                        'employee_id' => $employee->id,
-                    ],
-                    [
-                        'gross_cents' => $gross,
-                        'deductions_cents' => $deductions,
-                        'net_cents' => $net,
-                    ]
-                );
+                Payslip::create([
+                    'payroll_run_id' => $run->id,
+                    'employee_id' => $employee->id,
+                    'gross_cents' => $gross,
+                    'deductions_cents' => $deductions,
+                    'net_cents' => $net,
+                ]);
             }
 
             $run->update([
@@ -152,10 +151,6 @@ class PayrollRunController extends BaseController
     public function destroy(string $id): JsonResponse
     {
         $run = PayrollRun::findOrFail($id);
-
-        if ($run->status === 'processed') {
-            return $this->errorResponse('Cannot delete a processed payroll run.', 422);
-        }
 
         $run->payslips()->delete();
         $run->delete();
