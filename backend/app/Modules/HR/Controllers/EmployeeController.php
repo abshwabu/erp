@@ -214,6 +214,15 @@ class EmployeeController extends Controller
             'password' => 'required|string|min:8',
         ]);
 
+        $tenantId = null;
+        if (function_exists('tenant') && tenant('id')) {
+            $tenantId = tenant('id');
+        } elseif (auth('api')->user()) {
+            $tenantId = auth('api')->user()->tenant_id;
+        } elseif (auth()->user()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
         $user = null;
         if ($employee->user_id) {
             $user = \App\Modules\Core\Models\User::find($employee->user_id);
@@ -226,9 +235,10 @@ class EmployeeController extends Controller
         if (!$user) {
             // Create user login account for employee
             $user = \App\Modules\Core\Models\User::create([
+                'tenant_id' => $tenantId,
                 'name' => trim("{$employee->first_name} {$employee->last_name}"),
                 'email' => $employee->email,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'password' => $request->password,
                 'is_active' => true,
             ]);
 
@@ -236,7 +246,7 @@ class EmployeeController extends Controller
             $employee->save();
         } else {
             $user->update([
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'password' => $request->password,
             ]);
 
             if (!$employee->user_id) {
