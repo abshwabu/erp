@@ -18,13 +18,17 @@ class RecruitmentController extends Controller
 
     public function publicShow(string $idOrSlug): JsonResponse
     {
-        $job = JobPosting::with(['department', 'position'])
-            ->where(function ($q) use ($idOrSlug) {
-                $q->where('id', $idOrSlug)
-                  ->orWhere('slug', $idOrSlug);
-            })
-            ->where('status', '!=', 'draft')
-            ->firstOrFail();
+        $query = JobPosting::with(['department', 'position']);
+
+        if (Str::isUuid($idOrSlug)) {
+            $query->where(function ($q) use ($idOrSlug) {
+                $q->where('id', $idOrSlug)->orWhere('slug', $idOrSlug);
+            });
+        } else {
+            $query->where('slug', $idOrSlug);
+        }
+
+        $job = $query->where('status', '!=', 'draft')->firstOrFail();
 
         // Increment view count
         $job->increment('views_count');
@@ -39,12 +43,17 @@ class RecruitmentController extends Controller
 
     public function publicSubmit(Request $request, string $idOrSlug): JsonResponse
     {
-        $job = JobPosting::where(function ($q) use ($idOrSlug) {
-            $q->where('id', $idOrSlug)
-              ->orWhere('slug', $idOrSlug);
-        })
-        ->where('status', 'published')
-        ->firstOrFail();
+        $query = JobPosting::query();
+
+        if (Str::isUuid($idOrSlug)) {
+            $query->where(function ($q) use ($idOrSlug) {
+                $q->where('id', $idOrSlug)->orWhere('slug', $idOrSlug);
+            });
+        } else {
+            $query->where('slug', $idOrSlug);
+        }
+
+        $job = $query->where('status', 'published')->firstOrFail();
 
         $request->validate([
             'applicant_name' => ['required', 'string', 'max:255'],
