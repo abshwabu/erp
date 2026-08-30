@@ -43,11 +43,20 @@ export const hrApi = {
   deletePosition: (id: string) => apiClient.delete(`/hr/positions/${id}`),
   
   // Attendance
+  getMyAttendanceStatus: () => apiClient.get<{
+    is_linked: boolean
+    employee_id?: string
+    employee_name?: string
+    status: 'not_clocked_in' | 'clocked_in' | 'clocked_out'
+    clock_in_time?: string
+    clock_out_time?: string
+    latest_action_at?: string
+  }>('/hr/attendance/my-status'),
   getAttendance: (params?: any) => apiClient.get<AttendanceLog[]>('/hr/attendance', { params }),
   getAttendanceSummary: (params?: any) => apiClient.get<AttendanceSummary>('/hr/attendance/summary', { params }),
   getEmployeeAttendance: (id: string, params?: any) => apiClient.get<AttendanceLog[]>(`/hr/employees/${id}/attendance`, { params }),
-  clockIn: (data: { employee_id: string; method: string; location?: any }) => apiClient.post('/hr/attendance/clock-in', data),
-  clockOut: (data: { employee_id: string; method: string; location?: any }) => apiClient.post('/hr/attendance/clock-out', data),
+  clockIn: (data?: { employee_id?: string; method?: string; location?: any; notes?: string }) => apiClient.post('/hr/attendance/clock-in', data || {}),
+  clockOut: (data?: { employee_id?: string; method?: string; location?: any; notes?: string }) => apiClient.post('/hr/attendance/clock-out', data || {}),
   
   // Leave
   getLeaveTypes: () => apiClient.get<LeaveType[]>('/hr/leave/types'),

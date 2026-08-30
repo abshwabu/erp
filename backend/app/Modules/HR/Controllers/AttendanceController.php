@@ -12,16 +12,82 @@ use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
+    public function myStatus(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['is_linked' => false, 'status' => 'not_clocked_in'], 200);
+        }
+
+        $employee = Employee::where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+            ->first();
+
+        if (!$employee) {
+            return response()->json([
+                'is_linked' => false,
+                'employee_id' => null,
+                'status' => 'not_clocked_in',
+            ], 200);
+        }
+
+        $today = Carbon::today()->toDateString();
+        $logs = AttendanceLog::where('employee_id', $employee->id)
+            ->whereDate('logged_at', $today)
+            ->orderBy('logged_at', 'asc')
+            ->get();
+
+        $latestLog = $logs->last();
+        $clockIn = $logs->where('clock_type', 'in')->first();
+        $clockOut = $logs->where('clock_type', 'out')->last();
+
+        $status = 'not_clocked_in';
+        if ($latestLog) {
+            if ($latestLog->clock_type === 'in') {
+                $status = 'clocked_in';
+            } elseif ($latestLog->clock_type === 'out') {
+                $status = 'clocked_out';
+            }
+        }
+
+        return response()->json([
+            'is_linked' => true,
+            'employee_id' => $employee->id,
+            'employee_name' => "{$employee->first_name} {$employee->last_name}",
+            'status' => $status,
+            'clock_in_time' => $clockIn?->logged_at ? Carbon::parse($clockIn->logged_at)->toIso8601String() : null,
+            'clock_out_time' => $clockOut?->logged_at ? Carbon::parse($clockOut->logged_at)->toIso8601String() : null,
+            'latest_action_at' => $latestLog?->logged_at ? Carbon::parse($latestLog->logged_at)->toIso8601String() : null,
+        ]);
+    }
+
     public function clockIn(Request $request)
     {
         $employeeId = $request->input('employee_id');
         if (! $employeeId) {
-            $employee = Employee::where('email', $request->user()->email)->first();
+            $user = $request->user();
+            $employee = Employee::where('user_id', $user?->id)
+                ->orWhere('email', $user?->email)
+                ->first();
+
+            if (!$employee && $user) {
+                $names = explode(' ', $user->name, 2);
+                $employee = Employee::create([
+                    'user_id' => $user->id,
+                    'first_name' => $names[0] ?? 'User',
+                    'last_name' => $names[1] ?? '',
+                    'email' => $user->email,
+                    'employee_number' => 'EMP-' . rand(1000, 9999),
+                    'employment_type' => 'full-time',
+                    'status' => 'active',
+                    'start_date' => now()->toDateString(),
+                ]);
+            }
             $employeeId = $employee?->id;
         }
 
         if (! $employeeId) {
-            return response()->json(['message' => 'Employee ID is required.'], 422);
+            return response()->json(['message' => 'Employee record could not be resolved.'], 422);
         }
 
         $log = AttendanceLog::create([
@@ -41,12 +107,16 @@ class AttendanceController extends Controller
     {
         $employeeId = $request->input('employee_id');
         if (! $employeeId) {
-            $employee = Employee::where('email', $request->user()->email)->first();
+            $user = $request->user();
+            $employee = Employee::where('user_id', $user?->id)
+                ->orWhere('email', $user?->email)
+                ->first();
+
             $employeeId = $employee?->id;
         }
 
         if (! $employeeId) {
-            return response()->json(['message' => 'Employee ID is required.'], 422);
+            return response()->json(['message' => 'Employee record could not be resolved.'], 422);
         }
 
         $log = AttendanceLog::create([

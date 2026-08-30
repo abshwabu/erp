@@ -6,14 +6,15 @@ import { useRouter } from 'vue-router'
 import { 
   Bell, 
   Search, 
-  Menu,
-  User,
-  Settings,
-  LogOut,
-  ChevronRight
+  Menu, 
+  User, 
+  Settings, 
+  LogOut, 
+  ChevronRight 
 } from '@lucide/vue'
 import { markRaw } from 'vue'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
+import NavClockWidget from './NavClockWidget.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
@@ -54,7 +55,7 @@ const userMenuItems = [
 
     <div class="flex items-center space-x-2 lg:space-x-4">
       <!-- Search (Desktop) -->
-      <div class="hidden md:flex relative">
+      <div class="hidden xl:flex relative">
         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search :size="18" class="text-slate-400" />
         </span>
@@ -65,10 +66,13 @@ const userMenuItems = [
         />
       </div>
 
+      <!-- Quick Clock In / Out Widget for all users -->
+      <NavClockWidget />
+
       <!-- Notifications -->
       <UiDropdown align="right">
         <template #trigger>
-          <button class="p-2 hover:bg-slate-100 rounded-full relative transition-colors">
+          <button class="p-2 hover:bg-slate-100 rounded-full relative transition-colors" title="Notifications">
             <Bell :size="20" class="text-slate-600" />
             <span 
               v-if="notificationStore.notifications.length > 0"

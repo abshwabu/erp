@@ -43,6 +43,7 @@ Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     Route::delete('positions/{id}', [PositionController::class, 'destroy']);
 
     // Attendance
+    Route::get('attendance/my-status', [AttendanceController::class, 'myStatus']);
     Route::post('attendance/clock-in', [AttendanceController::class, 'clockIn']);
     Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut']);
     Route::get('attendance', [AttendanceController::class, 'index']);
