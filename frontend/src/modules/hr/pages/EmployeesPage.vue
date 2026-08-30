@@ -9,7 +9,7 @@ import UiTable from '@/components/ui/UiTable.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiStat from '@/components/ui/UiStat.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import EmployeeDrawer from '../components/EmployeeDrawer.vue'
+import EmployeeModal from '../components/EmployeeModal.vue'
 import { Plus, Search, Users, UserPlus, Calendar, Briefcase, Filter, Trash2, Eye } from '@lucide/vue'
 import type { Employee, Department } from '@/types/hr'
 
@@ -33,7 +33,7 @@ const deleteMutation = useMutation({
   },
 })
 
-const isDrawerOpen = ref(false)
+const isModalOpen = ref(false)
 const searchQuery = ref('')
 const selectedDepartment = ref('')
 const selectedStatus = ref('')
@@ -132,7 +132,7 @@ const typeOptions = [
         <h1 class="text-2xl font-bold text-slate-900">Employees</h1>
         <p class="text-slate-500">Manage your workforce, profiles, and employment details.</p>
       </div>
-      <UiButton @click="isDrawerOpen = true">
+      <UiButton @click="isModalOpen = true">
         <Plus class="h-4 w-4 mr-2" /> New Employee
       </UiButton>
     </div>
@@ -238,8 +238,8 @@ const typeOptions = [
       </template>
     </UiTable>
 
-    <EmployeeDrawer
-      v-model="isDrawerOpen"
+    <EmployeeModal
+      v-model="isModalOpen"
       @saved="queryClient.invalidateQueries({ queryKey: ['hr', 'employees'] })"
     />
   </div>
