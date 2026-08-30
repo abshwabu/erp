@@ -48,6 +48,14 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
+        $data = $request->all();
+        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] === '') {
+                $data[$key] = null;
+            }
+        }
+        $request->merge($data);
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -114,9 +122,18 @@ class EmployeeController extends Controller
     {
         $employee = Employee::findOrFail($id);
 
+        $data = $request->all();
+        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender', 'preferred_name'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] === '') {
+                $data[$key] = null;
+            }
+        }
+        $request->merge($data);
+
         $validated = $request->validate([
             'first_name' => 'sometimes|required|string|max:255',
             'last_name' => 'sometimes|required|string|max:255',
+            'preferred_name' => 'nullable|string|max:255',
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('hr_employees', 'email')->ignore($employee->id)],
             'employee_number' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('hr_employees', 'employee_number')->ignore($employee->id)],
             'phone' => 'nullable|string|max:50',
@@ -124,7 +141,7 @@ class EmployeeController extends Controller
             'gender' => 'nullable|string|max:50',
             'department_id' => 'nullable|uuid|exists:hr_departments,id',
             'position_id' => 'nullable|uuid|exists:hr_positions,id',
-            'manager_id' => 'nullable|uuid|exists:hr_employees,id',
+            'manager_id' => ['nullable', 'uuid', 'exists:hr_employees,id', Rule::notIn([$employee->id])],
             'employment_type' => 'sometimes|required|string|max:50',
             'status' => 'sometimes|required|string|max:50',
             'start_date' => 'sometimes|required|date',
@@ -134,7 +151,7 @@ class EmployeeController extends Controller
 
         $employee->update($validated);
 
-        return response()->json($employee->load(['department', 'position', 'manager']));
+        return response()->json($employee->fresh(['department', 'position', 'manager']));
     }
 
     public function destroy($id)
