@@ -19,6 +19,7 @@ Route::prefix('api/hr')->middleware('auth:api,sanctum')->group(function () {
     Route::delete('employees/{id}', [EmployeeController::class, 'destroy']);
     Route::get('employees/{id}/leave-balances', [EmployeeController::class, 'leaveBalances']);
     Route::get('employees/{id}/attendance', [EmployeeController::class, 'attendance']);
+    Route::post('employees/{id}/reset-password', [EmployeeController::class, 'resetPassword']);
 
     // Employee Documents
     Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index']);

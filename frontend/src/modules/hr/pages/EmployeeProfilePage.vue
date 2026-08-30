@@ -41,6 +41,12 @@ import {
   ShieldCheck,
   GraduationCap,
   CreditCard,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Copy,
 } from '@lucide/vue'
 
 const route = useRoute()
@@ -103,6 +109,70 @@ const isEditing = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 const selectedDocFilter = ref<string>('all')
+
+// Password Reset Modal State
+const isResetPasswordModalOpen = ref(false)
+const resetPasswordForm = ref({
+  password: '',
+  password_confirmation: '',
+  showPassword: false,
+})
+const resetPasswordLoading = ref(false)
+const resetPasswordSuccess = ref('')
+const resetPasswordError = ref('')
+
+const openResetPasswordModal = () => {
+  resetPasswordError.value = ''
+  resetPasswordSuccess.value = ''
+  resetPasswordForm.value = {
+    password: '',
+    password_confirmation: '',
+    showPassword: false,
+  }
+  isResetPasswordModalOpen.value = true
+}
+
+const generateRandomPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*'
+  let result = ''
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  resetPasswordForm.value.password = result
+  resetPasswordForm.value.password_confirmation = result
+  resetPasswordForm.value.showPassword = true
+}
+
+const handleResetPassword = async () => {
+  if (!resetPasswordForm.value.password) {
+    resetPasswordError.value = 'Please enter a password.'
+    return
+  }
+  if (resetPasswordForm.value.password.length < 8) {
+    resetPasswordError.value = 'Password must be at least 8 characters long.'
+    return
+  }
+  if (resetPasswordForm.value.password !== resetPasswordForm.value.password_confirmation) {
+    resetPasswordError.value = 'Passwords do not match.'
+    return
+  }
+
+  resetPasswordLoading.value = true
+  resetPasswordError.value = ''
+  resetPasswordSuccess.value = ''
+
+  try {
+    const res: any = await hrApi.resetEmployeePassword(employeeId, {
+      password: resetPasswordForm.value.password,
+    })
+    resetPasswordSuccess.value = res.data?.message || 'Password has been reset successfully.'
+    queryClient.invalidateQueries({ queryKey: ['hr', 'employees', employeeId] })
+  } catch (err: any) {
+    resetPasswordError.value = err?.response?.data?.message || err?.message || 'Failed to reset password.'
+  } finally {
+    resetPasswordLoading.value = false
+  }
+}
 
 const editForm = ref({
   first_name: '',
@@ -438,7 +508,10 @@ const genderOptions = [
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center flex-wrap gap-2">
+        <UiButton variant="outline" size="sm" type="button" @click="openResetPasswordModal" title="Reset Login Password">
+          <KeyRound class="w-3.5 h-3.5 mr-1.5 text-amber-600" /> Reset Password
+        </UiButton>
         <UiButton variant="outline" size="sm" type="button" @click="isUploadDocModalOpen = true">
           <Plus class="w-3.5 h-3.5 mr-1.5" /> Upload Document
         </UiButton>
@@ -920,6 +993,83 @@ const genderOptions = [
         <p v-else class="text-xs text-slate-400 italic py-4 text-center">No attendance logs found for this employee.</p>
       </div>
     </div>
+
+    <!-- Reset Employee Password Modal -->
+    <UiModal v-model="isResetPasswordModalOpen" title="Reset Employee Password" size="md">
+      <div class="space-y-4">
+        <div>
+          <p class="text-xs text-slate-500">
+            Set or update system login credentials for
+            <strong class="text-slate-800">{{ employee.first_name }} {{ employee.last_name }}</strong>
+            (<span class="font-mono text-slate-700">{{ employee.email }}</span>).
+          </p>
+        </div>
+
+        <div v-if="resetPasswordSuccess" class="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center justify-between">
+          <span>{{ resetPasswordSuccess }}</span>
+          <button type="button" @click="resetPasswordSuccess = ''" class="text-emerald-500 font-bold ml-2">✕</button>
+        </div>
+
+        <div v-if="resetPasswordError" class="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-center justify-between">
+          <span>{{ resetPasswordError }}</span>
+          <button type="button" @click="resetPasswordError = ''" class="text-red-500 font-bold ml-2">✕</button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">New Password</label>
+              <button
+                type="button"
+                @click="generateRandomPassword"
+                class="text-xs text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-1 hover:underline"
+              >
+                <Sparkles class="w-3.5 h-3.5" /> Generate Random
+              </button>
+            </div>
+            <div class="relative flex items-center">
+              <input
+                v-model="resetPasswordForm.password"
+                :type="resetPasswordForm.showPassword ? 'text' : 'password'"
+                placeholder="Min. 8 characters"
+                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+              />
+              <button
+                type="button"
+                @click="resetPasswordForm.showPassword = !resetPasswordForm.showPassword"
+                class="absolute right-3 text-slate-400 hover:text-slate-600 p-1"
+                tabindex="-1"
+              >
+                <EyeOff v-if="resetPasswordForm.showPassword" class="w-4 h-4" />
+                <Eye v-else class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Confirm Password</label>
+            <input
+              v-model="resetPasswordForm.password_confirmation"
+              :type="resetPasswordForm.showPassword ? 'text' : 'password'"
+              placeholder="Confirm new password"
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <UiButton variant="outline" type="button" @click="isResetPasswordModalOpen = false">Cancel</UiButton>
+          <UiButton
+            type="button"
+            :loading="resetPasswordLoading"
+            :disabled="!resetPasswordForm.password"
+            @click="handleResetPassword"
+          >
+            Update Password
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
 
     <!-- Leave Request Modal -->
     <LeaveRequestModal

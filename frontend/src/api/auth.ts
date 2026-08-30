@@ -60,4 +60,13 @@ export const authApi = {
     const response = await apiClient.post('/auth/reset-password', payload)
     return response.data
   },
+
+  async changePassword(payload: {
+    current_password: string
+    password: string
+    password_confirmation: string
+  }): Promise<{ message: string }> {
+    const response = await apiClient.post('/auth/change-password', payload)
+    return response.data
+  },
 }

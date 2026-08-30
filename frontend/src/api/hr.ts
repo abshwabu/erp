@@ -18,6 +18,7 @@ export const hrApi = {
   createEmployee: (data: Partial<Employee>) => apiClient.post<Employee>('/hr/employees', data),
   updateEmployee: (id: string, data: Partial<Employee>) => apiClient.patch<Employee>(`/hr/employees/${id}`, data),
   deleteEmployee: (id: string) => apiClient.delete(`/hr/employees/${id}`),
+  resetEmployeePassword: (id: string, data: { password: string }) => apiClient.post(`/hr/employees/${id}/reset-password`, data),
   
   // Employee Documents
   getEmployeeDocuments: (employeeId: string, params?: any) => 

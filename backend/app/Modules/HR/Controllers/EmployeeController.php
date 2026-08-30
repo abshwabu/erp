@@ -206,6 +206,52 @@ class EmployeeController extends Controller
         return response()->json($attendance);
     }
 
+    public function resetPassword(Request $request, string $id)
+    {
+        $employee = Employee::findOrFail($id);
+
+        $request->validate([
+            'password' => 'required|string|min:8',
+        ]);
+
+        $user = null;
+        if ($employee->user_id) {
+            $user = \App\Modules\Core\Models\User::find($employee->user_id);
+        }
+
+        if (!$user) {
+            $user = \App\Modules\Core\Models\User::where('email', $employee->email)->first();
+        }
+
+        if (!$user) {
+            // Create user login account for employee
+            $user = \App\Modules\Core\Models\User::create([
+                'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                'email' => $employee->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'is_active' => true,
+            ]);
+
+            $employee->user_id = $user->id;
+            $employee->save();
+        } else {
+            $user->update([
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+            ]);
+
+            if (!$employee->user_id) {
+                $employee->user_id = $user->id;
+                $employee->save();
+            }
+        }
+
+        return response()->json([
+            'message' => "Password for {$employee->first_name} {$employee->last_name} ({$employee->email}) has been successfully updated.",
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+    }
+
     private function generateEmployeeNumber(): string
     {
         $latest = Employee::withTrashed()

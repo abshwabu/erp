@@ -16,6 +16,7 @@ Route::prefix('api/auth')->group(function () {
     Route::get('me', [AuthController::class, 'me'])->middleware('auth:api,sanctum');
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api,sanctum');
 
     Route::prefix('mfa')->group(function () {
         Route::post('enable', [AuthController::class, 'enableMfa'])->middleware('auth:api,sanctum');
