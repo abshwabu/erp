@@ -6,32 +6,33 @@ import UiDrawer from '@/components/ui/UiDrawer.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import { User, Briefcase, MapPin, Calendar, Plus, Trash2, Heart } from '@lucide/vue'
+import { User, Briefcase, Calendar, Plus, Trash2, Heart } from '@lucide/vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'saved'])
 
 const { data: departments } = useQuery({
   queryKey: ['hr', 'departments'],
-  queryFn: () => hrApi.getDepartments().then(res => res.data)
+  queryFn: () => hrApi.getDepartments().then((res) => res.data),
 })
 
 const { data: positions } = useQuery({
   queryKey: ['hr', 'positions'],
-  queryFn: () => hrApi.getPositions().then(res => res.data)
+  queryFn: () => hrApi.getPositions().then((res) => res.data),
 })
 
 const { data: employees } = useQuery({
   queryKey: ['hr', 'employees'],
-  queryFn: () => hrApi.getEmployees().then(res => res.data)
+  queryFn: () => hrApi.getEmployees().then((res) => res.data),
 })
 
-const managerOptions = computed(() =>
-  (Array.isArray(employees.value) ? employees.value : (employees.value as any)?.data || []).map((e: any) => ({
+const managerOptions = computed(() => [
+  { label: 'None (Top Level)', value: '' },
+  ...(Array.isArray(employees.value) ? employees.value : (employees.value as any)?.data || []).map((e: any) => ({
     label: `${e.first_name} ${e.last_name}`,
     value: e.id,
-  }))
-)
+  })),
+])
 
 const form = ref({
   first_name: '',
@@ -47,13 +48,12 @@ const form = ref({
   start_date: new Date().toISOString().split('T')[0],
   gender: '',
   date_of_birth: '',
-  emergency_contacts: [
-    { name: '', relationship: '', phone: '' }
-  ]
+  emergency_contacts: [{ name: '', relationship: '', phone: '' }],
 })
 
 const loading = ref(false)
 const errors = ref<Record<string, string[]>>({})
+const generalError = ref('')
 
 const addContact = () => {
   form.value.emergency_contacts.push({ name: '', relationship: '', phone: '' })
@@ -66,19 +66,30 @@ const removeContact = (index: number) => {
 const save = async () => {
   loading.value = true
   errors.value = {}
-  
-  // Debugging
-  console.log('Form data being submitted:', form.value)
-  
+  generalError.value = ''
+
+  const payload: any = {
+    ...form.value,
+    department_id: form.value.department_id || null,
+    position_id: form.value.position_id || null,
+    manager_id: form.value.manager_id || null,
+    date_of_birth: form.value.date_of_birth || null,
+    phone: form.value.phone || null,
+    gender: form.value.gender || null,
+    employee_number: form.value.employee_number || null,
+    emergency_contacts: form.value.emergency_contacts.filter((c) => c.name || c.phone),
+  }
+
   try {
-    await hrApi.createEmployee(form.value as any)
+    await hrApi.createEmployee(payload)
     emit('saved')
     emit('update:modelValue', false)
     resetForm()
   } catch (e: any) {
-    console.error('API Error:', e.response?.data)
     if (e.response?.data?.errors) {
       errors.value = e.response.data.errors
+    } else {
+      generalError.value = e.response?.data?.message || e.message || 'Failed to create employee'
     }
   } finally {
     loading.value = false
@@ -100,8 +111,10 @@ const resetForm = () => {
     start_date: new Date().toISOString().split('T')[0],
     gender: '',
     date_of_birth: '',
-    emergency_contacts: [{ name: '', relationship: '', phone: '' }]
+    emergency_contacts: [{ name: '', relationship: '', phone: '' }],
   }
+  errors.value = {}
+  generalError.value = ''
 }
 
 const employmentTypes = [
@@ -113,6 +126,7 @@ const employmentTypes = [
 ]
 
 const genders = [
+  { label: 'Select Gender', value: '' },
   { label: 'Male', value: 'male' },
   { label: 'Female', value: 'female' },
   { label: 'Other', value: 'other' },
@@ -120,13 +134,17 @@ const genders = [
 </script>
 
 <template>
-  <UiDrawer 
-    :model-value="modelValue" 
-    @update:model-value="emit('update:modelValue', $event)" 
+  <UiDrawer
+    :model-value="modelValue"
+    @update:model-value="emit('update:modelValue', $event)"
     title="Add New Employee"
     size="lg"
   >
     <div class="space-y-8 pb-20">
+      <div v-if="generalError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+        {{ generalError }}
+      </div>
+
       <!-- Section: Personal Info -->
       <section class="space-y-4">
         <div class="flex items-center gap-2 text-slate-900 font-bold border-b border-slate-100 pb-2">
@@ -139,7 +157,7 @@ const genders = [
         </div>
         <div class="grid grid-cols-2 gap-4">
           <UiInput v-model="form.email" label="Email" type="email" placeholder="john.doe@company.com" :error="errors.email?.[0]" />
-          <UiInput v-model="form.phone" label="Phone" type="tel" placeholder="+1..." pattern="[0-9+\s\-]+" title="Please enter a valid phone number" :error="errors.phone?.[0]" />
+          <UiInput v-model="form.phone" label="Phone" type="tel" placeholder="+1 555 0100" :error="errors.phone?.[0]" />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <UiSelect v-model="form.gender" label="Gender" :options="genders" />
@@ -154,30 +172,30 @@ const genders = [
           <span>Work Details</span>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <UiInput v-model="form.employee_number" label="Employee ID" placeholder="EMP-001" :error="errors.employee_number?.[0]" />
+          <UiInput v-model="form.employee_number" label="Employee ID (Auto if blank)" placeholder="EMP-0001" :error="errors.employee_number?.[0]" />
           <UiInput v-model="form.start_date" label="Start Date" type="date" :error="errors.start_date?.[0]" />
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <UiSelect 
-            v-model="form.department_id" 
-            label="Department" 
-            :options="departments?.map(d => ({ label: d.name, value: d.id })) || []" 
+          <UiSelect
+            v-model="form.department_id"
+            label="Department"
+            :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
             :error="errors.department_id?.[0]"
           />
-          <UiSelect 
-            v-model="form.position_id" 
-            label="Position" 
-            :options="positions?.map(p => ({ label: p.title, value: p.id })) || []" 
+          <UiSelect
+            v-model="form.position_id"
+            label="Position"
+            :options="[{ label: 'Select Position', value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
             :error="errors.position_id?.[0]"
           />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <UiSelect v-model="form.employment_type" label="Employment Type" :options="employmentTypes" />
-          <UiSelect 
-            v-model="form.manager_id" 
-            label="Direct Manager" 
-            :options="managerOptions" 
-            placeholder="Search manager..."
+          <UiSelect
+            v-model="form.manager_id"
+            label="Direct Manager"
+            :options="managerOptions"
+            placeholder="Select manager"
           />
         </div>
       </section>
@@ -193,20 +211,21 @@ const genders = [
             <Plus class="h-4 w-4 mr-1" /> Add
           </UiButton>
         </div>
-        
-        <div v-for="(contact, index) in form.emergency_contacts" :key="index" class="p-4 bg-slate-50 rounded-xl border border-slate-200 relative group">
-          <button 
+
+        <div v-for="(contact, index) in form.emergency_contacts" :key="index" class="p-4 bg-slate-50 rounded-xl border border-slate-200 relative group space-y-3">
+          <button
             v-if="form.emergency_contacts.length > 1"
+            type="button"
             @click="removeContact(index)"
             class="absolute -top-2 -right-2 p-1.5 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <Trash2 class="h-3.5 w-3.5" />
           </button>
-          
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <UiInput v-model="contact.name" label="Name" placeholder="Full name" size="sm" />
             <UiInput v-model="contact.relationship" label="Relationship" placeholder="e.g. Spouse" size="sm" />
-            <UiInput v-model="contact.phone" label="Phone" type="tel" placeholder="+1..." pattern="[0-9+\s\-]+" title="Please enter a valid phone number" size="sm" />
+            <UiInput v-model="contact.phone" label="Phone" type="tel" placeholder="+1..." size="sm" />
           </div>
         </div>
       </section>
@@ -215,7 +234,9 @@ const genders = [
     <template #footer>
       <div class="flex justify-end gap-3 w-full bg-white p-4 border-t border-slate-100">
         <UiButton variant="outline" @click="emit('update:modelValue', false)">Cancel</UiButton>
-        <UiButton @click="save" :loading="loading">Create Employee</UiButton>
+        <UiButton @click="save" :loading="loading" :disabled="!form.first_name || !form.last_name || !form.email">
+          Create Employee
+        </UiButton>
       </div>
     </template>
   </UiDrawer>

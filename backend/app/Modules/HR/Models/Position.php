@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\HR\Models;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -29,5 +28,10 @@ class Position extends Model
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(Employee::class, 'position_id');
     }
 }

@@ -20,12 +20,41 @@ class LeaveController extends Controller
 
     public function types()
     {
-        return response()->json(LeaveType::all());
+        $types = LeaveType::all();
+        if ($types->isEmpty()) {
+            $defaultTypes = [
+                ['name' => 'Annual Leave', 'code' => 'ANNUAL', 'is_paid' => true, 'max_days_per_year' => 20, 'carry_over_days' => 5, 'requires_approval' => true, 'is_active' => true],
+                ['name' => 'Sick Leave', 'code' => 'SICK', 'is_paid' => true, 'max_days_per_year' => 10, 'carry_over_days' => 0, 'requires_approval' => true, 'is_active' => true],
+                ['name' => 'Casual / Personal Leave', 'code' => 'CASUAL', 'is_paid' => true, 'max_days_per_year' => 5, 'carry_over_days' => 0, 'requires_approval' => true, 'is_active' => true],
+                ['name' => 'Maternity / Parental Leave', 'code' => 'PARENTAL', 'is_paid' => true, 'max_days_per_year' => 90, 'carry_over_days' => 0, 'requires_approval' => true, 'is_active' => true],
+                ['name' => 'Unpaid Leave', 'code' => 'UNPAID', 'is_paid' => false, 'max_days_per_year' => 30, 'carry_over_days' => 0, 'requires_approval' => true, 'is_active' => true],
+            ];
+            foreach ($defaultTypes as $dt) {
+                LeaveType::create($dt);
+            }
+            $types = LeaveType::all();
+        }
+
+        return response()->json($types);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(LeaveRequest::with(['employee', 'leaveType', 'approver'])->orderBy('created_at', 'desc')->get());
+        $query = LeaveRequest::with(['employee.department', 'leaveType', 'approver']);
+
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->input('employee_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('department_id')) {
+            $query->whereHas('employee', fn ($q) => $q->where('department_id', $request->input('department_id')));
+        }
+
+        return response()->json($query->orderBy('created_at', 'desc')->get());
     }
 
     public function store(Request $request)
@@ -58,7 +87,7 @@ class LeaveController extends Controller
             'requested_at' => now(),
         ]);
 
-        return response()->json($leaveRequest, 201);
+        return response()->json($leaveRequest->load(['employee.department', 'leaveType']), 201);
     }
 
     public function approve(Request $request, $id)
@@ -81,7 +110,7 @@ class LeaveController extends Controller
             $entitlement->save();
         }
 
-        return response()->json($leaveRequest);
+        return response()->json($leaveRequest->load(['employee.department', 'leaveType']));
     }
 
     public function reject(Request $request, $id)
@@ -92,13 +121,15 @@ class LeaveController extends Controller
             'approver_notes' => $request->input('notes'),
             'decided_at' => now(),
         ]);
-        return response()->json($leaveRequest);
+
+        return response()->json($leaveRequest->load(['employee.department', 'leaveType']));
     }
 
     public function cancel($id)
     {
         $leaveRequest = LeaveRequest::findOrFail($id);
         $leaveRequest->update(['status' => 'cancelled']);
-        return response()->json($leaveRequest);
+
+        return response()->json($leaveRequest->load(['employee.department', 'leaveType']));
     }
 }
