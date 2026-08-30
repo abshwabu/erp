@@ -800,15 +800,22 @@ const cents = (value: any) => {
       <div class="space-y-5">
         <!-- Customer & Date Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="flex gap-2 items-end">
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Customer <span class="text-red-500">*</span></label>
+              <button
+                type="button"
+                @click="openCustomerModal"
+                class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1 hover:underline"
+              >
+                <Plus class="w-3.5 h-3.5" /> New Customer
+              </button>
+            </div>
             <UiSelect
               v-model="invoiceForm.customer_id"
-              label="Customer"
               :options="customerOptions"
               placeholder="Select customer"
-              class="flex-1"
             />
-            <UiButton variant="outline" type="button" @click="openCustomerModal">New</UiButton>
           </div>
           <UiSelect
             v-model="invoiceForm.status"
