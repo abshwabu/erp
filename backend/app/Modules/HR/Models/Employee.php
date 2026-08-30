@@ -31,6 +31,13 @@ class Employee extends Model
         'gender',
         'employment_type',
         'status',
+        'base_salary',
+        'salary_currency',
+        'salary_type',
+        'payment_method',
+        'bank_name',
+        'bank_account_number',
+        'bank_routing_number',
         'start_date',
         'probation_end_date',
         'contract_end_date',
@@ -40,6 +47,7 @@ class Employee extends Model
     ];
 
     protected $casts = [
+        'base_salary' => 'decimal:2',
         'emergency_contacts' => 'array',
         'custom_fields' => 'array',
     ];

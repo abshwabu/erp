@@ -6,7 +6,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
-import { User, Briefcase, Plus, Trash2, Heart } from '@lucide/vue'
+import { User, Briefcase, Plus, Trash2, Heart, DollarSign, CreditCard } from '@lucide/vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'saved'])
@@ -52,6 +52,13 @@ const form = ref({
   start_date: new Date().toISOString().split('T')[0],
   gender: '',
   date_of_birth: '',
+  base_salary: '',
+  salary_currency: 'USD',
+  salary_type: 'monthly',
+  payment_method: 'bank_transfer',
+  bank_name: '',
+  bank_account_number: '',
+  bank_routing_number: '',
   emergency_contacts: [{ name: '', relationship: '', phone: '' }],
 })
 
@@ -144,45 +151,49 @@ const handleSaveQuickPosition = () => {
   })
 }
 
+const employmentTypes = [
+  { label: 'Full-time', value: 'full-time' },
+  { label: 'Part-time', value: 'part-time' },
+  { label: 'Contract', value: 'contract' },
+  { label: 'Intern', value: 'intern' },
+  { label: 'Probationary', value: 'probationary' },
+]
+
+const genders = [
+  { label: 'Select Gender', value: '' },
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other', value: 'other' },
+]
+
+const salaryTypes = [
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Hourly', value: 'hourly' },
+  { label: 'Yearly', value: 'yearly' },
+  { label: 'Weekly', value: 'weekly' },
+]
+
+const currencyOptions = [
+  { label: 'USD ($)', value: 'USD' },
+  { label: 'EUR (€)', value: 'EUR' },
+  { label: 'GBP (£)', value: 'GBP' },
+  { label: 'ETB (Br)', value: 'ETB' },
+  { label: 'CAD ($)', value: 'CAD' },
+  { label: 'AUD ($)', value: 'AUD' },
+]
+
+const paymentMethods = [
+  { label: 'Direct Bank Transfer', value: 'bank_transfer' },
+  { label: 'Cash', value: 'cash' },
+  { label: 'Cheque', value: 'cheque' },
+]
+
 const addContact = () => {
   form.value.emergency_contacts.push({ name: '', relationship: '', phone: '' })
 }
 
 const removeContact = (index: number) => {
   form.value.emergency_contacts.splice(index, 1)
-}
-
-const save = async () => {
-  loading.value = true
-  errors.value = {}
-  generalError.value = ''
-
-  const payload: any = {
-    ...form.value,
-    department_id: form.value.department_id || null,
-    position_id: form.value.position_id || null,
-    manager_id: form.value.manager_id || null,
-    date_of_birth: form.value.date_of_birth || null,
-    phone: form.value.phone || null,
-    gender: form.value.gender || null,
-    employee_number: form.value.employee_number || null,
-    emergency_contacts: form.value.emergency_contacts.filter((c) => c.name || c.phone),
-  }
-
-  try {
-    await hrApi.createEmployee(payload)
-    emit('saved')
-    emit('update:modelValue', false)
-    resetForm()
-  } catch (e: any) {
-    if (e.response?.data?.errors) {
-      errors.value = e.response.data.errors
-    } else {
-      generalError.value = e.response?.data?.message || e.message || 'Failed to create employee'
-    }
-  } finally {
-    loading.value = false
-  }
 }
 
 const resetForm = () => {
@@ -200,37 +211,66 @@ const resetForm = () => {
     start_date: new Date().toISOString().split('T')[0],
     gender: '',
     date_of_birth: '',
+    base_salary: '',
+    salary_currency: 'USD',
+    salary_type: 'monthly',
+    payment_method: 'bank_transfer',
+    bank_name: '',
+    bank_account_number: '',
+    bank_routing_number: '',
     emergency_contacts: [{ name: '', relationship: '', phone: '' }],
   }
   errors.value = {}
   generalError.value = ''
 }
 
-const employmentTypes = [
-  { label: 'Full-time', value: 'full-time' },
-  { label: 'Part-time', value: 'part-time' },
-  { label: 'Contract', value: 'contract' },
-  { label: 'Intern', value: 'intern' },
-  { label: 'Probationary', value: 'probationary' },
-]
+const save = async () => {
+  loading.value = true
+  errors.value = {}
+  generalError.value = ''
 
-const genders = [
-  { label: 'Select Gender', value: '' },
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
-]
+  const payload: any = {
+    ...form.value,
+    department_id: form.value.department_id || null,
+    position_id: form.value.position_id || null,
+    manager_id: form.value.manager_id || null,
+    gender: form.value.gender || null,
+    date_of_birth: form.value.date_of_birth || null,
+    phone: form.value.phone || null,
+    base_salary: form.value.base_salary ? Number(form.value.base_salary) : null,
+    bank_name: form.value.bank_name || null,
+    bank_account_number: form.value.bank_account_number || null,
+    bank_routing_number: form.value.bank_routing_number || null,
+    emergency_contacts: form.value.emergency_contacts.filter((c) => c.name || c.phone),
+  }
+
+  try {
+    await hrApi.createEmployee(payload)
+    emit('saved')
+    emit('update:modelValue', false)
+    resetForm()
+  } catch (err: any) {
+    if (err.response?.data?.errors) {
+      errors.value = err.response.data.errors
+    } else {
+      generalError.value = err.response?.data?.message || err.message || 'Failed to create employee'
+    }
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="New Employee"
+    title="Create New Employee"
     size="xl"
   >
-    <div class="space-y-6">
-      <div v-if="generalError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+    <form @submit.prevent="save" class="space-y-6">
+      <!-- General Error Alert -->
+      <div v-if="generalError" class="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
         {{ generalError }}
       </div>
 
@@ -241,12 +281,12 @@ const genders = [
           <span>Personal Information</span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiInput v-model="form.first_name" label="First Name" placeholder="John" :error="errors.first_name?.[0]" required />
-          <UiInput v-model="form.last_name" label="Last Name" placeholder="Doe" :error="errors.last_name?.[0]" required />
+          <UiInput v-model="form.first_name" label="First Name" :error="errors.first_name?.[0]" required />
+          <UiInput v-model="form.last_name" label="Last Name" :error="errors.last_name?.[0]" required />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiInput v-model="form.email" label="Email Address" type="email" placeholder="john.doe@company.com" :error="errors.email?.[0]" required />
-          <UiInput v-model="form.phone" label="Phone Number" type="tel" placeholder="+1 555 0100" :error="errors.phone?.[0]" />
+          <UiInput v-model="form.email" label="Email Address" type="email" :error="errors.email?.[0]" required />
+          <UiInput v-model="form.phone" label="Phone Number" type="tel" :error="errors.phone?.[0]" placeholder="+1..." />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UiSelect v-model="form.gender" label="Gender" :options="genders" />
@@ -318,6 +358,43 @@ const genders = [
         </div>
       </div>
 
+      <!-- Salary & Compensation Details -->
+      <div class="space-y-3">
+        <div class="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
+          <DollarSign class="h-4 w-4 text-emerald-600" />
+          <span>Compensation & Payroll Details</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <UiInput
+            v-model="form.base_salary"
+            label="Base Salary Amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="e.g. 5000"
+            :error="errors.base_salary?.[0]"
+          />
+          <UiSelect v-model="form.salary_currency" label="Currency" :options="currencyOptions" />
+          <UiSelect v-model="form.salary_type" label="Pay Frequency" :options="salaryTypes" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UiSelect v-model="form.payment_method" label="Payment Method" :options="paymentMethods" />
+          <UiInput
+            v-if="form.payment_method === 'bank_transfer'"
+            v-model="form.bank_name"
+            label="Bank Name"
+            placeholder="e.g. Chase, Commercial Bank"
+          />
+        </div>
+
+        <div v-if="form.payment_method === 'bank_transfer'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UiInput v-model="form.bank_account_number" label="Account Number / IBAN" placeholder="Account # or IBAN" />
+          <UiInput v-model="form.bank_routing_number" label="Routing / SWIFT / BIC" placeholder="Routing or SWIFT Code" />
+        </div>
+      </div>
+
       <!-- Emergency Contacts -->
       <div class="space-y-3">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -348,76 +425,73 @@ const genders = [
         </div>
       </div>
 
-      <!-- Modal Footer -->
+      <!-- Actions -->
       <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-        <UiButton variant="outline" type="button" @click="emit('update:modelValue', false)">Cancel</UiButton>
-        <UiButton
-          type="button"
-          @click="save"
-          :loading="loading"
-          :disabled="!form.first_name || !form.last_name || !form.email"
-        >
+        <UiButton variant="outline" type="button" @click="emit('update:modelValue', false)">
+          Cancel
+        </UiButton>
+        <UiButton type="submit" :loading="loading">
           Create Employee
         </UiButton>
       </div>
-    </div>
-  </UiModal>
+    </form>
 
-  <!-- Quick Create Department Sub-Modal -->
-  <UiModal v-model="isQuickDeptModalOpen" title="New Department" size="md">
-    <div class="space-y-4">
-      <div v-if="quickDeptError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
-        {{ quickDeptError }}
+    <!-- Quick Create Department Sub-Modal -->
+    <UiModal v-model="isQuickDeptModalOpen" title="New Department" size="md">
+      <div class="space-y-4">
+        <div v-if="quickDeptError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+          {{ quickDeptError }}
+        </div>
+        <UiInput v-model="quickDeptForm.name" label="Department Name" placeholder="e.g. Engineering, Sales" required />
+        <UiInput v-model="quickDeptForm.code" label="Department Code" placeholder="e.g. ENG" />
+        <UiSelect
+          v-model="quickDeptForm.parent_id"
+          label="Parent Department"
+          :options="[{ label: 'None (Top Level)', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+          placeholder="None"
+        />
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <UiButton variant="outline" type="button" @click="isQuickDeptModalOpen = false">Cancel</UiButton>
+          <UiButton
+            type="button"
+            :loading="createDeptMutation.isPending.value"
+            :disabled="!quickDeptForm.name"
+            @click="handleSaveQuickDept"
+          >
+            Save Department
+          </UiButton>
+        </div>
       </div>
-      <UiInput v-model="quickDeptForm.name" label="Department Name" placeholder="e.g. Engineering, Sales" required />
-      <UiInput v-model="quickDeptForm.code" label="Department Code" placeholder="e.g. ENG" />
-      <UiSelect
-        v-model="quickDeptForm.parent_id"
-        label="Parent Department"
-        :options="[{ label: 'None (Top Level)', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
-        placeholder="None"
-      />
-      <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-        <UiButton variant="outline" type="button" @click="isQuickDeptModalOpen = false">Cancel</UiButton>
-        <UiButton
-          type="button"
-          :loading="createDeptMutation.isPending.value"
-          :disabled="!quickDeptForm.name"
-          @click="handleSaveQuickDept"
-        >
-          Save Department
-        </UiButton>
-      </div>
-    </div>
-  </UiModal>
+    </UiModal>
 
-  <!-- Quick Create Position Sub-Modal -->
-  <UiModal v-model="isQuickPositionModalOpen" title="New Position" size="md">
-    <div class="space-y-4">
-      <div v-if="quickPositionError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
-        {{ quickPositionError }}
+    <!-- Quick Create Position Sub-Modal -->
+    <UiModal v-model="isQuickPositionModalOpen" title="New Position" size="md">
+      <div class="space-y-4">
+        <div v-if="quickPositionError" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+          {{ quickPositionError }}
+        </div>
+        <UiInput v-model="quickPositionForm.title" label="Position Title" placeholder="e.g. Senior Software Engineer" required />
+        <UiSelect
+          v-model="quickPositionForm.department_id"
+          label="Department"
+          :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+          placeholder="Select Department"
+          required
+        />
+        <UiInput v-model="quickPositionForm.job_grade" label="Job Grade" placeholder="e.g. L4, Mid-Level" />
+        <UiInput v-model="quickPositionForm.description" label="Description" placeholder="Brief role summary" />
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <UiButton variant="outline" type="button" @click="isQuickPositionModalOpen = false">Cancel</UiButton>
+          <UiButton
+            type="button"
+            :loading="createPositionMutation.isPending.value"
+            :disabled="!quickPositionForm.title || !quickPositionForm.department_id"
+            @click="handleSaveQuickPosition"
+          >
+            Save Position
+          </UiButton>
+        </div>
       </div>
-      <UiInput v-model="quickPositionForm.title" label="Position Title" placeholder="e.g. Senior Software Engineer" required />
-      <UiSelect
-        v-model="quickPositionForm.department_id"
-        label="Department"
-        :options="[{ label: 'Select Department', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
-        placeholder="Select Department"
-        required
-      />
-      <UiInput v-model="quickPositionForm.job_grade" label="Job Grade" placeholder="e.g. L4, Mid-Level" />
-      <UiInput v-model="quickPositionForm.description" label="Description" placeholder="Brief role summary" />
-      <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-        <UiButton variant="outline" type="button" @click="isQuickPositionModalOpen = false">Cancel</UiButton>
-        <UiButton
-          type="button"
-          :loading="createPositionMutation.isPending.value"
-          :disabled="!quickPositionForm.title || !quickPositionForm.department_id"
-          @click="handleSaveQuickPosition"
-        >
-          Save Position
-        </UiButton>
-      </div>
-    </div>
+    </UiModal>
   </UiModal>
 </template>

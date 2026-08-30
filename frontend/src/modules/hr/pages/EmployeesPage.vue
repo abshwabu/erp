@@ -91,6 +91,7 @@ const columns = [
   { key: 'employee_number', label: 'ID' },
   { key: 'department', label: 'Department' },
   { key: 'position', label: 'Position' },
+  { key: 'salary', label: 'Salary' },
   { key: 'employment_type', label: 'Type' },
   { key: 'status', label: 'Status' },
   { key: 'start_date', label: 'Start Date' },
@@ -210,6 +211,13 @@ const typeOptions = [
 
       <template #cell(position)="{ item }">
         <div class="text-slate-700 text-xs">{{ item.position?.title || '—' }}</div>
+      </template>
+
+      <template #cell(salary)="{ item }">
+        <span v-if="item.base_salary" class="font-mono text-xs font-semibold text-slate-800">
+          {{ item.salary_currency || 'USD' }} {{ Number(item.base_salary).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+        </span>
+        <span v-else class="text-xs text-slate-400 italic">—</span>
       </template>
 
       <template #cell(employment_type)="{ item }">

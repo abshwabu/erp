@@ -67,6 +67,13 @@ export interface Employee {
   gender?: Gender
   employment_type: EmploymentType
   status: EmployeeStatus
+  base_salary?: number | string
+  salary_currency?: string
+  salary_type?: 'monthly' | 'hourly' | 'yearly' | 'weekly' | string
+  payment_method?: 'bank_transfer' | 'cash' | 'cheque' | string
+  bank_name?: string
+  bank_account_number?: string
+  bank_routing_number?: string
   start_date: string
   probation_end_date?: string
   contract_end_date?: string

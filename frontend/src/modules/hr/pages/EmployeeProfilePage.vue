@@ -46,7 +46,8 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Copy,
+  DollarSign,
+  Landmark,
 } from '@lucide/vue'
 
 const route = useRoute()
@@ -189,6 +190,13 @@ const editForm = ref({
   employment_type: 'full-time',
   status: 'active',
   start_date: '',
+  base_salary: '',
+  salary_currency: 'USD',
+  salary_type: 'monthly',
+  payment_method: 'bank_transfer',
+  bank_name: '',
+  bank_account_number: '',
+  bank_routing_number: '',
   emergency_contacts: [] as Array<{ name: string; relationship: string; phone: string }>,
 })
 
@@ -298,6 +306,13 @@ const startEditing = () => {
     employment_type: employee.value.employment_type || 'full-time',
     status: employee.value.status || 'active',
     start_date: employee.value.start_date ? String(employee.value.start_date).slice(0, 10) : '',
+    base_salary: employee.value.base_salary != null ? String(employee.value.base_salary) : '',
+    salary_currency: employee.value.salary_currency || 'USD',
+    salary_type: employee.value.salary_type || 'monthly',
+    payment_method: employee.value.payment_method || 'bank_transfer',
+    bank_name: employee.value.bank_name || '',
+    bank_account_number: employee.value.bank_account_number || '',
+    bank_routing_number: employee.value.bank_routing_number || '',
     emergency_contacts: Array.isArray(employee.value.emergency_contacts)
       ? JSON.parse(JSON.stringify(employee.value.emergency_contacts))
       : [{ name: '', relationship: '', phone: '' }],
@@ -338,6 +353,13 @@ const saveProfile = async () => {
     employment_type: editForm.value.employment_type,
     status: editForm.value.status,
     start_date: editForm.value.start_date,
+    base_salary: editForm.value.base_salary ? Number(editForm.value.base_salary) : null,
+    salary_currency: editForm.value.salary_currency || 'USD',
+    salary_type: editForm.value.salary_type || 'monthly',
+    payment_method: editForm.value.payment_method || 'bank_transfer',
+    bank_name: editForm.value.bank_name || null,
+    bank_account_number: editForm.value.bank_account_number || null,
+    bank_routing_number: editForm.value.bank_routing_number || null,
     emergency_contacts: editForm.value.emergency_contacts.filter((c) => c.name || c.phone),
   }
 
@@ -458,6 +480,34 @@ const genderOptions = [
   { label: 'Female', value: 'female' },
   { label: 'Other', value: 'other' },
 ]
+
+const salaryTypes = [
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Hourly', value: 'hourly' },
+  { label: 'Yearly', value: 'yearly' },
+  { label: 'Weekly', value: 'weekly' },
+]
+
+const currencyOptions = [
+  { label: 'USD ($)', value: 'USD' },
+  { label: 'EUR (€)', value: 'EUR' },
+  { label: 'GBP (£)', value: 'GBP' },
+  { label: 'ETB (Br)', value: 'ETB' },
+  { label: 'CAD ($)', value: 'CAD' },
+  { label: 'AUD ($)', value: 'AUD' },
+]
+
+const paymentMethods = [
+  { label: 'Direct Bank Transfer', value: 'bank_transfer' },
+  { label: 'Cash', value: 'cash' },
+  { label: 'Cheque', value: 'cheque' },
+]
+
+const formatSalary = (amount?: number | string, currency: string = 'USD') => {
+  if (amount == null || amount === '') return 'Not configured'
+  const val = Number(amount)
+  return `${currency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 </script>
 
 <template>
@@ -471,7 +521,7 @@ const genderOptions = [
       <button
         type="button"
         @click="router.push({ name: 'hr-employees' })"
-        class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
       >
         <ArrowLeft class="w-3.5 h-3.5" /> Back to Employees
       </button>
@@ -504,6 +554,9 @@ const genderOptions = [
               {{ employee.status }}
             </UiBadge>
             <span class="text-xs text-slate-400">Started {{ employee.start_date ? new Date(employee.start_date).toLocaleDateString() : 'N/A' }}</span>
+            <span v-if="employee.base_salary" class="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              {{ formatSalary(employee.base_salary, employee.salary_currency) }} / {{ employee.salary_type || 'month' }}
+            </span>
           </div>
         </div>
       </div>
@@ -532,7 +585,7 @@ const genderOptions = [
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        class="px-5 py-3 text-sm font-bold border-b-2 -mb-px transition-colors flex items-center gap-2"
+        class="px-5 py-3 text-sm font-bold border-b-2 -mb-px transition-colors flex items-center gap-2 cursor-pointer"
         :class="activeTab === tab.id ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
         @click="activeTab = tab.id as any"
       >
@@ -696,6 +749,61 @@ const genderOptions = [
               </div>
               <p v-else class="text-sm text-slate-400 italic">No direct manager assigned</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compensation & Payroll Details Card -->
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <DollarSign class="w-4 h-4 text-emerald-600" />
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Compensation & Banking Details</h2>
+          </div>
+        </div>
+
+        <div v-if="isEditing" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <UiInput v-model="editForm.base_salary" label="Base Salary" type="number" step="0.01" min="0" placeholder="e.g. 5000" />
+            <UiSelect v-model="editForm.salary_currency" label="Currency" :options="currencyOptions" />
+            <UiSelect v-model="editForm.salary_type" label="Pay Frequency" :options="salaryTypes" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UiSelect v-model="editForm.payment_method" label="Payment Method" :options="paymentMethods" />
+            <UiInput v-if="editForm.payment_method === 'bank_transfer'" v-model="editForm.bank_name" label="Bank Name" placeholder="e.g. Chase" />
+          </div>
+
+          <div v-if="editForm.payment_method === 'bank_transfer'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UiInput v-model="editForm.bank_account_number" label="Account Number / IBAN" placeholder="Account # or IBAN" />
+            <UiInput v-model="editForm.bank_routing_number" label="Routing / SWIFT / BIC" placeholder="Routing or SWIFT Code" />
+          </div>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div class="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Base Salary</span>
+            <p class="text-xl font-black font-mono text-emerald-950 mt-1">
+              {{ formatSalary(employee.base_salary, employee.salary_currency) }}
+            </p>
+            <span class="text-xs text-emerald-700 capitalize font-medium">Per {{ employee.salary_type || 'month' }}</span>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Method</span>
+            <p class="text-sm font-bold text-slate-900 mt-1 capitalize">
+              {{ (employee.payment_method || 'bank_transfer').replace('_', ' ') }}
+            </p>
+            <span v-if="employee.bank_name" class="text-xs text-slate-500">{{ employee.bank_name }}</span>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Account Details</span>
+            <p v-if="employee.bank_account_number" class="text-sm font-mono font-bold text-slate-900 mt-1">
+              {{ employee.bank_account_number }}
+            </p>
+            <p v-else class="text-xs text-slate-400 italic mt-1">No bank account specified</p>
+            <span v-if="employee.bank_routing_number" class="text-xs font-mono text-slate-500">SWIFT/Route: {{ employee.bank_routing_number }}</span>
           </div>
         </div>
       </div>

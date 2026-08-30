@@ -49,7 +49,7 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $data = $request->all();
-        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender'] as $key) {
+        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender', 'base_salary', 'bank_name', 'bank_account_number', 'bank_routing_number'] as $key) {
             if (array_key_exists($key, $data) && $data[$key] === '') {
                 $data[$key] = null;
             }
@@ -69,6 +69,13 @@ class EmployeeController extends Controller
             'manager_id' => 'nullable|uuid|exists:hr_employees,id',
             'employment_type' => 'required|string|max:50',
             'status' => 'required|string|max:50',
+            'base_salary' => 'nullable|numeric|min:0',
+            'salary_currency' => 'nullable|string|max:10',
+            'salary_type' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|string|max:50',
+            'bank_name' => 'nullable|string|max:255',
+            'bank_account_number' => 'nullable|string|max:255',
+            'bank_routing_number' => 'nullable|string|max:255',
             'start_date' => 'required|date',
             'emergency_contacts' => 'nullable|array',
             'custom_fields' => 'nullable|array',
@@ -87,16 +94,15 @@ class EmployeeController extends Controller
                 $leaveTypes = $this->seedDefaultLeaveTypes();
             }
 
-            $currentYear = Carbon::parse($validated['start_date'])->year;
+            $currentYear = Carbon::now()->year;
             foreach ($leaveTypes as $type) {
-                LeaveEntitlement::firstOrCreate([
+                LeaveEntitlement::create([
                     'employee_id' => $emp->id,
                     'leave_type_id' => $type->id,
                     'year' => $currentYear,
-                ], [
                     'entitled_days' => $type->max_days_per_year,
-                    'accrued_days' => $type->max_days_per_year,
                     'taken_days' => 0,
+                    'pending_days' => 0,
                     'carried_over_days' => 0,
                 ]);
             }
@@ -123,7 +129,7 @@ class EmployeeController extends Controller
         $employee = Employee::findOrFail($id);
 
         $data = $request->all();
-        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender', 'preferred_name'] as $key) {
+        foreach (['department_id', 'position_id', 'manager_id', 'date_of_birth', 'phone', 'gender', 'base_salary', 'bank_name', 'bank_account_number', 'bank_routing_number'] as $key) {
             if (array_key_exists($key, $data) && $data[$key] === '') {
                 $data[$key] = null;
             }
@@ -144,6 +150,13 @@ class EmployeeController extends Controller
             'manager_id' => ['nullable', 'uuid', 'exists:hr_employees,id', Rule::notIn([$employee->id])],
             'employment_type' => 'sometimes|required|string|max:50',
             'status' => 'sometimes|required|string|max:50',
+            'base_salary' => 'nullable|numeric|min:0',
+            'salary_currency' => 'nullable|string|max:10',
+            'salary_type' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|string|max:50',
+            'bank_name' => 'nullable|string|max:255',
+            'bank_account_number' => 'nullable|string|max:255',
+            'bank_routing_number' => 'nullable|string|max:255',
             'start_date' => 'sometimes|required|date',
             'emergency_contacts' => 'nullable|array',
             'custom_fields' => 'nullable|array',
