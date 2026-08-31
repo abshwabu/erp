@@ -3,9 +3,47 @@ export type LeadPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type DealStage = 'qualification' | 'proposal' | 'negotiation' | 'won' | 'lost'
 export type ActivityType = 'call' | 'meeting' | 'email' | 'task' | 'follow_up' | 'note'
 export type ActivityStatus = 'pending' | 'completed' | 'cancelled'
+export type LeadFormType = 'wizard' | 'classic_embed'
+
+export interface LeadFormQuestion {
+  id: string
+  label: string
+  name: string
+  type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'select' | 'radio' | 'checkbox' | 'date'
+  placeholder?: string
+  required: boolean
+  options?: string[]
+  help_text?: string
+}
+
+export interface LeadForm {
+  id: string
+  title: string
+  slug: string
+  source: string
+  form_type: LeadFormType
+  headline?: string | null
+  description?: string | null
+  custom_questions?: LeadFormQuestion[] | null
+  thank_you_title?: string | null
+  thank_you_message?: string | null
+  redirect_url?: string | null
+  default_priority: LeadPriority
+  default_estimated_value?: number | string | null
+  assigned_to_user_id?: string | null
+  is_active: boolean
+  views_count: number
+  submissions_count: number
+  conversion_rate: number
+  theme_color: string
+  leads_count?: number
+  created_at: string
+  updated_at: string
+}
 
 export interface Lead {
   id: string
+  lead_form_id?: string | null
   name: string
   company?: string | null
   title?: string | null
@@ -20,9 +58,11 @@ export interface Lead {
   converted_customer_id?: string | null
   converted_deal_id?: string | null
   notes?: string | null
+  custom_form_responses?: Record<string, any> | null
   customer?: CrmContact
   deal?: Deal
   assigned_user?: { id: string; name: string }
+  lead_form?: LeadForm
   created_at: string
   updated_at: string
 }

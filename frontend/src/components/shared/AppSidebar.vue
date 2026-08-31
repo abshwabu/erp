@@ -35,6 +35,7 @@ import {
   Target,
   TrendingUp,
   CheckSquare,
+  Sparkles,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -120,6 +121,7 @@ const navigationGroups = [
           { name: 'Deals & Pipeline', to: '/crm/deals', icon: markRaw(TrendingUp) },
           { name: 'Contacts & Accounts', to: '/crm/contacts', icon: markRaw(UserCheck) },
           { name: 'Activities & Tasks', to: '/crm/activities', icon: markRaw(CheckSquare) },
+          { name: 'Lead Forms & Sources', to: '/crm/lead-forms', icon: markRaw(Sparkles) },
         ]
       },
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },

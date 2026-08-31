@@ -50,6 +50,24 @@ const router = createRouter({
       meta: { title: 'Career Opportunity', requiresAuth: false }
     },
     {
+      path: '/leads/wizard/:slug',
+      name: 'public-lead-wizard',
+      component: () => import('@/views/crm/PublicLeadWizardPage.vue'),
+      meta: { title: 'Lead Intake Wizard', requiresAuth: false }
+    },
+    {
+      path: '/leads/form/:slug',
+      name: 'public-lead-form',
+      component: () => import('@/views/crm/PublicLeadClassicPage.vue'),
+      meta: { title: 'Lead Inquiry Form', requiresAuth: false }
+    },
+    {
+      path: '/embed/lead-form/:slug',
+      name: 'embed-lead-form',
+      component: () => import('@/views/crm/PublicLeadClassicPage.vue'),
+      meta: { title: 'Embed Lead Form', requiresAuth: false }
+    },
+    {
       path: '/',
       component: AppLayout,
       meta: { requiresAuth: true },
@@ -227,6 +245,12 @@ const router = createRouter({
           name: 'crm-activities',
           component: () => import('@/modules/crm/pages/CrmActivitiesPage.vue'),
           meta: { title: 'Activities & Tasks', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'crm/lead-forms',
+          name: 'crm-lead-forms',
+          component: () => import('@/modules/crm/pages/CrmLeadFormsPage.vue'),
+          meta: { title: 'Lead Forms & Channels', permission: 'crm.contacts.view' }
         },
         {
           path: 'projects',

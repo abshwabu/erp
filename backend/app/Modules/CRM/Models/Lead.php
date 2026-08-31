@@ -20,6 +20,7 @@ class Lead extends Model
     protected $table = 'crm_leads';
 
     protected $fillable = [
+        'lead_form_id',
         'name',
         'company',
         'title',
@@ -34,11 +35,18 @@ class Lead extends Model
         'converted_customer_id',
         'converted_deal_id',
         'notes',
+        'custom_form_responses',
     ];
 
     protected $casts = [
         'estimated_value' => 'decimal:2',
+        'custom_form_responses' => 'array',
     ];
+
+    public function leadForm(): BelongsTo
+    {
+        return $this->belongsTo(LeadForm::class, 'lead_form_id');
+    }
 
     public function customer(): BelongsTo
     {

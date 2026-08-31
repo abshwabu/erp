@@ -1,9 +1,25 @@
 import apiClient from './client'
-import type { Lead, Deal, CrmContact, Activity, CrmDashboardStats } from '@/types/crm'
+import type { Lead, Deal, CrmContact, Activity, CrmDashboardStats, LeadForm } from '@/types/crm'
 
 export const crmApi = {
   // Analytics & Dashboard
   getStats: () => apiClient.get<{ data: CrmDashboardStats }>('/crm/dashboard/stats'),
+
+  // Lead Forms & Multi-Channel Intake
+  getLeadForms: (params?: any) => apiClient.get<{ data: LeadForm[] }>('/crm/lead-forms', { params }),
+  getLeadForm: (id: string) => apiClient.get<{ data: LeadForm }>(`/crm/lead-forms/${id}`),
+  createLeadForm: (data: Partial<LeadForm>) => apiClient.post<{ data: LeadForm }>('/crm/lead-forms', data),
+  updateLeadForm: (id: string, data: Partial<LeadForm>) => apiClient.patch<{ data: LeadForm }>(`/crm/lead-forms/${id}`, data),
+  deleteLeadForm: (id: string) => apiClient.delete(`/crm/lead-forms/${id}`),
+
+  // Public Lead Form Views & Submissions (No Auth Required)
+  getPublicLeadForm: (idOrSlug: string) => 
+    apiClient.get<{ data: LeadForm; company: { name: string } }>(`/public/leads/forms/${idOrSlug}`),
+  submitPublicLeadForm: (idOrSlug: string, data: any) => 
+    apiClient.post<{ message: string; thank_you_title?: string; redirect_url?: string; lead_id: string }>(
+      `/public/leads/forms/${idOrSlug}/submit`,
+      data
+    ),
 
   // Leads
   getLeads: (params?: any) => apiClient.get<{ data: Lead[] }>('/crm/leads', { params }),
