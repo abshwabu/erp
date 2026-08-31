@@ -100,7 +100,7 @@ class LeadController extends BaseController
         $lead = Lead::findOrFail($id);
         $lead->delete();
 
-        return $this->successResponse(null, 'Lead deleted successfully.');
+        return $this->successResponse(['message' => 'Lead deleted successfully.']);
     }
 
     public function convert(Request $request, string $id): JsonResponse
@@ -160,6 +160,6 @@ class LeadController extends BaseController
             ];
         });
 
-        return $this->successResponse($result, 'Lead converted to Customer and Deal successfully.');
+        return $this->successResponse($result);
     }
 }

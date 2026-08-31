@@ -137,7 +137,7 @@ class LeadFormController extends BaseController
             'custom_questions' => ['nullable', 'array'],
             'thank_you_title' => ['nullable', 'string', 'max:255'],
             'thank_you_message' => ['nullable', 'string'],
-            'redirect_url' => ['nullable', 'url', 'max:255'],
+            'redirect_url' => ['nullable', 'string', 'max:255'],
             'default_priority' => ['nullable', 'string', 'in:low,medium,high,urgent'],
             'default_estimated_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to_user_id' => ['nullable', 'uuid'],
@@ -179,7 +179,7 @@ class LeadFormController extends BaseController
             'custom_questions' => ['nullable', 'array'],
             'thank_you_title' => ['nullable', 'string', 'max:255'],
             'thank_you_message' => ['nullable', 'string'],
-            'redirect_url' => ['nullable', 'url', 'max:255'],
+            'redirect_url' => ['nullable', 'string', 'max:255'],
             'default_priority' => ['nullable', 'string', 'in:low,medium,high,urgent'],
             'default_estimated_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to_user_id' => ['nullable', 'uuid'],
@@ -197,6 +197,6 @@ class LeadFormController extends BaseController
         $form = LeadForm::findOrFail($id);
         $form->delete();
 
-        return $this->successResponse(null, 'Lead form deleted successfully.');
+        return $this->successResponse(['message' => 'Lead form deleted successfully.']);
     }
 }

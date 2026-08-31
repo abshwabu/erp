@@ -120,6 +120,6 @@ class ActivityController extends BaseController
         $activity = Activity::findOrFail($id);
         $activity->delete();
 
-        return $this->successResponse(null, 'Activity deleted successfully.');
+        return $this->successResponse(['message' => 'Activity deleted successfully.']);
     }
 }

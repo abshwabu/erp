@@ -127,6 +127,6 @@ class DealController extends BaseController
         $deal = Deal::findOrFail($id);
         $deal->delete();
 
-        return $this->successResponse(null, 'Deal deleted successfully.');
+        return $this->successResponse(['message' => 'Deal deleted successfully.']);
     }
 }

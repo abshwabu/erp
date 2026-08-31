@@ -99,6 +99,6 @@ class ContactController extends BaseController
         $contact = Customer::findOrFail($id);
         $contact->delete();
 
-        return $this->successResponse(null, 'Contact deleted successfully.');
+        return $this->successResponse(['message' => 'Contact deleted successfully.']);
     }
 }
