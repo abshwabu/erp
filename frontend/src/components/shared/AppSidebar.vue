@@ -38,6 +38,8 @@ import {
   Sparkles,
   Clock,
   Flag,
+  MessageSquare,
+  BookOpen,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -53,6 +55,7 @@ const expandedItems = ref<Record<string, boolean>>({
   'Human Resources': true,
   CRM: true,
   Projects: true,
+  Support: true,
   Accounting: true,
   'Sales & Invoicing': true,
 })
@@ -139,7 +142,16 @@ const navigationGroups = [
           { name: 'Milestones', to: '/projects/milestones', icon: markRaw(Flag) },
         ]
       },
-      { name: 'Support', to: '/support', icon: markRaw(Headphones), permission: 'support.tickets.view' },
+      { 
+        name: 'Support', 
+        icon: markRaw(Headphones), 
+        permission: 'support.tickets.view',
+        children: [
+          { name: 'Helpdesk Overview', to: '/support', icon: markRaw(LayoutDashboard) },
+          { name: 'Ticket Queue', to: '/support/tickets', icon: markRaw(MessageSquare) },
+          { name: 'Knowledge Base', to: '/support/knowledge-base', icon: markRaw(BookOpen) },
+        ]
+      },
     ]
   },
   {

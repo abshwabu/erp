@@ -277,11 +277,24 @@ const router = createRouter({
           component: () => import('@/modules/projects/pages/ProjectMilestonesPage.vue'),
           meta: { title: 'Project Milestones', permission: 'projects.view' }
         },
+        // Support & Helpdesk Module
         {
           path: 'support',
           name: 'support',
-          component: () => import('@/modules/support/pages/SupportPage.vue'),
-          meta: { title: 'Support', permission: 'support.tickets.view' }
+          component: () => import('@/modules/support/pages/SupportDashboardPage.vue'),
+          meta: { title: 'Helpdesk Overview', permission: 'support.tickets.view' }
+        },
+        {
+          path: 'support/tickets',
+          name: 'support-tickets',
+          component: () => import('@/modules/support/pages/SupportTicketsPage.vue'),
+          meta: { title: 'Support Tickets Queue', permission: 'support.tickets.view' }
+        },
+        {
+          path: 'support/knowledge-base',
+          name: 'support-knowledge-base',
+          component: () => import('@/modules/support/pages/SupportKnowledgeBasePage.vue'),
+          meta: { title: 'Knowledge Base & FAQs', permission: 'support.tickets.view' }
         },
         {
           path: 'reporting',
