@@ -6,9 +6,13 @@ import { Plus, Folder, FileText, ChevronRight, ChevronDown, Edit2, Trash2 } from
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
+import UiModal from '@/components/ui/UiModal.vue'
+import { useToast } from '@/composables/useToast'
 import type { ProductCategory } from '@/types/inventory'
 
 const queryClient = useQueryClient()
+const toast = useToast()
+
 const { data: categories, isLoading } = useQuery({
   queryKey: ['inventory', 'categories'],
   queryFn: () => inventoryApi.getCategories().then(res => res.data)
@@ -25,6 +29,8 @@ const toggleExpand = (id: string | number) => {
 }
 
 const isAdding = ref(false)
+const isDeleteModalOpen = ref(false)
+const categoryToDelete = ref<{ id: string | number; name: string } | null>(null)
 const newCategoryName = ref('')
 const selectedCategoryId = ref<string | number | null>(null)
 
@@ -37,6 +43,10 @@ const createMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
     isAdding.value = false
     newCategoryName.value = ''
+    toast.success('Category created')
+  },
+  onError: (err: any) => {
+    toast.error(err?.response?.data?.message || 'Failed to create category')
   }
 })
 
@@ -44,6 +54,12 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => inventoryApi.deleteCategory(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
+    isDeleteModalOpen.value = false
+    categoryToDelete.value = null
+    toast.success('Category deleted')
+  },
+  onError: (err: any) => {
+    toast.error(err?.response?.data?.message || 'Failed to delete category')
   }
 })
 
@@ -52,9 +68,14 @@ const handleAdd = () => {
   createMutation.mutate(newCategoryName.value.trim())
 }
 
-const handleDelete = (id: string | number) => {
-  if (confirm('Are you sure you want to delete this category?')) {
-    deleteMutation.mutate(String(id))
+const openDeleteConfirm = (cat: { id: string | number; name: string }) => {
+  categoryToDelete.value = cat
+  isDeleteModalOpen.value = true
+}
+
+const confirmDelete = () => {
+  if (categoryToDelete.value) {
+    deleteMutation.mutate(String(categoryToDelete.value.id))
   }
 }
 </script>
@@ -105,8 +126,9 @@ const handleDelete = (id: string | number) => {
               
               <div class="hidden group-hover:flex items-center space-x-1">
                 <button
-                  @click.stop="handleDelete(category.id)"
-                  class="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                  type="button"
+                  @click.stop="openDeleteConfirm(category)"
+                  class="p-1 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
                   title="Delete category"
                 >
                   <Trash2 class="h-3.5 w-3.5" />
@@ -132,5 +154,37 @@ const handleDelete = (id: string | number) => {
     <div v-else class="text-center py-8 text-slate-500 border rounded-lg border-dashed">
       No categories found.
     </div>
+
+    <!-- Category Delete Confirmation Modal -->
+    <UiModal v-model="isDeleteModalOpen" title="Delete Category" size="sm">
+      <div v-if="categoryToDelete" class="space-y-4">
+        <div class="flex items-start gap-3.5 p-3.5 bg-red-50/80 border border-red-200 rounded-2xl">
+          <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
+            <Trash2 class="w-5 h-5" />
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-sm font-bold text-red-950">Delete Category</h4>
+            <p class="text-xs text-red-800 leading-relaxed">
+              Are you sure you want to delete category <strong>{{ categoryToDelete.name }}</strong>?
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">
+            Cancel
+          </UiButton>
+          <UiButton
+            variant="danger"
+            size="sm"
+            :loading="deleteMutation.isPending.value"
+            @click="confirmDelete"
+          >
+            <Trash2 class="w-3.5 h-3.5 mr-1" />
+            Delete
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
   </div>
 </template>

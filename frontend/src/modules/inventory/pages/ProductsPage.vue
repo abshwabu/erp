@@ -31,13 +31,16 @@ import UiTable from '@/components/ui/UiTable.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
+import UiModal from '@/components/ui/UiModal.vue'
 import CreateEditProductModal from '../components/CreateEditProductModal.vue'
 import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
 import { formatCurrency, resolveImageUrl } from '@/utils/format'
+import { useToast } from '@/composables/useToast'
 import type { Product, ProductCategory, ProductFilters, ProductStatus } from '@/types/inventory'
 
 const queryClient = useQueryClient()
+const toast = useToast()
 const page = ref(1)
 const viewMode = ref<'table' | 'grid'>('table')
 
@@ -181,17 +184,31 @@ const handleEdit = (product: Product) => {
   isCreateModalOpen.value = true
 }
 
+const isDeleteModalOpen = ref(false)
+const productToDelete = ref<Product | null>(null)
+
 const deleteMutation = useMutation({
   mutationFn: (id: string) => inventoryApi.deleteProduct(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['inventory', 'products'] })
     queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-summary'] })
+    isDeleteModalOpen.value = false
+    productToDelete.value = null
+    toast.success('Product deleted successfully')
+  },
+  onError: (err: any) => {
+    toast.error(err?.response?.data?.message || 'Failed to delete product')
   },
 })
 
-const handleDelete = (id: string) => {
-  if (confirm('Are you sure you want to delete this product?')) {
-    deleteMutation.mutate(id)
+const openDeleteConfirm = (product: Product) => {
+  productToDelete.value = product
+  isDeleteModalOpen.value = true
+}
+
+const confirmDelete = () => {
+  if (productToDelete.value) {
+    deleteMutation.mutate(productToDelete.value.id)
   }
 }
 
@@ -489,9 +506,9 @@ const hasActiveFilters = computed(() => {
             </button>
             <button
               type="button"
-              @click.stop="handleDelete(item.id)"
+              @click.stop="openDeleteConfirm(item)"
               title="Delete Product"
-              class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+              class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
             >
               <Trash2 class="h-4 w-4" />
             </button>
@@ -576,8 +593,9 @@ const hasActiveFilters = computed(() => {
                 <Edit2 class="w-4 h-4" />
               </button>
               <button
-                @click="handleDelete(product.id)"
-                class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                type="button"
+                @click.stop="openDeleteConfirm(product)"
+                class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 title="Delete Product"
               >
                 <Trash2 class="w-4 h-4" />
@@ -619,5 +637,41 @@ const hasActiveFilters = computed(() => {
       v-model="isImportModalOpen"
       @imported="refetch"
     />
+
+    <!-- Custom Delete Confirmation Modal -->
+    <UiModal v-model="isDeleteModalOpen" title="Delete Product" size="sm">
+      <div v-if="productToDelete" class="space-y-4">
+        <div class="flex items-start gap-3.5 p-3.5 bg-red-50/80 border border-red-200 rounded-2xl">
+          <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
+            <Trash2 class="w-5 h-5" />
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-sm font-bold text-red-950">Confirm Product Deletion</h4>
+            <p class="text-xs text-red-800 leading-relaxed">
+              Are you sure you want to permanently delete <strong class="font-bold">{{ productToDelete.name }}</strong> (SKU: <span class="font-mono font-semibold">{{ productToDelete.sku }}</span>)?
+            </p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 leading-relaxed">
+          This action will remove the product and its inventory specifications from the active catalog.
+        </p>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">
+            Cancel
+          </UiButton>
+          <UiButton
+            variant="danger"
+            size="sm"
+            :loading="deleteMutation.isPending.value"
+            @click="confirmDelete"
+          >
+            <Trash2 class="w-3.5 h-3.5 mr-1" />
+            Delete Product
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
   </div>
 </template>
