@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Core\Controllers\AuthController;
 use App\Modules\Core\Controllers\RoleController;
 use App\Modules\Core\Controllers\SettingsController;
+use App\Modules\Core\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -25,25 +26,34 @@ Route::prefix('api/auth')->group(function () {
     });
 });
 
-// ── Roles & Permissions (all require authentication) ─────────────────────────
+// ── Authenticated Core Endpoints ─────────────────────────────────────────────
 Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
+
+    // Users CRUD
+    Route::get('users', [UserController::class, 'index'])
+        ->middleware('permission:core.users.view');
+    Route::post('users', [UserController::class, 'store'])
+        ->middleware('permission:core.users.create');
+    Route::get('users/{id}', [UserController::class, 'show'])
+        ->middleware('permission:core.users.view');
+    Route::put('users/{id}', [UserController::class, 'update'])
+        ->middleware('permission:core.users.edit');
+    Route::patch('users/{id}/toggle-status', [UserController::class, 'toggleStatus'])
+        ->middleware('permission:core.users.edit');
+    Route::delete('users/{id}', [UserController::class, 'destroy'])
+        ->middleware('permission:core.users.delete');
 
     // Role CRUD
     Route::get('permissions', [RoleController::class, 'permissions'])
         ->middleware('permission:core.roles.view');
-
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('permission:core.roles.view');
-
     Route::post('roles', [RoleController::class, 'store'])
         ->middleware('permission:core.roles.create');
-
     Route::get('roles/{role}', [RoleController::class, 'show'])
         ->middleware('permission:core.roles.view');
-
     Route::put('roles/{role}', [RoleController::class, 'update'])
         ->middleware('permission:core.roles.edit');
-
     Route::delete('roles/{role}', [RoleController::class, 'destroy'])
         ->middleware('permission:core.roles.delete');
 
@@ -54,14 +64,12 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
     // User ↔ Role assignment
     Route::post('users/{user}/roles', [RoleController::class, 'assignRole'])
         ->middleware('permission:core.roles.edit');
-
     Route::delete('users/{user}/roles/{role}', [RoleController::class, 'revokeRole'])
         ->middleware('permission:core.roles.edit');
 
     // Tenant settings
     Route::get('core/settings', [SettingsController::class, 'show'])
         ->middleware('permission:core.settings.view');
-
     Route::post('core/settings', [SettingsController::class, 'update'])
         ->middleware('permission:core.settings.edit');
 

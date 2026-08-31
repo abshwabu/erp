@@ -379,6 +379,12 @@ const router = createRouter({
           component: () => import('@/modules/core/pages/RolesPage.vue'),
           meta: { title: 'Users & Roles', permission: 'core.roles.view' }
         },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/modules/core/pages/RolesPage.vue'),
+          meta: { title: 'Team Members & Users', permission: 'core.roles.view' }
+        },
       ]
     },
     {
