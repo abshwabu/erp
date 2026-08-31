@@ -36,6 +36,8 @@ import {
   TrendingUp,
   CheckSquare,
   Sparkles,
+  Clock,
+  Flag,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -50,6 +52,7 @@ const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
   'Human Resources': true,
   CRM: true,
+  Projects: true,
   Accounting: true,
   'Sales & Invoicing': true,
 })
@@ -125,7 +128,17 @@ const navigationGroups = [
         ]
       },
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
-      { name: 'Projects', to: '/projects', icon: markRaw(FolderKanban), permission: 'projects.view' },
+      { 
+        name: 'Projects', 
+        icon: markRaw(FolderKanban), 
+        permission: 'projects.view',
+        children: [
+          { name: 'Portfolio Overview', to: '/projects', icon: markRaw(LayoutDashboard) },
+          { name: 'Tasks & Kanban', to: '/projects/tasks', icon: markRaw(CheckSquare) },
+          { name: 'Timesheets & Logs', to: '/projects/time-logs', icon: markRaw(Clock) },
+          { name: 'Milestones', to: '/projects/milestones', icon: markRaw(Flag) },
+        ]
+      },
       { name: 'Support', to: '/support', icon: markRaw(Headphones), permission: 'support.tickets.view' },
     ]
   },

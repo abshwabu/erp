@@ -252,11 +252,30 @@ const router = createRouter({
           component: () => import('@/modules/crm/pages/CrmLeadFormsPage.vue'),
           meta: { title: 'Lead Forms & Channels', permission: 'crm.contacts.view' }
         },
+        // Projects Module
         {
           path: 'projects',
           name: 'projects',
-          component: () => import('@/modules/projects/pages/ProjectsPage.vue'),
-          meta: { title: 'Projects', permission: 'projects.view' }
+          component: () => import('@/modules/projects/pages/ProjectsOverviewPage.vue'),
+          meta: { title: 'Projects Portfolio', permission: 'projects.view' }
+        },
+        {
+          path: 'projects/tasks',
+          name: 'projects-tasks',
+          component: () => import('@/modules/projects/pages/ProjectTasksPage.vue'),
+          meta: { title: 'Task Board & Kanban', permission: 'projects.view' }
+        },
+        {
+          path: 'projects/time-logs',
+          name: 'projects-time-logs',
+          component: () => import('@/modules/projects/pages/ProjectTimeLogsPage.vue'),
+          meta: { title: 'Timesheets & Logs', permission: 'projects.view' }
+        },
+        {
+          path: 'projects/milestones',
+          name: 'projects-milestones',
+          component: () => import('@/modules/projects/pages/ProjectMilestonesPage.vue'),
+          meta: { title: 'Project Milestones', permission: 'projects.view' }
         },
         {
           path: 'support',
