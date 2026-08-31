@@ -71,6 +71,10 @@ class LeadFormController extends BaseController
             $customResponses = json_decode($customResponses, true) ?: [];
         }
 
+        // Automatically extract the estimated value / budget from the form answers
+        $defaultVal = $form->default_estimated_value ? (float) $form->default_estimated_value : null;
+        $estimatedValue = $this->parseEstimatedValue($customResponses, $defaultVal);
+
         $lead = Lead::create([
             'lead_form_id' => $form->id,
             'name' => $validated['name'],
@@ -81,7 +85,7 @@ class LeadFormController extends BaseController
             'source' => $form->source ?: 'website',
             'status' => 'new',
             'priority' => $form->default_priority ?: 'medium',
-            'estimated_value' => $form->default_estimated_value,
+            'estimated_value' => $estimatedValue,
             'assigned_to_user_id' => $form->assigned_to_user_id,
             'notes' => $validated['notes'] ?? null,
             'custom_form_responses' => $customResponses,
@@ -96,6 +100,58 @@ class LeadFormController extends BaseController
             'redirect_url' => $form->redirect_url,
             'lead_id' => $lead->id,
         ], 201);
+    }
+
+    /**
+     * Helper to extract numerical estimated budget from user form responses.
+     */
+    private function parseEstimatedValue(array $responses, ?float $default = null): ?float
+    {
+        // 1. Search for fields explicitly mentioning budget, value, amount, or price
+        foreach ($responses as $key => $value) {
+            $normalizedKey = strtolower((string) $key);
+            if (
+                str_contains($normalizedKey, 'budget') ||
+                str_contains($normalizedKey, 'amount') ||
+                str_contains($normalizedKey, 'value') ||
+                str_contains($normalizedKey, 'price') ||
+                str_contains($normalizedKey, 'cost')
+            ) {
+                $parsed = $this->extractNumericValue((string) (is_array($value) ? implode(' ', $value) : $value));
+                if ($parsed !== null && $parsed > 0) {
+                    return $parsed;
+                }
+            }
+        }
+
+        // 2. Search for any field answer that has currency symbols ($) or budget ranges
+        foreach ($responses as $key => $value) {
+            if (is_string($value) && (str_contains($value, '$') || preg_match('/\b\d{1,3}(,\d{3})+(\.\d+)?\b/', $value))) {
+                $parsed = $this->extractNumericValue($value);
+                if ($parsed !== null && $parsed > 0) {
+                    return $parsed;
+                }
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Extracts a numeric float from string ranges like "$5,000 - $20,000", "$50,000+", "15000".
+     */
+    private function extractNumericValue(string $val): ?float
+    {
+        $clean = str_replace(',', '', $val);
+        preg_match_all('/\d+(\.\d+)?/', $clean, $matches);
+
+        if (!empty($matches[0])) {
+            $numbers = array_map('floatval', $matches[0]);
+            // If range like 5000 - 20000, take the upper target bound
+            return max($numbers);
+        }
+
+        return null;
     }
 
     // ── Authenticated Internal Endpoints ─────────────────────────────────────────

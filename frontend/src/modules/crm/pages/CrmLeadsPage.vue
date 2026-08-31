@@ -27,6 +27,10 @@ import {
   Sparkles,
   DollarSign,
   Briefcase,
+  Eye,
+  FileText,
+  Calendar,
+  Layers,
 } from '@lucide/vue'
 
 const queryClient = useQueryClient()
@@ -36,8 +40,10 @@ const searchQuery = ref('')
 const selectedStatus = ref<string>('all')
 const isCreateModalOpen = ref(false)
 const isConvertModalOpen = ref(false)
+const isDetailDrawerOpen = ref(false)
 const editingLead = ref<Lead | null>(null)
 const convertingLead = ref<Lead | null>(null)
+const selectedLead = ref<Lead | null>(null)
 
 const leadForm = ref({
   name: '',
@@ -92,7 +98,7 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Leads',
+      label: 'Total Inbound Leads',
       value: list.length,
       icon: markRaw(Users),
     },
@@ -102,12 +108,12 @@ const stats = computed(() => {
       icon: markRaw(Sparkles),
     },
     {
-      label: 'Converted to Deals',
+      label: 'Converted to Pipeline',
       value: converted,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Est. Pipeline Value',
+      label: 'Total Inbound Est. Value',
       value: `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(DollarSign),
     },
@@ -204,6 +210,11 @@ const openConvertModal = (lead: Lead) => {
   isConvertModalOpen.value = true
 }
 
+const openLeadDetail = (lead: Lead) => {
+  selectedLead.value = lead
+  isDetailDrawerOpen.value = true
+}
+
 const handleSave = () => {
   if (!leadForm.value.name) {
     toast.error('Please enter the lead name')
@@ -241,8 +252,8 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Leads & Prospects</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Capture inbound leads, qualify opportunities, and convert them to pipeline deals.</p>
+        <h1 class="text-2xl font-bold text-slate-900">Leads & Inbound Inquiries</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Capture inbound leads, qualify opportunities, review form responses, and convert to sales pipeline.</p>
       </div>
       <UiButton @click="openCreateModal">
         <Plus class="w-4 h-4 mr-2" /> Capture New Lead
@@ -299,15 +310,29 @@ const getPriorityBadge = (priority: string) => {
               <th class="px-4 py-3 text-left">Lead Contact & Company</th>
               <th class="px-4 py-3 text-left">Status</th>
               <th class="px-4 py-3 text-left">Priority</th>
-              <th class="px-4 py-3 text-left">Source</th>
-              <th class="px-4 py-3 text-right">Est. Value</th>
+              <th class="px-4 py-3 text-left">Channel / Source</th>
+              <th class="px-4 py-3 text-right">Est. Value (Budget)</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
-            <tr v-for="lead in filteredLeads" :key="lead.id" class="hover:bg-slate-50/70 transition-colors">
+            <tr
+              v-for="lead in filteredLeads"
+              :key="lead.id"
+              class="hover:bg-slate-50/70 transition-colors cursor-pointer"
+              @click="openLeadDetail(lead)"
+            >
               <td class="px-4 py-3">
-                <div class="font-bold text-slate-900 text-sm">{{ lead.name }}</div>
+                <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span>{{ lead.name }}</span>
+                  <span
+                    v-if="lead.custom_form_responses && Object.keys(lead.custom_form_responses).length"
+                    class="px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 font-semibold text-[10px] border border-primary-100"
+                    title="Submitted via Lead Form"
+                  >
+                    Form Responses
+                  </span>
+                </div>
                 <div class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                   <span v-if="lead.company" class="font-semibold text-slate-700">{{ lead.company }}</span>
                   <span v-if="lead.company && (lead.email || lead.phone)">•</span>
@@ -331,11 +356,15 @@ const getPriorityBadge = (priority: string) => {
                 {{ lead.source.replace('_', ' ') }}
               </td>
 
+              <!-- Est. Value (Budget extracted from form answers or default) -->
               <td class="px-4 py-3 text-right font-mono font-bold text-slate-900">
-                {{ lead.estimated_value ? `$${Number(lead.estimated_value).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—' }}
+                <span v-if="lead.estimated_value">
+                  ${{ Number(lead.estimated_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                </span>
+                <span v-else class="text-slate-400 font-normal">—</span>
               </td>
 
-              <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+              <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap" @click.stop>
                 <UiButton
                   v-if="lead.status !== 'converted'"
                   size="sm"
@@ -344,6 +373,10 @@ const getPriorityBadge = (priority: string) => {
                   title="Convert Lead to Customer & Deal"
                 >
                   <Sparkles class="w-3.5 h-3.5 mr-1 text-primary-600" /> Convert
+                </UiButton>
+
+                <UiButton variant="ghost" size="sm" @click="openLeadDetail(lead)" title="View Form Responses">
+                  <Eye class="w-3.5 h-3.5 text-slate-600" />
                 </UiButton>
 
                 <UiButton variant="ghost" size="sm" @click="openEditModal(lead)" title="Edit Lead">
@@ -370,11 +403,100 @@ const getPriorityBadge = (priority: string) => {
         <Users class="w-10 h-10 mx-auto text-slate-300" />
         <h4 class="font-bold text-slate-700 text-sm">No leads found</h4>
         <p class="text-xs text-slate-400 max-w-sm mx-auto">
-          Capture prospect inquiries to build your sales funnel.
+          Capture prospect inquiries or share your lead intake wizard to build your sales funnel.
         </p>
         <UiButton size="sm" @click="openCreateModal">Capture First Lead</UiButton>
       </div>
     </div>
+
+    <!-- Lead Details & Questionnaire Responses Modal -->
+    <UiModal v-model="isDetailDrawerOpen" title="Lead Inquiry Details" size="lg">
+      <div v-if="selectedLead" class="space-y-5">
+        <!-- Lead Header -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-1">
+            <h3 class="text-base font-black text-slate-900">{{ selectedLead.name }}</h3>
+            <p class="text-xs text-slate-500 font-medium">
+              {{ selectedLead.title ? `${selectedLead.title} at ` : '' }}
+              <strong class="text-slate-800">{{ selectedLead.company || 'Individual Prospect' }}</strong>
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <UiBadge :variant="getStatusBadge(selectedLead.status).variant" class="font-bold">
+              {{ getStatusBadge(selectedLead.status).label }}
+            </UiBadge>
+            <UiBadge :variant="getPriorityBadge(selectedLead.priority).variant" class="font-bold">
+              {{ getPriorityBadge(selectedLead.priority).label }}
+            </UiBadge>
+          </div>
+        </div>
+
+        <!-- Contact & Value Summary Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Est. Value / Budget</span>
+            <p class="font-mono font-black text-primary-700 text-sm">
+              {{ selectedLead.estimated_value ? `$${Number(selectedLead.estimated_value).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—' }}
+            </p>
+          </div>
+          <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Channel</span>
+            <p class="font-bold text-slate-800 capitalize">{{ selectedLead.source.replace('_', ' ') }}</p>
+          </div>
+          <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+            <p class="font-mono font-bold text-slate-800 truncate">{{ selectedLead.email || '—' }}</p>
+          </div>
+          <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</span>
+            <p class="font-mono font-bold text-slate-800 truncate">{{ selectedLead.phone || '—' }}</p>
+          </div>
+        </div>
+
+        <!-- Submitted Form Questionnaire Responses -->
+        <div v-if="selectedLead.custom_form_responses && Object.keys(selectedLead.custom_form_responses).length" class="space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
+            Submitted Questionnaire Responses
+          </h4>
+
+          <div class="space-y-2.5">
+            <div
+              v-for="(val, key) in selectedLead.custom_form_responses"
+              :key="key"
+              class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1"
+            >
+              <span class="font-bold uppercase text-[10px] tracking-wider text-slate-400">
+                {{ String(key).replace(/_/g, ' ') }}
+              </span>
+              <p class="text-slate-900 font-semibold leading-relaxed">
+                {{ Array.isArray(val) ? val.join(', ') : val }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div v-if="selectedLead.notes" class="space-y-1.5 pt-1">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">Additional Inquiry Notes</h4>
+          <p class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
+            {{ selectedLead.notes }}
+          </p>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <UiButton variant="outline" size="sm" @click="isDetailDrawerOpen = false">Close</UiButton>
+          <UiButton
+            v-if="selectedLead.status !== 'converted'"
+            size="sm"
+            @click="isDetailDrawerOpen = false; openConvertModal(selectedLead)"
+          >
+            <Sparkles class="w-3.5 h-3.5 mr-1" /> Convert to Pipeline Deal
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
 
     <!-- Create / Edit Lead Modal -->
     <UiModal v-model="isCreateModalOpen" :title="editingLead ? 'Edit Lead Details' : 'Capture New Lead'" size="lg">
@@ -396,11 +518,12 @@ const getPriorityBadge = (priority: string) => {
             label="Lead Source"
             :options="[
               { label: 'Website / Organic', value: 'website' },
+              { label: 'Agency Referral', value: 'agency' },
+              { label: 'Social Media', value: 'social_media' },
+              { label: 'Google / Paid Ads', value: 'google_ads' },
               { label: 'Client Referral', value: 'referral' },
               { label: 'Cold Outreach', value: 'outreach' },
-              { label: 'Social Media', value: 'social' },
               { label: 'Event / Trade Show', value: 'event' },
-              { label: 'Advertisement', value: 'ads' },
               { label: 'Other', value: 'other' },
             ]"
           />
@@ -425,7 +548,7 @@ const getPriorityBadge = (priority: string) => {
               { label: 'Urgent', value: 'urgent' },
             ]"
           />
-          <UiInput v-model="leadForm.estimated_value" label="Est. Value ($)" type="number" placeholder="5000" />
+          <UiInput v-model="leadForm.estimated_value" label="Est. Value / Budget ($)" type="number" placeholder="5000" />
         </div>
 
         <div class="space-y-1">
