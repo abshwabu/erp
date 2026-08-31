@@ -32,6 +32,9 @@ import {
   Globe,
   Plug,
   Briefcase,
+  Target,
+  TrendingUp,
+  CheckSquare,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -45,6 +48,7 @@ const { hasPermission } = usePermission()
 const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
   'Human Resources': true,
+  CRM: true,
   Accounting: true,
   'Sales & Invoicing': true,
 })
@@ -106,8 +110,19 @@ const navigationGroups = [
           { name: 'Job Opportunities', to: '/hr/jobs', icon: markRaw(Briefcase) },
         ]
       },
+      { 
+        name: 'CRM', 
+        icon: markRaw(Target), 
+        permission: 'crm.contacts.view',
+        children: [
+          { name: 'Overview', to: '/crm', icon: markRaw(LayoutDashboard) },
+          { name: 'Leads & Prospects', to: '/crm/leads', icon: markRaw(Users) },
+          { name: 'Deals & Pipeline', to: '/crm/deals', icon: markRaw(TrendingUp) },
+          { name: 'Contacts & Accounts', to: '/crm/contacts', icon: markRaw(UserCheck) },
+          { name: 'Activities & Tasks', to: '/crm/activities', icon: markRaw(CheckSquare) },
+        ]
+      },
       { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
-      { name: 'CRM', to: '/crm', icon: markRaw(UserCheck), permission: 'crm.contacts.view' },
       { name: 'Projects', to: '/projects', icon: markRaw(FolderKanban), permission: 'projects.view' },
       { name: 'Support', to: '/support', icon: markRaw(Headphones), permission: 'support.tickets.view' },
     ]

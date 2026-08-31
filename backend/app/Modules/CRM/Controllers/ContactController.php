@@ -8,13 +8,29 @@ use App\Http\Controllers\BaseController;
 use App\Modules\Sales\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class ContactController extends BaseController
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $contacts = $this->query()->orderBy('name')->get();
+        $query = Customer::query()
+            ->withCount(['deals', 'invoices', 'activities']);
+
+        if ($request->filled('status') && $request->input('status') !== 'all') {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->input('search') . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', $search)
+                  ->orWhere('company', 'like', $search)
+                  ->orWhere('email', 'like', $search)
+                  ->orWhere('phone', 'like', $search);
+            });
+        }
+
+        $contacts = $query->orderBy('name')->get();
 
         return $this->successResponse($contacts);
     }
@@ -26,40 +42,63 @@ class ContactController extends BaseController
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'company' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', 'in:lead,customer'],
+            'job_title' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'string', 'in:lead,customer,partner,churned'],
+            'source' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
         ]);
 
-        $payload = [
-            'name' => $validated['name'],
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-        ];
-
-        if (Schema::hasColumn($this->table(), 'company')) {
-            $payload['company'] = $validated['company'] ?? null;
-            $payload['status'] = $validated['status'] ?? 'customer';
-        }
-
-        $contact = $this->query()->create($payload);
+        $contact = Customer::create($validated);
 
         return $this->createdResponse($contact);
     }
 
-    private function query()
+    public function show(string $id): JsonResponse
     {
-        if (class_exists(Customer::class) && Schema::hasTable('customers')) {
-            return Customer::query();
-        }
+        $contact = Customer::with([
+            'deals.assignedUser',
+            'invoices',
+            'activities.assignedUser',
+        ])
+        ->withCount(['deals', 'invoices', 'activities'])
+        ->findOrFail($id);
 
-        return \App\Modules\CRM\Models\CrmContact::query();
+        return $this->successResponse($contact);
     }
 
-    private function table(): string
+    public function update(Request $request, string $id): JsonResponse
     {
-        if (class_exists(Customer::class) && Schema::hasTable('customers')) {
-            return 'customers';
-        }
+        $contact = Customer::findOrFail($id);
 
-        return 'crm_contacts';
+        $validated = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'company' => ['nullable', 'string', 'max:255'],
+            'job_title' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'string', 'in:lead,customer,partner,churned'],
+            'source' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $contact->update($validated);
+
+        return $this->successResponse($contact);
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        $contact = Customer::findOrFail($id);
+        $contact->delete();
+
+        return $this->successResponse(null, 'Contact deleted successfully.');
     }
 }

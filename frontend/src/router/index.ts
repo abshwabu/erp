@@ -197,11 +197,36 @@ const router = createRouter({
           component: () => import('@/modules/payroll/pages/PayrollPage.vue'),
           meta: { title: 'Payroll', permission: 'payroll.runs.view' }
         },
+        // CRM Module
         {
           path: 'crm',
           name: 'crm',
-          component: () => import('@/modules/crm/pages/CrmPage.vue'),
-          meta: { title: 'CRM', permission: 'crm.contacts.view' }
+          component: () => import('@/modules/crm/pages/CrmDashboardPage.vue'),
+          meta: { title: 'CRM Overview', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'crm/leads',
+          name: 'crm-leads',
+          component: () => import('@/modules/crm/pages/CrmLeadsPage.vue'),
+          meta: { title: 'Leads & Prospects', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'crm/deals',
+          name: 'crm-deals',
+          component: () => import('@/modules/crm/pages/CrmDealsPage.vue'),
+          meta: { title: 'Deals & Pipeline', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'crm/contacts',
+          name: 'crm-contacts',
+          component: () => import('@/modules/crm/pages/CrmContactsPage.vue'),
+          meta: { title: 'Contacts & Accounts', permission: 'crm.contacts.view' }
+        },
+        {
+          path: 'crm/activities',
+          name: 'crm-activities',
+          component: () => import('@/modules/crm/pages/CrmActivitiesPage.vue'),
+          meta: { title: 'Activities & Tasks', permission: 'crm.contacts.view' }
         },
         {
           path: 'projects',
