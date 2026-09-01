@@ -303,9 +303,13 @@ class SuperAdminController extends BaseController
         $tenant = Tenant::findOrFail($id);
 
         try {
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+
             tenancy()->initialize($tenant);
 
-            $adminUser = TenantUser::whereHas('roles', fn ($q) => $q->where('name', 'Admin'))
+            $adminUser = TenantUser::whereHas('roles', fn ($q) => $q->where('name', 'Admin')->orWhere('name', 'Owner'))
                 ->orWhere('email', 'like', '%admin%')
                 ->first() ?? TenantUser::first();
 
@@ -317,9 +321,12 @@ class SuperAdminController extends BaseController
                     'password'  => Hash::make('password123'),
                     'is_active' => true,
                 ]);
+
+                $role = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'api']);
+                $adminUser->syncRoles([$role]);
             }
 
-            $token = JWTAuth::fromUser($adminUser);
+            $token = JWTAuth::customClaims(['tenant_id' => $tenant->getTenantKey()])->fromUser($adminUser);
             tenancy()->end();
 
             return $this->successResponse([

@@ -191,10 +191,14 @@ const updateStatusMutation = useMutation({
 
 const impersonateMutation = useMutation({
   mutationFn: (id: string) => superAdminApi.impersonateTenant(id),
-  onSuccess: (res) => {
+  onSuccess: async (res) => {
     const data = res.data.data
     if (data?.access_token) {
-      authStore.setToken(data.access_token)
+      await authStore.impersonateTenant(data.access_token, {
+        id: data.tenant_id,
+        name: data.tenant_name,
+        domain: data.tenant_slug,
+      })
       toast.success(`Switched context to ${data.tenant_name}`)
       setTimeout(() => {
         window.location.href = '/'

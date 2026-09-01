@@ -34,9 +34,26 @@ export const useAuthStore = defineStore('auth', () => {
     return permissions.value.includes(permission)
   }
 
-  function setTokens(access: string, refresh: string) {
+  function setToken(access: string) {
     accessToken.value = access
-    refreshToken.value = refresh
+  }
+
+  function setTokens(access: string, refresh?: string) {
+    accessToken.value = access
+    if (refresh) {
+      refreshToken.value = refresh
+    }
+  }
+
+  async function impersonateTenant(access: string, tenant: { id: string; name: string; domain: string }) {
+    const tenantStore = useTenantStore()
+    accessToken.value = access
+    tenantStore.setTenant({
+      id: tenant.id,
+      name: tenant.name,
+      domain: tenant.domain,
+    })
+    await checkAuth()
   }
 
   function setUser(userData: User, userPermissions: string[]) {
