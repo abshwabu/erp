@@ -6,6 +6,9 @@ use App\Modules\Integrations\Controllers\IntegrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/integrations')->middleware('auth:api,sanctum')->group(function () {
+    Route::get('/catalog', [IntegrationController::class, 'catalog'])
+        ->middleware('permission:integrations.view');
+
     Route::get('/', [IntegrationController::class, 'index'])
         ->middleware('permission:integrations.view');
 
@@ -19,6 +22,9 @@ Route::prefix('api/integrations')->middleware('auth:api,sanctum')->group(functio
         ->middleware('permission:integrations.manage');
 
     Route::post('/{id}/test', [IntegrationController::class, 'testConnection'])
+        ->middleware('permission:integrations.manage');
+
+    Route::post('/{id}/send-test', [IntegrationController::class, 'sendTestPayload'])
         ->middleware('permission:integrations.manage');
 
     Route::get('/{id}/logs', [IntegrationController::class, 'logs'])
