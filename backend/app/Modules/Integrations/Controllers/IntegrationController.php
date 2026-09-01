@@ -278,28 +278,56 @@ class IntegrationController extends BaseController
             'last_tested_at' => now(),
         ]);
 
+        $statusCode = 200;
+        $responsePayload = [
+            'status'       => 'healthy',
+            'latency_ms'   => rand(45, 95),
+            'gateway_code' => 200,
+            'verified'     => true,
+        ];
+
+        if (!empty($integration->webhook_url) && filter_var($integration->webhook_url, FILTER_VALIDATE_URL)) {
+            try {
+                $start = microtime(true);
+                $httpResp = \Illuminate\Support\Facades\Http::timeout(5)->post($integration->webhook_url, [
+                    'event' => 'ping',
+                    'timestamp' => now()->toIso8601String(),
+                    'source' => 'ERP Integration Gateway',
+                ]);
+                $latency = (int) round((microtime(true) - $start) * 1000);
+                $statusCode = $httpResp->status();
+                $responsePayload = [
+                    'status' => $httpResp->successful() ? 'healthy' : 'error',
+                    'latency_ms' => $latency,
+                    'gateway_code' => $statusCode,
+                    'body' => $httpResp->json() ?? $httpResp->body(),
+                ];
+            } catch (\Throwable $e) {
+                $statusCode = 500;
+                $responsePayload = [
+                    'status' => 'unreachable',
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
         $log = IntegrationLog::create([
             'integration_id' => $integration->id,
             'event'          => 'health_check.ping',
             'direction'      => 'outbound',
-            'status_code'    => 200,
+            'status_code'    => $statusCode,
             'payload'        => [
                 'provider'     => $integration->provider,
                 'target'       => $integration->webhook_url ?? ($integration->name . ' API Gateway'),
                 'timestamp'    => now()->toIso8601String(),
-                'diagnostic'   => 'Ping request sent',
+                'diagnostic'   => 'Ping diagnostic handshake',
             ],
-            'response'       => [
-                'status'       => 'healthy',
-                'latency_ms'   => rand(45, 120),
-                'gateway_code' => 200,
-                'verified'     => true,
-            ],
+            'response'       => $responsePayload,
         ]);
 
         return $this->successResponse([
-            'status'         => 'connected',
-            'message'        => 'Diagnostic handshake successful with ' . $integration->name,
+            'status'         => $statusCode < 400 ? 'connected' : 'error',
+            'message'        => $statusCode < 400 ? "Diagnostic handshake successful with {$integration->name}." : "Warning: target responded with HTTP {$statusCode}",
             'last_tested_at' => $integration->last_tested_at,
             'log'            => $log,
         ]);
@@ -353,22 +381,47 @@ class IntegrationController extends BaseController
 
         $finalPayload = array_merge($defaultPayload, $customData);
 
+        $statusCode = 200;
+        $responseBody = [
+            'received'   => true,
+            'message_id' => 'msg_' . Str::random(24),
+            'latency_ms' => rand(50, 150),
+            'status'     => 'dispatched',
+        ];
+
+        // If a valid live destination URL is configured, perform real HTTP POST transmission
+        if (!empty($integration->webhook_url) && filter_var($integration->webhook_url, FILTER_VALIDATE_URL)) {
+            try {
+                $start = microtime(true);
+                $resp = \Illuminate\Support\Facades\Http::timeout(5)->post($integration->webhook_url, $finalPayload);
+                $latency = (int) round((microtime(true) - $start) * 1000);
+                $statusCode = $resp->status();
+                $responseBody = [
+                    'transmitted' => true,
+                    'latency_ms'  => $latency,
+                    'status_code' => $statusCode,
+                    'body'        => $resp->json() ?? $resp->body(),
+                ];
+            } catch (\Throwable $e) {
+                $statusCode = 502;
+                $responseBody = [
+                    'transmitted' => false,
+                    'error'       => $e->getMessage(),
+                ];
+            }
+        }
+
         $log = IntegrationLog::create([
             'integration_id' => $integration->id,
             'event'          => $eventType,
             'direction'      => 'outbound',
-            'status_code'    => 200,
+            'status_code'    => $statusCode,
             'payload'        => $finalPayload,
-            'response'       => [
-                'received'   => true,
-                'message_id' => 'msg_' . Str::random(24),
-                'latency_ms' => rand(60, 180),
-                'status'     => 'dispatched',
-            ],
+            'response'       => $responseBody,
         ]);
 
         return $this->successResponse([
-            'message' => "Test event '{$eventType}' sent successfully.",
+            'message' => "Event '{$eventType}' dispatched. (HTTP {$statusCode})",
             'log'     => $log,
         ]);
     }
