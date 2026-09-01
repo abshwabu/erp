@@ -146,34 +146,27 @@ const fillDemo = (demoEmail: string) => {
         <Sparkles class="w-3.5 h-3.5 text-amber-500" />
         <span class="font-medium">Quick Demo Autofill:</span>
       </div>
-      <div class="grid grid-cols-4 gap-2">
-        <button
-          type="button"
-          @click="fillDemo('superadmin@erp.local')"
-          class="px-2 py-1.5 rounded-lg border border-amber-200 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 transition-colors"
-        >
-          👑 Super Admin
-        </button>
+      <div class="grid grid-cols-3 gap-2">
         <button
           type="button"
           @click="fillDemo('owner@example.com')"
-          class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
+          class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
         >
-          💼 Owner
+          👑 Owner
         </button>
         <button
           type="button"
           @click="fillDemo('admin@example.com')"
-          class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
+          class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
         >
           🛠️ Admin
         </button>
         <button
           type="button"
-          @click="fillDemo('accountant@example.com')"
-          class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
+          @click="fillDemo('cashier@example.com')"
+          class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors"
         >
-          📊 Accountant
+          💳 Cashier
         </button>
       </div>
     </div>
