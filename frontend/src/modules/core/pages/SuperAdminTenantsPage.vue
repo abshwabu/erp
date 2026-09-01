@@ -192,21 +192,27 @@ const updateStatusMutation = useMutation({
 const impersonateMutation = useMutation({
   mutationFn: (id: string) => superAdminApi.impersonateTenant(id),
   onSuccess: async (res) => {
-    const data = res.data.data
-    if (data?.access_token) {
-      await authStore.impersonateTenant(data.access_token, {
-        id: data.tenant_id,
-        name: data.tenant_name,
-        domain: data.tenant_slug,
-      })
-      toast.success(`Switched context to ${data.tenant_name}`)
-      setTimeout(() => {
-        window.location.href = '/'
-      }, 500)
+    try {
+      const data = res.data.data
+      if (data?.access_token) {
+        await authStore.impersonateTenant(data.access_token, {
+          id: data.tenant_id,
+          name: data.tenant_name,
+          domain: data.tenant_slug,
+        })
+        toast.success(`Switched context to ${data.tenant_name}`)
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 300)
+      } else {
+        toast.error('Impersonation token missing from server response')
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to switch workspace context')
     }
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Impersonation failed')
+    toast.error(err?.response?.data?.message || err?.message || 'Impersonation request failed')
   },
 })
 

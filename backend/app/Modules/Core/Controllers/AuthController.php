@@ -269,6 +269,35 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        try {
+            if (! tenancy()->initialized && $authHeader = $request->header('Authorization')) {
+                if (str_starts_with($authHeader, 'Bearer ')) {
+                    $jwtString = substr($authHeader, 7);
+                    $parts = explode('.', $jwtString);
+                    if (count($parts) >= 2) {
+                        $payloadJson = base64_decode(strtr($parts[1], '-_', '+/'));
+                        $payloadData = json_decode($payloadJson, true);
+                        if (! empty($payloadData['tenant_id'])) {
+                            $t = Tenant::query()
+                                ->where(function ($q) use ($payloadData) {
+                                    $tid = (string) $payloadData['tenant_id'];
+                                    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $tid)) {
+                                        $q->where('id', $tid);
+                                    }
+                                    $q->orWhere('slug', $tid);
+                                })
+                                ->first();
+                            if ($t) {
+                                tenancy()->initialize($t);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // continue
+        }
+
         $user = auth('api')->user() ?? $request->user();
 
         if (! $user) {
@@ -280,7 +309,7 @@ class AuthController extends Controller
         return response()->json([
             'data' => [
                 'id' => $user->id,
-                'tenant_id' => $user->tenant_id,
+                'tenant_id' => $user->tenant_id ?? (tenancy()->initialized ? tenant('id') : null),
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_active' => $user->is_active,
