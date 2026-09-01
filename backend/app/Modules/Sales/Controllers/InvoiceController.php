@@ -97,6 +97,16 @@ class InvoiceController extends BaseController
                 app(\App\Modules\Sales\Services\SalesAccountingService::class)->postInvoiceJournal($invoice);
             }
 
+            // Dispatch event to integrations (Stripe, Slack, Webhooks)
+            \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('invoice.created', [
+                'invoice_id'     => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'customer'       => $invoice->customer?->name ?? 'Guest Client',
+                'amount'         => '$' . number_format($invoice->total_cents / 100, 2),
+                'amount_cents'   => $invoice->total_cents,
+                'due_date'       => $invoice->due_date,
+            ]);
+
             return $invoice->load(['customer', 'lines', 'payments']);
         });
 
@@ -131,6 +141,13 @@ class InvoiceController extends BaseController
 
         // Post to Accounting General Ledger & Financial Reports
         app(\App\Modules\Sales\Services\SalesAccountingService::class)->postInvoiceJournal($invoice);
+
+        \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('invoice.sent', [
+            'invoice_id'     => $invoice->id,
+            'invoice_number' => $invoice->number,
+            'customer'       => $invoice->customer?->name ?? 'Customer',
+            'amount'         => '$' . number_format($invoice->total_cents / 100, 2),
+        ]);
 
         return $this->successResponse($invoice->fresh(['customer', 'lines', 'payments']));
     }
@@ -179,6 +196,17 @@ class InvoiceController extends BaseController
 
             // Post to Accounting Cash/Bank & Settle Accounts Receivable
             app(\App\Modules\Sales\Services\SalesAccountingService::class)->postPaymentJournal($payment, $invoice);
+
+            if ($invoice->status === 'paid') {
+                \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('invoice.paid', [
+                    'invoice_id'     => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'customer'       => $invoice->customer?->name ?? 'Customer',
+                    'amount'         => '$' . number_format($invoice->total_cents / 100, 2),
+                    'payment_method' => $validated['method'],
+                    'paid_at'        => now()->toIso8601String(),
+                ]);
+            }
 
             return $invoice->fresh(['customer', 'lines', 'payments']);
         });

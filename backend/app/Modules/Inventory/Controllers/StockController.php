@@ -153,6 +153,15 @@ class StockController extends BaseController
             ], 422);
         }
 
+        \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('inventory.adjusted', [
+            'product_id'  => $movement->product_id,
+            'quantity'    => $movement->quantity,
+            'type'        => $movement->type,
+            'location_id' => $movement->to_location_id ?? $movement->from_location_id,
+            'notes'       => $movement->notes,
+            'adjusted_at' => now()->toIso8601String(),
+        ]);
+
         return response()->json([
             'message' => 'Stock adjusted successfully.',
             'data' => [

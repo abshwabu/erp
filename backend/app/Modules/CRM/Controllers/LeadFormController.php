@@ -94,6 +94,18 @@ class LeadFormController extends BaseController
         // Increment submissions count
         $form->increment('submissions_count');
 
+        // Broadcast to integrated webhooks, Slack, and automation connectors
+        \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('lead.captured', [
+            'lead_id'          => $lead->id,
+            'name'             => $lead->name,
+            'email'            => $lead->email,
+            'phone'            => $lead->phone,
+            'company'          => $lead->company,
+            'source'           => $lead->source,
+            'estimated_budget' => $lead->estimated_value,
+            'captured_at'      => now()->toIso8601String(),
+        ]);
+
         return response()->json([
             'message' => $form->thank_you_message ?: 'Thank you! Your inquiry has been received. Our team will get in touch shortly.',
             'thank_you_title' => $form->thank_you_title ?: 'Thank You!',

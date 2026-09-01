@@ -96,6 +96,17 @@ class DealController extends BaseController
 
         $deal->update($validated);
 
+        if ($deal->stage === 'won') {
+            \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('deal.won', [
+                'deal_id'  => $deal->id,
+                'title'    => $deal->title,
+                'value'    => '$' . number_format((float) $deal->amount, 2),
+                'customer' => $deal->customer?->name ?? 'Customer',
+                'owner'    => $deal->assignedUser?->name ?? 'Sales Rep',
+                'won_at'   => now()->toIso8601String(),
+            ]);
+        }
+
         return $this->successResponse($deal->fresh(['customer', 'lead', 'assignedUser']));
     }
 
@@ -118,6 +129,17 @@ class DealController extends BaseController
         }
 
         $deal->update($updateData);
+
+        if ($deal->stage === 'won') {
+            \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('deal.won', [
+                'deal_id'  => $deal->id,
+                'title'    => $deal->title,
+                'value'    => '$' . number_format((float) $deal->amount, 2),
+                'customer' => $deal->customer?->name ?? 'Customer',
+                'owner'    => $deal->assignedUser?->name ?? 'Sales Rep',
+                'won_at'   => now()->toIso8601String(),
+            ]);
+        }
 
         return $this->successResponse($deal->fresh(['customer', 'assignedUser']));
     }

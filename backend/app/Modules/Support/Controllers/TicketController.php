@@ -87,6 +87,16 @@ class TicketController extends BaseController
             'is_internal' => false,
         ]);
 
+        \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('ticket.created', [
+            'ticket_id'     => $ticket->id,
+            'ticket_number' => $ticket->ticket_number,
+            'subject'       => $ticket->subject,
+            'priority'      => $ticket->priority,
+            'contact_name'  => $ticket->contact_name,
+            'contact_email' => $ticket->contact_email,
+            'created_at'    => now()->toIso8601String(),
+        ]);
+
         return $this->createdResponse($ticket->load(['assignee:id,name', 'customer:id,name,company', 'messages']));
     }
 
