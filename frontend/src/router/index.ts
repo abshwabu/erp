@@ -385,6 +385,16 @@ const router = createRouter({
           component: () => import('@/modules/core/pages/RolesPage.vue'),
           meta: { title: 'Team Members & Users', permission: 'core.roles.view' }
         },
+        {
+          path: 'super-admin',
+          name: 'super-admin',
+          component: () => import('@/modules/core/pages/SuperAdminTenantsPage.vue'),
+          meta: { title: 'Super Admin - Tenant Management' }
+        },
+        {
+          path: 'tenants',
+          redirect: 'super-admin',
+        },
       ]
     },
     {

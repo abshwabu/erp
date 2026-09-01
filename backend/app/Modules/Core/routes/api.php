@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Core\Controllers\AuthController;
 use App\Modules\Core\Controllers\RoleController;
 use App\Modules\Core\Controllers\SettingsController;
+use App\Modules\Core\Controllers\SuperAdminController;
 use App\Modules\Core\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,19 @@ Route::prefix('api/auth')->group(function () {
 
 // ── Authenticated Core Endpoints ─────────────────────────────────────────────
 Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
+
+    // Super Admin & Multi-Tenant Management
+    Route::prefix('super-admin')->group(function () {
+        Route::get('metrics', [SuperAdminController::class, 'metrics']);
+        Route::get('tenants', [SuperAdminController::class, 'index']);
+        Route::post('tenants', [SuperAdminController::class, 'store']);
+        Route::get('tenants/{id}', [SuperAdminController::class, 'show']);
+        Route::put('tenants/{id}', [SuperAdminController::class, 'update']);
+        Route::patch('tenants/{id}/status', [SuperAdminController::class, 'updateStatus']);
+        Route::post('tenants/{id}/impersonate', [SuperAdminController::class, 'impersonate']);
+        Route::delete('tenants/{id}', [SuperAdminController::class, 'destroy']);
+        Route::get('plans', [SuperAdminController::class, 'plans']);
+    });
 
     // Users CRUD
     Route::get('users', [UserController::class, 'index'])

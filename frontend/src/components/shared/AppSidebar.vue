@@ -40,6 +40,7 @@ import {
   Flag,
   MessageSquare,
   BookOpen,
+  Crown,
 } from '@lucide/vue'
 import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
@@ -181,6 +182,7 @@ const navigationGroups = [
       { name: 'Settings', to: '/settings', icon: markRaw(Settings), permission: 'core.settings.view' },
       { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
       { name: 'Integrations', to: '/integrations', icon: markRaw(Plug), permission: 'integrations.view' },
+      { name: 'Super Admin', to: '/super-admin', icon: markRaw(Crown) },
     ]
   },
 ]
