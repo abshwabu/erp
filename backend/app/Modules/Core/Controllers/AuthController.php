@@ -306,6 +306,26 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $planData = null;
+        try {
+            if (tenancy()->initialized && tenant()) {
+                $t = tenant();
+                $plan = $t->plan ?? (\App\Modules\Core\Models\Plan::where('id', $t->plan_id)->first());
+                if ($plan) {
+                    $planData = [
+                        'id'              => $plan->id,
+                        'name'            => $plan->name,
+                        'slug'            => $plan->slug,
+                        'allowed_modules' => $plan->getAllowedModules(),
+                        'limits'          => $plan->getLimits(),
+                        'perks'           => $plan->getPerks(),
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            // continue
+        }
+
         return response()->json([
             'data' => [
                 'id' => $user->id,
@@ -316,6 +336,7 @@ class AuthController extends Controller
                 'mfa_enabled' => $user->mfa_enabled,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
+                'plan' => $planData,
             ],
         ]);
     }

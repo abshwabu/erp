@@ -42,14 +42,14 @@ import {
   BookOpen,
   Crown,
 } from '@lucide/vue'
-import { ref, markRaw } from 'vue'
+import { ref, markRaw, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import UiIcon from '@/components/ui/UiIcon.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const router = useRouter()
-const { hasPermission } = usePermission()
+const { hasPermission, hasModuleAccess } = usePermission()
 
 const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
@@ -76,11 +76,12 @@ const navigationGroups = [
     title: 'OPERATIONS',
     items: [
       { name: 'Dashboard', to: '/', icon: markRaw(LayoutDashboard) },
-      { name: 'Point of Sale', to: '/pos', icon: markRaw(ShoppingCart), permission: 'pos.sessions.open' },
+      { name: 'Point of Sale', to: '/pos', icon: markRaw(ShoppingCart), permission: 'pos.sessions.open', module: 'pos' },
       { 
         name: 'Inventory', 
         icon: markRaw(Package), 
         permission: 'inventory.products.view',
+        module: 'inventory',
         children: [
           { name: 'Products', to: '/inventory/products', icon: markRaw(Package) },
           { name: 'Stock Levels', to: '/inventory/stock', icon: markRaw(Box) },
@@ -88,12 +89,12 @@ const navigationGroups = [
           { name: 'Low Stock', to: '/inventory/low-stock', icon: markRaw(AlertTriangle) },
         ]
       },
-      { name: 'Warehouse', to: '/warehouse', icon: markRaw(Warehouse), permission: 'warehouse.receive' },
-      { name: 'Shops', to: '/shops', icon: markRaw(Store), permission: 'shops.view' },
-      { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view' },
-      { name: 'Manufacturing', to: '/manufacturing', icon: markRaw(Factory), permission: 'manufacturing.work_orders.view' },
+      { name: 'Warehouse', to: '/warehouse', icon: markRaw(Warehouse), permission: 'warehouse.receive', module: 'inventory' },
+      { name: 'Shops', to: '/shops', icon: markRaw(Store), permission: 'shops.view', module: 'sales' },
+      { name: 'Procurement', to: '/procurement', icon: markRaw(ShoppingBag), permission: 'procurement.purchase_orders.view', module: 'procurement' },
+      { name: 'Manufacturing', to: '/manufacturing', icon: markRaw(Factory), permission: 'manufacturing.work_orders.view', module: 'manufacturing' },
       { name: 'Documents', to: '/documents', icon: markRaw(FileText), permission: 'documents.view' },
-      { name: 'E-Commerce', to: '/ecommerce', icon: markRaw(Globe), permission: 'ecommerce.channels.view' },
+      { name: 'E-Commerce', to: '/ecommerce', icon: markRaw(Globe), permission: 'ecommerce.channels.view', module: 'ecommerce' },
     ]
   },
   {
@@ -104,11 +105,13 @@ const navigationGroups = [
         to: '/sales/invoices',
         icon: markRaw(FileText),
         permission: 'sales.invoices.create',
+        module: 'sales',
       },
       { 
         name: 'Human Resources', 
         icon: markRaw(Users), 
         permission: 'hr.employees.view',
+        module: 'hr',
         children: [
           { name: 'Employees', to: '/hr/employees', icon: markRaw(Users) },
           { name: 'Departments', to: '/hr/departments', icon: markRaw(Warehouse) },
@@ -122,6 +125,7 @@ const navigationGroups = [
         name: 'CRM', 
         icon: markRaw(Target), 
         permission: 'crm.contacts.view',
+        module: 'crm',
         children: [
           { name: 'Overview', to: '/crm', icon: markRaw(LayoutDashboard) },
           { name: 'Leads & Prospects', to: '/crm/leads', icon: markRaw(Users) },
@@ -131,11 +135,12 @@ const navigationGroups = [
           { name: 'Lead Forms & Sources', to: '/crm/lead-forms', icon: markRaw(Sparkles) },
         ]
       },
-      { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view' },
+      { name: 'Payroll', to: '/payroll', icon: markRaw(Banknote), permission: 'payroll.runs.view', module: 'payroll' },
       { 
         name: 'Projects', 
         icon: markRaw(FolderKanban), 
         permission: 'projects.view',
+        module: 'projects',
         children: [
           { name: 'Portfolio Overview', to: '/projects', icon: markRaw(LayoutDashboard) },
           { name: 'Tasks & Kanban', to: '/projects/tasks', icon: markRaw(CheckSquare) },
@@ -147,6 +152,7 @@ const navigationGroups = [
         name: 'Support', 
         icon: markRaw(Headphones), 
         permission: 'support.tickets.view',
+        module: 'support',
         children: [
           { name: 'Helpdesk Overview', to: '/support', icon: markRaw(LayoutDashboard) },
           { name: 'Ticket Queue', to: '/support/tickets', icon: markRaw(MessageSquare) },
@@ -162,6 +168,7 @@ const navigationGroups = [
         name: 'Accounting',
         icon: markRaw(Calculator),
         permission: 'accounting.journals.view',
+        module: 'accounting',
         children: [
           { name: 'Chart of Accounts', to: '/accounting/chart-of-accounts', icon: markRaw(Calculator) },
           { name: 'Journals', to: '/accounting/journals', icon: markRaw(FileText) },
@@ -172,8 +179,8 @@ const navigationGroups = [
           { name: 'AP Aging', to: '/accounting/ap-aging', icon: markRaw(AlertTriangle) },
         ]
       },
-      { name: 'Reporting', to: '/reporting', icon: markRaw(BarChart2), permission: 'accounting.reports.view' },
-      { name: 'Assets', to: '/assets', icon: markRaw(Landmark), permission: 'assets.view' },
+      { name: 'Reporting', to: '/reporting', icon: markRaw(BarChart2), permission: 'accounting.reports.view', module: 'accounting' },
+      { name: 'Assets', to: '/assets', icon: markRaw(Landmark), permission: 'assets.view', module: 'assets' },
     ]
   },
   {
@@ -181,16 +188,24 @@ const navigationGroups = [
     items: [
       { name: 'Settings', to: '/settings', icon: markRaw(Settings), permission: 'core.settings.view' },
       { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
-      { name: 'Integrations', to: '/integrations', icon: markRaw(Plug), permission: 'integrations.view' },
+      { name: 'Integrations', to: '/integrations', icon: markRaw(Plug), permission: 'integrations.view', module: 'integrations' },
       { name: 'Super Admin', to: '/super-admin', icon: markRaw(Crown) },
     ]
   },
 ]
 
-const filteredGroups = navigationGroups.map(group => ({
-  ...group,
-  items: group.items.filter(item => !item.permission || hasPermission(item.permission))
-})).filter(group => group.items.length > 0)
+const filteredGroups = computed(() => {
+  return navigationGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      // Check Plan-level module access first
+      if ((item as any).module && !hasModuleAccess((item as any).module)) {
+        return false
+      }
+      return !item.permission || hasPermission(item.permission)
+    })
+  })).filter(group => group.items.length > 0)
+})
 </script>
 
 <template>

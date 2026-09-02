@@ -4,15 +4,30 @@ export interface PlatformPlan {
   id: string
   name: string
   slug: string
+  badge?: string
+  tagline?: string
   description?: string
   price_monthly: number
   price_annually: number
   is_active: boolean
   tenants_count?: number
+  allowed_modules: string[]
+  perks: string[]
+  limits?: {
+    users_limit: number
+    storage_gb: number
+    invoices_limit: number
+    multi_warehouse: boolean
+    advanced_accounting: boolean
+    custom_domain: boolean
+    webhooks_integrations?: boolean
+    support_sla?: string
+    [key: string]: any
+  }
   features?: Array<{
     id: string
     feature_key: string
-    value: string
+    feature_value: any
   }>
 }
 

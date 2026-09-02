@@ -39,6 +39,9 @@ import {
   Sparkles,
   Globe,
   Database,
+  Lock,
+  X,
+  CheckCircle,
 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -59,6 +62,24 @@ const isDeleteModalOpen = ref(false)
 const editingTenant = ref<PlatformTenant | null>(null)
 const tenantToDelete = ref<PlatformTenant | null>(null)
 const deleteConfirmationInput = ref('')
+
+const moduleMatrix = [
+  { key: 'sales', name: 'Sales & Invoicing', category: 'Revenue', basic: true, pro: true, enterprise: true, note: '100 inv/mo on Basic, Unlimited on Pro & Ent' },
+  { key: 'crm', name: 'CRM & Lead Intake', category: 'Revenue', basic: true, pro: true, enterprise: true, note: 'Web forms, lead pipeline & deals' },
+  { key: 'inventory', name: 'Inventory & Stock Control', category: 'Operations', basic: true, pro: true, enterprise: true, note: 'Single warehouse on Basic, Multi-warehouse on Pro/Ent' },
+  { key: 'pos', name: 'POS Cashier Terminal', category: 'Operations', basic: true, pro: true, enterprise: true, note: 'Cashier sessions & barcode receipts' },
+  { key: 'core', name: 'Core Settings & RBAC', category: 'Administration', basic: true, pro: true, enterprise: true, note: 'User preferences & role permissions' },
+  { key: 'accounting', name: 'Double-Entry Accounting', category: 'Finance', basic: false, pro: true, enterprise: true, note: 'General ledger, journal entries, trial balance & aging' },
+  { key: 'procurement', name: 'Procurement & Supplier POs', category: 'Operations', basic: false, pro: true, enterprise: true, note: 'Purchase orders, bills & vendor directory' },
+  { key: 'hr', name: 'Human Resources & Attendance', category: 'People', basic: false, pro: true, enterprise: true, note: 'Staff directory, attendance & leave approvals' },
+  { key: 'payroll', name: 'Payroll Runs & Pay Stubs', category: 'People', basic: false, pro: true, enterprise: true, note: 'Automated disbursement calculations & payslips' },
+  { key: 'projects', name: 'Projects & Billable Time', category: 'Operations', basic: false, pro: true, enterprise: true, note: 'Task boards, milestones & timesheet logs' },
+  { key: 'support', name: 'Support & Helpdesk', category: 'People', basic: false, pro: true, enterprise: true, note: 'Ticket queue, SLA routing & knowledge articles' },
+  { key: 'assets', name: 'Fixed Asset Depreciation', category: 'Finance', basic: false, pro: true, enterprise: true, note: 'Asset registry & write-down schedules' },
+  { key: 'manufacturing', name: 'Manufacturing & BOMs', category: 'Operations', basic: false, pro: false, enterprise: true, note: 'Production work orders & bill of materials' },
+  { key: 'ecommerce', name: 'Multi-Storefront Ecommerce', category: 'Revenue', basic: false, pro: false, enterprise: true, note: 'Public storefronts & online catalog engine' },
+  { key: 'integrations', name: 'Webhooks & API Connectors', category: 'Technology', basic: false, pro: false, enterprise: true, note: '12-gateway connectors & real-time webhook engine' },
+]
 
 // Forms
 const createForm = ref({
@@ -550,64 +571,211 @@ function copyDomain(text: string, id: string) {
     </div>
 
     <!-- 2. Subscription Plans Tab -->
-    <div v-else-if="activeTab === 'plans'" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div v-else-if="activeTab === 'plans'" class="space-y-8">
+      <!-- Tier Pricing & Perks Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div
           v-for="plan in plans"
           :key="plan.id"
-          class="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-6 relative overflow-hidden"
-          :class="plan.name === 'Enterprise' ? 'ring-2 ring-indigo-600/50' : ''"
+          class="bg-white rounded-3xl border p-6 shadow-xs flex flex-col justify-between space-y-6 relative overflow-hidden transition-all duration-200 hover:shadow-md"
+          :class="[
+            plan.slug === 'enterprise' ? 'border-purple-300 ring-2 ring-purple-600/30' :
+            plan.slug === 'professional' ? 'border-blue-300 ring-2 ring-blue-600/30' :
+            'border-slate-200'
+          ]"
         >
-          <div v-if="plan.name === 'Enterprise'" class="absolute top-0 right-0 bg-indigo-600 text-white font-bold text-[10px] px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-            Most Popular
+          <!-- Top Badge -->
+          <div
+            v-if="plan.badge"
+            class="absolute top-0 right-0 font-bold text-[10px] px-3 py-1 rounded-bl-xl uppercase tracking-wider text-white"
+            :class="[
+              plan.slug === 'enterprise' ? 'bg-gradient-to-r from-purple-600 to-indigo-600' :
+              plan.slug === 'professional' ? 'bg-gradient-to-r from-blue-600 to-cyan-600' :
+              'bg-slate-700'
+            ]"
+          >
+            {{ plan.badge }}
           </div>
 
           <div class="space-y-4">
             <div>
-              <h3 class="text-xl font-black text-slate-900">{{ plan.name }}</h3>
-              <p class="text-xs text-slate-500 mt-1">{{ plan.description || 'Enterprise-grade cloud ERP tier.' }}</p>
-            </div>
-
-            <div class="flex items-baseline gap-1">
-              <span class="text-3xl font-black text-slate-900">${{ (plan.price_monthly / 100).toFixed(2) }}</span>
-              <span class="text-xs text-slate-400 font-medium">/ month per organization</span>
-            </div>
-
-            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs flex items-center justify-between">
-              <span class="text-slate-600 font-bold">Active Subscribed Tenants</span>
-              <span class="font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
-                {{ plan.tenants_count || 0 }} Tenants
-              </span>
-            </div>
-
-            <div class="space-y-2 pt-2 border-t border-slate-100">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Included Features & Modules</span>
-              <div class="space-y-1.5 text-xs text-slate-700">
-                <div class="flex items-center gap-2">
-                  <CheckCircle2 class="w-4 h-4 text-emerald-500" />
-                  <span>Isolated PostgreSQL Schema Guard</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <CheckCircle2 class="w-4 h-4 text-emerald-500" />
-                  <span>Unlimited Invoicing & Accounting Ledgers</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <CheckCircle2 class="w-4 h-4 text-emerald-500" />
-                  <span>CRM, Inventory, POS, Payroll & HR</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <CheckCircle2 class="w-4 h-4 text-emerald-500" />
-                  <span>Full API & Webhook Dispatch Integrations</span>
-                </div>
+              <div class="flex items-center gap-2">
+                <Crown v-if="plan.slug === 'enterprise'" class="w-5 h-5 text-amber-500" />
+                <Zap v-else-if="plan.slug === 'professional'" class="w-5 h-5 text-blue-500" />
+                <Layers v-else class="w-5 h-5 text-slate-500" />
+                <h3 class="text-xl font-black text-slate-900">{{ plan.name }} Tier</h3>
               </div>
+              <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">{{ plan.tagline || plan.description }}</p>
+            </div>
+
+            <!-- Price -->
+            <div class="p-4 bg-slate-50/80 rounded-2xl border border-slate-100 space-y-1">
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-slate-900">${{ (plan.price_monthly / 100).toFixed(0) }}</span>
+                <span class="text-xs text-slate-500 font-medium">/ month</span>
+              </div>
+              <div class="text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                <span>or ${{ (plan.price_annually / 100).toFixed(0) }}/year (billed annually)</span>
+                <span class="font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                  {{ plan.tenants_count || 0 }} Active Tenants
+                </span>
+              </div>
+            </div>
+
+            <!-- Capacity Highlights -->
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col">
+                <span class="text-slate-400 font-semibold text-[10px] uppercase">User Capacity</span>
+                <span class="font-bold text-slate-800">
+                  {{ (plan.limits?.users_limit === -1 || plan.slug === 'enterprise') ? 'Unlimited Users' : (plan.limits?.users_limit || 5) + ' User Seats' }}
+                </span>
+              </div>
+              <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col">
+                <span class="text-slate-400 font-semibold text-[10px] uppercase">File Storage</span>
+                <span class="font-bold text-slate-800">
+                  {{ plan.limits?.storage_gb || (plan.slug === 'enterprise' ? 500 : plan.slug === 'professional' ? 50 : 5) }} GB Cloud Storage
+                </span>
+              </div>
+            </div>
+
+            <!-- Module Access Pills -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Module Entitlements ({{ plan.allowed_modules?.includes('*') ? 'All 15 Modules' : (plan.allowed_modules?.length || 5) + ' Modules' }})
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-if="plan.allowed_modules?.includes('*')"
+                  class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1"
+                >
+                  <Sparkles class="w-3 h-3 text-purple-600" /> All 15 Enterprise Modules Unlocked
+                </span>
+                <template v-else>
+                  <span
+                    v-for="mod in plan.allowed_modules"
+                    :key="mod"
+                    class="px-2 py-0.5 rounded-lg text-[10px] font-bold capitalize bg-slate-100 text-slate-700 border border-slate-200"
+                  >
+                    {{ mod }}
+                  </span>
+                </template>
+              </div>
+            </div>
+
+            <!-- Perks Checklist -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Exclusive Plan Perks</span>
+              <ul class="space-y-1.5 text-xs text-slate-700">
+                <li
+                  v-for="(perk, i) in plan.perks"
+                  :key="i"
+                  class="flex items-start gap-2 leading-snug"
+                >
+                  <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <span :class="perk.startsWith('Everything in') ? 'font-bold text-indigo-700' : ''">{{ perk }}</span>
+                </li>
+              </ul>
             </div>
           </div>
 
           <div class="pt-4 border-t border-slate-100">
-            <UiButton variant="outline" class="w-full" size="sm">
-              <Edit2 class="w-3.5 h-3.5 mr-1" /> Configure Plan Features
-            </UiButton>
+            <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+              <span>SLA Level:</span>
+              <span class="font-bold text-slate-800">{{ plan.limits?.support_sla || (plan.slug === 'enterprise' ? '24/7 1h SLA' : plan.slug === 'professional' ? '12h Business SLA' : '48h Standard') }}</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Comprehensive Module Entitlements Matrix -->
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden space-y-4 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Layers class="w-4 h-4 text-indigo-600" /> Complete Feature & Module Access Matrix
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Comparison of included operations, finance, and system capabilities across each subscription tier.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+            15 Modules Evaluated
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-100 text-xs">
+            <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <tr>
+                <th class="px-4 py-3 text-left w-1/4">Module / ERP Capability</th>
+                <th class="px-4 py-3 text-left w-1/6">Category</th>
+                <th class="px-4 py-3 text-center w-1/6">
+                  <div class="font-bold text-slate-800">Basic</div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">$29/month</div>
+                </th>
+                <th class="px-4 py-3 text-center w-1/6">
+                  <div class="font-bold text-blue-700">Professional</div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">$79/month</div>
+                </th>
+                <th class="px-4 py-3 text-center w-1/6">
+                  <div class="font-bold text-purple-700 flex items-center justify-center gap-1">
+                    <Crown class="w-3 h-3 text-amber-500" /> Enterprise
+                  </div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">$199/month</div>
+                </th>
+                <th class="px-4 py-3 text-left">Perk & Limit Differences</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              <tr
+                v-for="row in moduleMatrix"
+                :key="row.key"
+                class="hover:bg-slate-50/70 transition-colors"
+              >
+                <td class="px-4 py-3 font-bold text-slate-900">
+                  {{ row.name }}
+                </td>
+
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                    {{ row.category }}
+                  </span>
+                </td>
+
+                <!-- Basic Column -->
+                <td class="px-4 py-3 text-center">
+                  <div v-if="row.basic" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 class="w-4 h-4" />
+                  </div>
+                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" title="Locked on Basic Plan">
+                    <Lock class="w-3 h-3 text-slate-400" />
+                  </div>
+                </td>
+
+                <!-- Professional Column -->
+                <td class="px-4 py-3 text-center">
+                  <div v-if="row.pro" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 class="w-4 h-4" />
+                  </div>
+                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" title="Locked on Professional Plan">
+                    <Lock class="w-3 h-3 text-slate-400" />
+                  </div>
+                </td>
+
+                <!-- Enterprise Column -->
+                <td class="px-4 py-3 text-center">
+                  <div v-if="row.enterprise" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-50 text-purple-700">
+                    <CheckCircle2 class="w-4 h-4" />
+                  </div>
+                </td>
+
+                <!-- Notes -->
+                <td class="px-4 py-3 text-slate-500 text-[11px]">
+                  {{ row.note }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

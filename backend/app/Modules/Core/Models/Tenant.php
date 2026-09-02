@@ -53,4 +53,21 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return $this->hasMany(PlanFeature::class, 'plan_id', 'plan_id');
     }
+
+    /**
+     * Check if this tenant's active plan allows access to the specified module.
+     */
+    public function hasModuleAccess(string $module): bool
+    {
+        if (!$this->plan_id) {
+            return true;
+        }
+
+        $plan = $this->plan ?? Plan::find($this->plan_id);
+        if (!$plan) {
+            return true;
+        }
+
+        return $plan->hasModule($module);
+    }
 }

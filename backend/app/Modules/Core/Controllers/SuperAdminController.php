@@ -352,17 +352,24 @@ class SuperAdminController extends BaseController
     {
         $plans = Plan::with('features')->orderBy('price_monthly')->get()->map(function (Plan $plan) {
             $tenantsCount = Tenant::where('plan_id', $plan->id)->count();
+            $badgeFeature = $plan->features->firstWhere('feature_key', 'badge');
+            $taglineFeature = $plan->features->firstWhere('feature_key', 'tagline');
 
             return [
-                'id'             => $plan->id,
-                'name'           => $plan->name,
-                'slug'           => $plan->slug,
-                'description'    => $plan->description,
-                'price_monthly'  => $plan->price_monthly,
-                'price_annually' => $plan->price_annually,
-                'is_active'      => $plan->is_active,
-                'tenants_count'  => $tenantsCount,
-                'features'       => $plan->features,
+                'id'              => $plan->id,
+                'name'            => $plan->name,
+                'slug'            => $plan->slug,
+                'badge'           => $badgeFeature?->feature_value ?? ($plan->slug === 'enterprise' ? 'All-Inclusive' : ($plan->slug === 'professional' ? 'Most Popular' : 'Starter')),
+                'tagline'         => $taglineFeature?->feature_value ?? 'Enterprise ERP Suite Tier',
+                'description'     => $plan->description,
+                'price_monthly'   => $plan->price_monthly,
+                'price_annually'  => $plan->price_annually,
+                'is_active'       => $plan->is_active,
+                'tenants_count'   => $tenantsCount,
+                'allowed_modules' => $plan->getAllowedModules(),
+                'perks'           => $plan->getPerks(),
+                'limits'          => $plan->getLimits(),
+                'features'        => $plan->features,
             ];
         });
 

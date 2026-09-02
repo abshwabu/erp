@@ -11,6 +11,14 @@ export interface User {
   email: string
   roles?: string[]
   avatar?: string
+  plan?: {
+    id: string
+    name: string
+    slug: string
+    allowed_modules: string[]
+    limits?: Record<string, any>
+    perks?: string[]
+  } | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -32,6 +40,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   function hasPermission(permission: string) {
     return permissions.value.includes(permission)
+  }
+
+  function hasModuleAccess(moduleName: string): boolean {
+    if (!user.value?.plan?.allowed_modules) {
+      return true // If no plan restrictions specified, allow
+    }
+
+    const allowed = user.value.plan.allowed_modules
+    if (allowed.includes('*')) {
+      return true
+    }
+
+    return allowed.map((m) => m.toLowerCase()).includes(moduleName.toLowerCase())
   }
 
   function setToken(access: string) {
@@ -154,6 +175,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userInitials,
     hasPermission,
+    hasModuleAccess,
     setToken,
     setTokens,
     impersonateTenant,

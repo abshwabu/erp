@@ -15,9 +15,14 @@ export function usePermission() {
     return permissions.every((p) => authStore.hasPermission(p))
   }
 
+  const hasModuleAccess = (moduleName: string) => {
+    return authStore.hasModuleAccess(moduleName)
+  }
+
   return {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    hasModuleAccess,
   }
 }
