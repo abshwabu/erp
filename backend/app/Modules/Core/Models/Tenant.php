@@ -26,6 +26,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'custom_domain',
             'plan_id',
             'status',
+            'trial_ends_at',
             'settings',
             'created_at',
             'updated_at',
@@ -36,7 +37,53 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return [
             'settings' => 'array',
+            'trial_ends_at' => 'datetime',
         ];
+    }
+
+    public function onTrial(): bool
+    {
+        if ($this->status === 'trial_expired') {
+            return false;
+        }
+
+        if ($this->status === 'trial') {
+            return !$this->trial_ends_at || $this->trial_ends_at->isFuture();
+        }
+
+        return (bool) ($this->trial_ends_at && $this->trial_ends_at->isFuture());
+    }
+
+    public function trialExpired(): bool
+    {
+        if ($this->status === 'trial_expired') {
+            return true;
+        }
+
+        if ($this->status === 'trial' && $this->trial_ends_at && $this->trial_ends_at->isPast()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function daysLeftInTrial(): int
+    {
+        if (!$this->trial_ends_at || $this->trial_ends_at->isPast()) {
+            return 0;
+        }
+
+        return (int) now()->diffInDays($this->trial_ends_at);
+    }
+
+    public function needsPlanSelection(): bool
+    {
+        // If demo or active paid plan
+        if ($this->slug === 'demo') {
+            return false;
+        }
+
+        return $this->trialExpired();
     }
 
     public function plan(): BelongsTo

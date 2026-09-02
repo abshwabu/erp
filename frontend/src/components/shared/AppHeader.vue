@@ -10,16 +10,19 @@ import {
   User, 
   Settings, 
   LogOut, 
-  ChevronRight 
+  ChevronRight,
+  CreditCard,
 } from '@lucide/vue'
-import { markRaw } from 'vue'
+import { markRaw, ref } from 'vue'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
 import NavClockWidget from './NavClockWidget.vue'
+import PlanSelectionModal from './PlanSelectionModal.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
+const isPlanModalOpen = ref(false)
 
 const handleLogout = async () => {
   await authStore.logout()
@@ -29,6 +32,7 @@ const handleLogout = async () => {
 const userMenuItems = [
   { label: 'Profile', icon: markRaw(User), to: '/profile' },
   { label: 'Settings', icon: markRaw(Settings), to: '/settings' },
+  { label: 'Subscription & Plans', icon: markRaw(CreditCard), action: () => { isPlanModalOpen.value = true } },
   { label: 'Logout', icon: markRaw(LogOut), action: handleLogout, variant: 'danger' as const },
 ]
 </script>
@@ -66,6 +70,27 @@ const userMenuItems = [
         />
       </div>
 
+      <!-- 2-Month Free Trial Countdown Badge -->
+      <div
+        v-if="authStore.isTrialActive"
+        class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl text-xs shadow-xs"
+      >
+        <span class="flex h-2 w-2 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <span class="font-bold text-amber-900">
+          Free Trial: {{ authStore.trialDaysLeft }} days left
+        </span>
+        <button
+          type="button"
+          @click="isPlanModalOpen = true"
+          class="ml-1 text-[11px] font-extrabold text-white bg-amber-600 hover:bg-amber-700 px-2 py-0.5 rounded-lg transition-colors cursor-pointer shadow-xs"
+        >
+          Choose Plan
+        </button>
+      </div>
+
       <!-- Quick Clock In / Out Widget for all users -->
       <NavClockWidget />
 
@@ -89,20 +114,21 @@ const userMenuItems = [
             No new notifications
           </div>
           <div v-else class="divide-y divide-slate-100">
-            <div v-for="n in notificationStore.notifications" :key="n.id" class="p-4 hover:bg-slate-50 cursor-pointer transition-colors">
-              <p class="text-sm font-medium text-slate-900">{{ n.title }}</p>
-              <p class="text-xs text-slate-500 mt-1">{{ n.message }}</p>
+            <div 
+              v-for="notif in notificationStore.notifications" 
+              :key="notif.id"
+              class="p-4 hover:bg-slate-50 transition-colors"
+              :class="{ 'bg-primary-50/30': !notif.read }"
+            >
+              <p class="text-sm font-medium text-slate-900">{{ notif.title }}</p>
+              <p class="text-xs text-slate-500 mt-1">{{ notif.message }}</p>
+              <span class="text-[10px] text-slate-400 mt-2 block">{{ notif.time }}</span>
             </div>
-          </div>
-          <div class="p-2 border-t border-slate-100 text-center">
-            <router-link to="/notifications" class="text-xs text-primary-600 font-medium hover:underline">
-              View all notifications
-            </router-link>
           </div>
         </div>
       </UiDropdown>
 
-      <!-- User Menu -->
+      <!-- User Profile Menu -->
       <UiDropdown :items="userMenuItems" align="right">
         <template #trigger>
           <button class="flex items-center space-x-3 p-1 hover:bg-slate-100 rounded-lg transition-colors group">
@@ -117,5 +143,8 @@ const userMenuItems = [
         </template>
       </UiDropdown>
     </div>
+
+    <!-- Voluntary Plan Selection Modal -->
+    <PlanSelectionModal v-model="isPlanModalOpen" />
   </header>
 </template>

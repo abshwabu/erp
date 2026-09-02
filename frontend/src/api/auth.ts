@@ -69,4 +69,14 @@ export const authApi = {
     const response = await apiClient.post('/auth/change-password', payload)
     return response.data
   },
+
+  async getBillingPlans(): Promise<{ data: any[] }> {
+    const response = await apiClient.get<{ data: any[] }>('/billing/plans')
+    return response.data
+  },
+
+  async selectPlan(payload: { plan_id: string; billing_cycle?: string }): Promise<{ message: string; data: any }> {
+    const response = await apiClient.post<{ message: string; data: any }>('/billing/select-plan', payload)
+    return response.data
+  },
 }

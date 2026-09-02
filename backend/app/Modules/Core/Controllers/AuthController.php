@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Core\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Core\Models\Plan;
 use App\Modules\Core\Models\Tenant;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Requests\LoginRequest;
@@ -27,15 +28,21 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        // 1. Create Tenant (triggers migration & seeding via TenancyServiceProvider)
+        // 1. Create Tenant with 2-month free trial
+        $trialEndsAt = now()->addMonths(2);
+        $enterprisePlan = Plan::where('slug', 'enterprise')->first();
+
         $tenant = Tenant::create([
             'name' => $request->company_name,
             'slug' => $request->domain,
-            'status' => 'active',
+            'status' => 'trial',
+            'trial_ends_at' => $trialEndsAt,
+            'plan_id' => $enterprisePlan?->id,
             'settings' => [
-                'timezone' => config('app.timezone'),
-                'locale' => config('app.locale'),
-                'currency' => config('app.currency', 'USD'),
+                'timezone' => config('app.timezone', 'Africa/Addis_Ababa'),
+                'locale' => config('app.locale', 'en'),
+                'currency' => 'ETB',
+                'trial_started_at' => now()->toIso8601String(),
             ],
         ]);
 
@@ -75,6 +82,11 @@ class AuthController extends Controller
                 'id' => $tenant->getTenantKey(),
                 'name' => $tenant->name,
                 'domain' => $tenant->slug,
+                'status' => $tenant->status,
+                'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+                'days_left' => $tenant->daysLeftInTrial(),
+                'is_trial' => $tenant->onTrial(),
+                'needs_plan' => $tenant->needsPlanSelection(),
             ]
         ], 201);
     }
@@ -307,6 +319,7 @@ class AuthController extends Controller
         }
 
         $planData = null;
+        $tenantData = null;
         try {
             if (tenancy()->initialized && tenant()) {
                 $t = tenant();
@@ -321,6 +334,18 @@ class AuthController extends Controller
                         'perks'           => $plan->getPerks(),
                     ];
                 }
+
+                $tenantData = [
+                    'id'            => $t->id,
+                    'name'          => $t->name,
+                    'slug'          => $t->slug,
+                    'status'        => $t->status,
+                    'trial_ends_at' => $t->trial_ends_at?->toIso8601String(),
+                    'days_left'     => $t->daysLeftInTrial(),
+                    'is_trial'      => $t->onTrial(),
+                    'trial_expired' => $t->trialExpired(),
+                    'needs_plan'    => $t->needsPlanSelection(),
+                ];
             }
         } catch (\Throwable $e) {
             // continue
@@ -337,6 +362,92 @@ class AuthController extends Controller
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
                 'plan' => $planData,
+                'tenant' => $tenantData,
+            ],
+        ]);
+    }
+
+    /**
+     * Get available plans for tenant billing and subscription.
+     */
+    public function availablePlans(): JsonResponse
+    {
+        $plans = Plan::with('features')->where('is_active', true)->orderBy('price_monthly')->get()->map(function (Plan $plan) {
+            $badgeFeature = $plan->features->firstWhere('feature_key', 'badge');
+            $taglineFeature = $plan->features->firstWhere('feature_key', 'tagline');
+
+            return [
+                'id'              => $plan->id,
+                'name'            => $plan->name,
+                'slug'            => $plan->slug,
+                'badge'           => $badgeFeature?->feature_value ?? ($plan->slug === 'enterprise' ? 'All-Inclusive' : ($plan->slug === 'professional' ? 'Most Popular' : 'Starter')),
+                'tagline'         => $taglineFeature?->feature_value ?? 'Enterprise Cloud ERP Plan',
+                'price_monthly'   => $plan->price_monthly,
+                'price_annually'  => $plan->price_annually,
+                'currency'        => 'ETB',
+                'currency_symbol' => 'Birr',
+                'allowed_modules' => $plan->getAllowedModules(),
+                'perks'           => $plan->getPerks(),
+                'limits'          => $plan->getLimits(),
+            ];
+        });
+
+        return response()->json(['data' => $plans]);
+    }
+
+    /**
+     * Choose and activate a subscription plan for the active tenant.
+     */
+    public function selectPlan(Request $request): JsonResponse
+    {
+        $request->validate([
+            'plan_id' => 'required',
+            'billing_cycle' => 'nullable|in:monthly,annually',
+        ]);
+
+        $t = tenant();
+        if (!$t) {
+            return response()->json(['message' => 'No active tenant workspace found.'], 404);
+        }
+
+        $planQuery = Plan::query();
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $request->plan_id)) {
+            $plan = $planQuery->where('id', $request->plan_id)->first();
+        } else {
+            $plan = $planQuery->where('slug', $request->plan_id)->first();
+        }
+
+        if (!$plan) {
+            return response()->json(['message' => 'The selected subscription plan does not exist.'], 404);
+        }
+
+        $cycle = $request->input('billing_cycle', 'monthly');
+
+        // Transition from trial/trial_expired to active
+        $settings = $t->settings ?? [];
+        $settings['subscription_activated_at'] = now()->toIso8601String();
+        $settings['billing_cycle'] = $cycle;
+
+        $t->update([
+            'plan_id'       => $plan->id,
+            'status'        => 'active',
+            'trial_ends_at' => null,
+            'settings'      => $settings,
+        ]);
+
+        return response()->json([
+            'message' => "Successfully activated {$plan->name} subscription plan!",
+            'data' => [
+                'tenant_id'   => $t->id,
+                'status'      => $t->status,
+                'plan' => [
+                    'id'              => $plan->id,
+                    'name'            => $plan->name,
+                    'slug'            => $plan->slug,
+                    'allowed_modules' => $plan->getAllowedModules(),
+                    'limits'          => $plan->getLimits(),
+                    'perks'           => $plan->getPerks(),
+                ],
             ],
         ]);
     }

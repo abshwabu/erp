@@ -31,6 +31,14 @@ final class TenantMiddleware
             tenancy()->initialize($tenant);
             $this->applyTenantContext($tenant);
 
+            if ($tenant->needsPlanSelection() && !$this->isBillingOrBypassRoute($request)) {
+                return new JsonResponse([
+                    'message' => 'Your 2-month free trial has ended. Please choose a subscription plan to continue using your workspace.',
+                    'trial_expired' => true,
+                    'code' => 'PLAN_SELECTION_REQUIRED',
+                ], 402);
+            }
+
             try {
                 return $next($request);
             } finally {
@@ -66,6 +74,14 @@ final class TenantMiddleware
             || str_starts_with($request->path(), 'api/store')
             || str_starts_with($request->path(), 'storage')
             || str_starts_with($request->path(), 'api/media');
+    }
+
+    private function isBillingOrBypassRoute(Request $request): bool
+    {
+        return $this->isCentralRoute($request)
+            || str_starts_with($request->path(), 'api/billing')
+            || $request->path() === 'api/auth/me'
+            || $request->path() === 'api/auth/logout';
     }
 
     private function applyTenantContext(Tenant $tenant): void

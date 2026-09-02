@@ -19,6 +19,17 @@ export interface User {
     limits?: Record<string, any>
     perks?: string[]
   } | null
+  tenant?: {
+    id: string
+    name: string
+    slug: string
+    status: string
+    trial_ends_at?: string | null
+    days_left?: number
+    is_trial?: boolean
+    trial_expired?: boolean
+    needs_plan?: boolean
+  } | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -28,6 +39,19 @@ export const useAuthStore = defineStore('auth', () => {
   const permissions = ref<string[]>([])
 
   const isAuthenticated = computed(() => !!accessToken.value)
+
+  const isTrialActive = computed(() => {
+    return !!user.value?.tenant?.is_trial && !user.value?.tenant?.trial_expired
+  })
+
+  const trialDaysLeft = computed(() => {
+    return user.value?.tenant?.days_left ?? 0
+  })
+
+  const needsPlanSelection = computed(() => {
+    if (user.value?.email === 'superadmin@erp.local') return false
+    return !!user.value?.tenant?.needs_plan
+  })
 
   const userInitials = computed(() => {
     if (!user.value?.name) return ''
@@ -173,6 +197,9 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     permissions,
     isAuthenticated,
+    isTrialActive,
+    trialDaysLeft,
+    needsPlanSelection,
     userInitials,
     hasPermission,
     hasModuleAccess,

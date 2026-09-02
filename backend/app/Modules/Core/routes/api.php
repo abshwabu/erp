@@ -30,6 +30,12 @@ Route::prefix('api/auth')->group(function () {
 // ── Authenticated Core Endpoints ─────────────────────────────────────────────
 Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
 
+    // Tenant Billing & Plan Activation
+    Route::prefix('billing')->group(function () {
+        Route::get('plans', [AuthController::class, 'availablePlans']);
+        Route::post('select-plan', [AuthController::class, 'selectPlan']);
+    });
+
     // Super Admin & Multi-Tenant Management
     Route::prefix('super-admin')->group(function () {
         Route::get('metrics', [SuperAdminController::class, 'metrics']);

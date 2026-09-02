@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useUIStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import AppSidebar from '@/components/shared/AppSidebar.vue'
 import AppHeader from '@/components/shared/AppHeader.vue'
+import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue'
 import UiToast from '@/components/ui/UiToast.vue'
 
 const uiStore = useUIStore()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 </script>
 
@@ -21,6 +24,9 @@ const notificationStore = useNotificationStore()
           <router-view />
         </div>
       </main>
+
+      <!-- Paywall / Plan Picker for Expired Trials -->
+      <PlanSelectionModal :forced="authStore.needsPlanSelection" />
 
       <!-- Global Toasts -->
       <div
