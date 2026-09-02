@@ -6,8 +6,12 @@ import { VueQueryPlugin, type VueQueryPluginOptions } from '@tanstack/vue-query'
 
 import App from './App.vue'
 import router from './router'
+import { offlineSyncService } from './services/offlineSync'
 
 const app = createApp(App)
+
+// Initialize offline storage & background synchronization service
+offlineSyncService.init()
 
 // Pinia
 app.use(createPinia())

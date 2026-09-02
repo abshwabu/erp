@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import AppSidebar from '@/components/shared/AppSidebar.vue'
 import AppHeader from '@/components/shared/AppHeader.vue'
+import OfflineBanner from '@/components/shared/OfflineBanner.vue'
 import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue'
 import UiToast from '@/components/ui/UiToast.vue'
 
@@ -17,6 +18,9 @@ const notificationStore = useNotificationStore()
     <AppSidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
+      <!-- Global Offline / Sync Network Banner -->
+      <OfflineBanner />
+
       <AppHeader />
 
       <main class="flex-1 overflow-auto p-4 lg:p-6 custom-scrollbar">

@@ -16,6 +16,7 @@ import {
 import { markRaw, ref } from 'vue'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
 import NavClockWidget from './NavClockWidget.vue'
+import OfflineStatusWidget from './OfflineStatusWidget.vue'
 import PlanSelectionModal from './PlanSelectionModal.vue'
 
 const uiStore = useUIStore()
@@ -90,6 +91,9 @@ const userMenuItems = [
           Choose Plan
         </button>
       </div>
+
+      <!-- Offline / Online Synchronization Status Widget -->
+      <OfflineStatusWidget />
 
       <!-- Quick Clock In / Out Widget for all users -->
       <NavClockWidget />
