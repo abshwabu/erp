@@ -103,21 +103,44 @@ class OfflineSyncService {
     return { successCount, failCount }
   }
 
+  private getSafeStorageItem(key: string): string | null {
+    if (typeof window === 'undefined') return null
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw)
+      return typeof parsed === 'string' ? parsed : String(parsed)
+    } catch {
+      return raw
+    }
+  }
+
   private async syncItem(item: OutboxItem): Promise<boolean> {
     try {
       item.status = 'syncing'
       await offlineStorage.updateOutboxItem(item)
 
-      // Retrieve current tokens from localStorage
-      const token = localStorage.getItem('access_token') ? JSON.parse(localStorage.getItem('access_token') || '""') : null
-      const tenantId = localStorage.getItem('tenant_id') ? JSON.parse(localStorage.getItem('tenant_id') || '""') : null
+      // Retrieve current tokens safely from localStorage
+      const token = this.getSafeStorageItem('access_token')
+      const tenantId = this.getSafeStorageItem('tenant_id')
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Offline-Synced': 'true',
         'X-Idempotency-Key': item.id,
-        ...(item.headers || {}),
+      }
+
+      // Safely copy non-auth headers from the original request
+      if (item.headers && typeof item.headers === 'object') {
+        for (const [k, v] of Object.entries(item.headers)) {
+          if (
+            typeof v === 'string' &&
+            !['authorization', 'x-tenant-id', 'host', 'content-length'].includes(k.toLowerCase())
+          ) {
+            headers[k] = v
+          }
+        }
       }
 
       if (token) {
