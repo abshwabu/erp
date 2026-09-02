@@ -88,8 +88,8 @@ const createForm = ref({
   custom_domain: '',
   plan_id: '',
   status: 'active',
-  currency: 'USD',
-  timezone: 'UTC',
+  currency: 'ETB',
+  timezone: 'Africa/Addis_Ababa',
   admin_name: '',
   admin_email: '',
   admin_password: '',
@@ -147,8 +147,8 @@ const filteredTenants = computed(() => {
 // Stats Cards
 const statCards = computed(() => {
   const m = metrics.value
-  const mrrFormatted = m?.mrr_cents ? '$' + (m.mrr_cents / 100).toFixed(2) : '$0.00'
-  const arrFormatted = m?.arr_cents ? '$' + (m.arr_cents / 100).toFixed(2) : '$0.00'
+  const mrrFormatted = m?.mrr_cents ? (m.mrr_cents / 100).toLocaleString() + ' Birr' : '0 Birr'
+  const arrFormatted = m?.arr_cents ? (m.arr_cents / 100).toLocaleString() + ' Birr' : '0 Birr'
 
   return [
     {
@@ -610,12 +610,13 @@ function copyDomain(text: string, id: string) {
 
             <!-- Price -->
             <div class="p-4 bg-slate-50/80 rounded-2xl border border-slate-100 space-y-1">
-              <div class="flex items-baseline gap-1">
-                <span class="text-3xl font-black text-slate-900">${{ (plan.price_monthly / 100).toFixed(0) }}</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-3xl font-black text-slate-900">{{ (plan.price_monthly / 100).toLocaleString() }}</span>
+                <span class="text-sm font-bold text-slate-700">Birr</span>
                 <span class="text-xs text-slate-500 font-medium">/ month</span>
               </div>
               <div class="text-[11px] text-slate-400 font-medium flex items-center justify-between">
-                <span>or ${{ (plan.price_annually / 100).toFixed(0) }}/year (billed annually)</span>
+                <span>or {{ (plan.price_annually / 100).toLocaleString() }} Birr / year</span>
                 <span class="font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
                   {{ plan.tenants_count || 0 }} Active Tenants
                 </span>
@@ -711,17 +712,17 @@ function copyDomain(text: string, id: string) {
                 <th class="px-4 py-3 text-left w-1/6">Category</th>
                 <th class="px-4 py-3 text-center w-1/6">
                   <div class="font-bold text-slate-800">Basic</div>
-                  <div class="text-[9px] text-slate-400 font-normal lowercase">$29/month</div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">1,000 Birr/month</div>
                 </th>
                 <th class="px-4 py-3 text-center w-1/6">
                   <div class="font-bold text-blue-700">Professional</div>
-                  <div class="text-[9px] text-slate-400 font-normal lowercase">$79/month</div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">2,500 Birr/month</div>
                 </th>
                 <th class="px-4 py-3 text-center w-1/6">
                   <div class="font-bold text-purple-700 flex items-center justify-center gap-1">
                     <Crown class="w-3 h-3 text-amber-500" /> Enterprise
                   </div>
-                  <div class="text-[9px] text-slate-400 font-normal lowercase">$199/month</div>
+                  <div class="text-[9px] text-slate-400 font-normal lowercase">5,000 Birr/month</div>
                 </th>
                 <th class="px-4 py-3 text-left">Perk & Limit Differences</th>
               </tr>
@@ -856,7 +857,7 @@ function copyDomain(text: string, id: string) {
           <UiSelect
             v-model="createForm.plan_id"
             label="Subscription Plan"
-            :options="(plans || []).map(p => ({ label: `${p.name} ($${(p.price_monthly / 100).toFixed(2)}/mo)`, value: p.id }))"
+            :options="(plans || []).map(p => ({ label: `${p.name} (${(p.price_monthly / 100).toLocaleString()} Birr/mo)`, value: p.id }))"
           />
         </div>
 

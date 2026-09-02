@@ -55,6 +55,8 @@ export interface PlatformMetrics {
   suspended_tenants: number
   mrr_cents: number
   arr_cents: number
+  currency?: string
+  currency_symbol?: string
   platform_version: string
   health: string
   plan_distribution: Array<{

@@ -17,8 +17,8 @@ class PlanSeeder extends Seeder
             [
                 'name' => 'Basic',
                 'slug' => 'basic',
-                'price_monthly' => 2900,   // $29.00 / mo
-                'price_annually' => 29000, // $290.00 / yr
+                'price_monthly' => 100000,   // 1,000 Birr / mo
+                'price_annually' => 1000000, // 10,000 Birr / yr
                 'features' => [
                     'tagline' => 'Essential tools for single-location shops and early-stage small businesses.',
                     'badge' => 'Starter',
@@ -51,8 +51,8 @@ class PlanSeeder extends Seeder
             [
                 'name' => 'Professional',
                 'slug' => 'professional',
-                'price_monthly' => 7900,   // $79.00 / mo
-                'price_annually' => 79000, // $790.00 / yr
+                'price_monthly' => 250000,   // 2,500 Birr / mo
+                'price_annually' => 2500000, // 25,000 Birr / yr
                 'features' => [
                     'tagline' => 'Full-spectrum ERP for growing companies requiring accounting, HR & procurement.',
                     'badge' => 'Most Popular',
@@ -97,8 +97,8 @@ class PlanSeeder extends Seeder
             [
                 'name' => 'Enterprise',
                 'slug' => 'enterprise',
-                'price_monthly' => 19900,   // $199.00 / mo
-                'price_annually' => 199000, // $1,990.00 / yr
+                'price_monthly' => 500000,   // 5,000 Birr / mo
+                'price_annually' => 5000000, // 50,000 Birr / yr
                 'features' => [
                     'tagline' => 'Unrestricted platform operations with manufacturing, webhooks, ecommerce & dedicated SLA.',
                     'badge' => 'All-Inclusive',

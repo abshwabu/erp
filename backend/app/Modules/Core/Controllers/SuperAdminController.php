@@ -58,6 +58,8 @@ class SuperAdminController extends BaseController
             'suspended_tenants' => $suspendedTenants,
             'mrr_cents'         => $mrrCents,
             'arr_cents'         => $mrrCents * 12,
+            'currency'          => 'ETB',
+            'currency_symbol'   => 'Birr',
             'plan_distribution' => $planDistribution,
             'platform_version'  => '2.5.0-Enterprise',
             'health'            => 'All Schemas Healthy & Operational',
