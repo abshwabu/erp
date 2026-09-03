@@ -14,18 +14,29 @@ class DemoTenantSeeder extends Seeder
     public function run(): void
     {
         // 1. Create or retrieve the primary demo tenant
-        $tenant = Tenant::firstOrCreate(
-            ['slug' => 'demo'],
-            [
+        $tenant = Tenant::where('slug', 'demo')->first();
+
+        if ($tenant) {
+            $dbName = $tenant->database()->getName();
+            if (! $tenant->database()->manager()->databaseExists($dbName)) {
+                $tenant->database()->manager()->createDatabase($tenant);
+                \Illuminate\Support\Facades\Artisan::call('tenants:migrate', [
+                    '--tenants' => [$tenant->getTenantKey()],
+                    '--force' => true,
+                ]);
+            }
+        } else {
+            $tenant = Tenant::create([
                 'name' => 'Demo Enterprise',
+                'slug' => 'demo',
                 'status' => 'active',
                 'settings' => [
                     'timezone' => 'UTC',
                     'locale' => 'en',
                     'currency' => 'USD',
                 ],
-            ]
-        );
+            ]);
+        }
 
         // 2. Initialize tenancy
         tenancy()->initialize($tenant);
