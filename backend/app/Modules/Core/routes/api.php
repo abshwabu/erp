@@ -93,6 +93,12 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
     Route::post('core/settings', [SettingsController::class, 'update'])
         ->middleware('permission:core.settings.edit');
 
+    // Module Management & Dynamic Dependency Toggling
+    Route::get('core/modules', [\App\Modules\Core\Controllers\ModuleController::class, 'index'])
+        ->middleware('permission:core.settings.view');
+    Route::post('core/modules/toggle', [\App\Modules\Core\Controllers\ModuleController::class, 'toggle'])
+        ->middleware('permission:core.settings.edit');
+
     // Consolidated live dashboard stats
     Route::get('core/dashboard', [\App\Modules\Core\Controllers\DashboardController::class, 'stats']);
 });

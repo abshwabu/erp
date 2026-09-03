@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Menu,
   Box,
+  Boxes,
   ArrowRightLeft,
   AlertTriangle,
   LogOut,
@@ -187,6 +188,7 @@ const navigationGroups = [
     title: 'SETTINGS',
     items: [
       { name: 'Settings', to: '/settings', icon: markRaw(Settings), permission: 'core.settings.view' },
+      { name: 'Modules & Apps', to: '/modules', icon: markRaw(Boxes), permission: 'core.settings.view' },
       { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
       { name: 'Integrations', to: '/integrations', icon: markRaw(Plug), permission: 'integrations.view', module: 'integrations' },
       { name: 'Super Admin', to: '/super-admin', icon: markRaw(Crown) },

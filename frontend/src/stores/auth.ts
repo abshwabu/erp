@@ -29,6 +29,7 @@ export interface User {
     is_trial?: boolean
     trial_expired?: boolean
     needs_plan?: boolean
+    enabled_modules?: string[]
   } | null
 }
 
@@ -67,8 +68,23 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function hasModuleAccess(moduleName: string): boolean {
+    if (user.value?.email === 'superadmin@erp.local') {
+      return true
+    }
+
+    if (moduleName.toLowerCase() === 'core') {
+      return true
+    }
+
+    // 1. Check if tenant has specific enabled_modules list
+    if (user.value?.tenant?.enabled_modules && Array.isArray(user.value.tenant.enabled_modules)) {
+      const enabled = user.value.tenant.enabled_modules.map((m) => m.toLowerCase())
+      return enabled.includes(moduleName.toLowerCase())
+    }
+
+    // 2. Fallback to plan allowed_modules
     if (!user.value?.plan?.allowed_modules) {
-      return true // If no plan restrictions specified, allow
+      return true
     }
 
     const allowed = user.value.plan.allowed_modules
@@ -77,6 +93,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     return allowed.map((m) => m.toLowerCase()).includes(moduleName.toLowerCase())
+  }
+
+  function setEnabledModules(modules: string[]) {
+    if (user.value?.tenant) {
+      user.value.tenant.enabled_modules = modules
+    }
   }
 
   function setToken(access: string) {
@@ -203,6 +225,7 @@ export const useAuthStore = defineStore('auth', () => {
     userInitials,
     hasPermission,
     hasModuleAccess,
+    setEnabledModules,
     setToken,
     setTokens,
     impersonateTenant,

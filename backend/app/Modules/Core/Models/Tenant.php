@@ -117,4 +117,66 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
         return $plan->hasModule($module);
     }
+
+    /**
+     * Get the list of currently enabled modules for this tenant (filtered by plan).
+     */
+    public function getEnabledModules(): array
+    {
+        $planAllowed = $this->plan?->getAllowedModules() ?? ['*'];
+        $settings = $this->settings ?? [];
+
+        if (!isset($settings['enabled_modules']) || !is_array($settings['enabled_modules'])) {
+            if (in_array('*', $planAllowed, true)) {
+                return array_keys(\App\Modules\Core\Services\ModuleManager::MODULES);
+            }
+            return $planAllowed;
+        }
+
+        $enabled = $settings['enabled_modules'];
+        if (!in_array('core', $enabled, true)) {
+            $enabled[] = 'core';
+        }
+
+        if (!in_array('*', $planAllowed, true)) {
+            $enabled = array_values(array_intersect($enabled, $planAllowed));
+        }
+
+        return array_values(array_unique(array_map('strtolower', $enabled)));
+    }
+
+    /**
+     * Check if a module is enabled by the tenant admin and permitted by plan.
+     */
+    public function hasModuleEnabled(string $module): bool
+    {
+        $module = strtolower($module);
+        if ($module === 'core') {
+            return true;
+        }
+
+        return in_array($module, $this->getEnabledModules(), true);
+    }
+
+    /**
+     * Toggle a module ON or OFF with automatic dependency resolution.
+     */
+    public function toggleModule(string $module, bool $enabled): array
+    {
+        $current = $this->getEnabledModules();
+        $planAllowed = $this->plan?->getAllowedModules() ?? ['*'];
+
+        $resolution = \App\Modules\Core\Services\ModuleManager::resolveToggle(
+            $current,
+            $module,
+            $enabled,
+            $planAllowed
+        );
+
+        $settings = $this->settings ?? [];
+        $settings['enabled_modules'] = $resolution['enabled'];
+        $this->update(['settings' => $settings]);
+
+        return $resolution;
+    }
 }

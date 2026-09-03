@@ -336,15 +336,16 @@ class AuthController extends Controller
                 }
 
                 $tenantData = [
-                    'id'            => $t->id,
-                    'name'          => $t->name,
-                    'slug'          => $t->slug,
-                    'status'        => $t->status,
-                    'trial_ends_at' => $t->trial_ends_at?->toIso8601String(),
-                    'days_left'     => $t->daysLeftInTrial(),
-                    'is_trial'      => $t->onTrial(),
-                    'trial_expired' => $t->trialExpired(),
-                    'needs_plan'    => $t->needsPlanSelection(),
+                    'id'              => $t->id,
+                    'name'            => $t->name,
+                    'slug'            => $t->slug,
+                    'status'          => $t->status,
+                    'trial_ends_at'   => $t->trial_ends_at?->toIso8601String(),
+                    'days_left'       => $t->daysLeftInTrial(),
+                    'is_trial'        => $t->onTrial(),
+                    'trial_expired'   => $t->trialExpired(),
+                    'needs_plan'      => $t->needsPlanSelection(),
+                    'enabled_modules' => $t->getEnabledModules(),
                 ];
             }
         } catch (\Throwable $e) {

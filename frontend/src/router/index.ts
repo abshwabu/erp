@@ -386,6 +386,16 @@ const router = createRouter({
           meta: { title: 'Team Members & Users', permission: 'core.roles.view' }
         },
         {
+          path: 'modules',
+          name: 'modules',
+          component: () => import('@/modules/core/pages/ModulesManagementPage.vue'),
+          meta: { title: 'Modules & Capability Center', permission: 'core.settings.view' }
+        },
+        {
+          path: 'settings/modules',
+          redirect: 'modules',
+        },
+        {
           path: 'super-admin',
           name: 'super-admin',
           component: () => import('@/modules/core/pages/SuperAdminTenantsPage.vue'),
