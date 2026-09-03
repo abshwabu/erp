@@ -376,6 +376,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_active' => $user->is_active,
+                'is_super_admin' => method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : ($user->email === 'superadmin@erp.local'),
                 'mfa_enabled' => $user->mfa_enabled,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),

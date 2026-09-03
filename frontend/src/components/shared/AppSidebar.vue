@@ -191,7 +191,7 @@ const navigationGroups = [
       { name: 'Modules & Apps', to: '/modules', icon: markRaw(Boxes), permission: 'core.settings.view' },
       { name: 'Users & Roles', to: '/roles', icon: markRaw(Shield), permission: 'core.roles.view' },
       { name: 'Integrations', to: '/integrations', icon: markRaw(Plug), permission: 'integrations.view', module: 'integrations' },
-      { name: 'Super Admin', to: '/super-admin', icon: markRaw(Crown) },
+      { name: 'Super Admin', to: '/super-admin', icon: markRaw(Crown), superAdminOnly: true },
     ]
   },
 ]
@@ -200,6 +200,10 @@ const filteredGroups = computed(() => {
   return navigationGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
+      // Hide super admin platform tools from regular tenant/demo users
+      if ((item as any).superAdminOnly && !authStore.isSuperAdmin) {
+        return false
+      }
       // Check Plan-level module access first
       if ((item as any).module && !hasModuleAccess((item as any).module)) {
         return false

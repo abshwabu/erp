@@ -10,6 +10,7 @@ export interface User {
   name: string
   email: string
   roles?: string[]
+  is_super_admin?: boolean
   avatar?: string
   plan?: {
     id: string
@@ -40,6 +41,15 @@ export const useAuthStore = defineStore('auth', () => {
   const permissions = ref<string[]>([])
 
   const isAuthenticated = computed(() => !!accessToken.value)
+
+  const isSuperAdmin = computed(() => {
+    return (
+      !!(user.value as any)?.is_super_admin ||
+      user.value?.email === 'superadmin@erp.local' ||
+      (user.value?.roles && user.value.roles.includes('Super Admin')) ||
+      (user.value?.email && user.value.email.toLowerCase().includes('superadmin'))
+    )
+  })
 
   const isTrialActive = computed(() => {
     return !!user.value?.tenant?.is_trial && !user.value?.tenant?.trial_expired
@@ -219,6 +229,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     permissions,
     isAuthenticated,
+    isSuperAdmin,
     isTrialActive,
     trialDaysLeft,
     needsPlanSelection,

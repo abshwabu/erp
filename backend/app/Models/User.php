@@ -53,4 +53,10 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(\App\Modules\Core\Models\Tenant::class, 'tenant_user');
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->email === 'superadmin@erp.local'
+            || str_contains(strtolower($this->email), 'superadmin');
+    }
 }

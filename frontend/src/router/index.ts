@@ -399,7 +399,7 @@ const router = createRouter({
           path: 'super-admin',
           name: 'super-admin',
           component: () => import('@/modules/core/pages/SuperAdminTenantsPage.vue'),
-          meta: { title: 'Super Admin - Tenant Management' }
+          meta: { title: 'Super Admin - Tenant Management', superAdminOnly: true }
         },
         {
           path: 'tenants',
@@ -437,6 +437,11 @@ router.beforeEach(async (to) => {
   // Auth Guard
   if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
     return { name: 'login' }
+  }
+
+  // Super Admin Only Guard
+  if (to.meta.superAdminOnly && !authStore.isSuperAdmin) {
+    return { name: 'dashboard' }
   }
 
   // Permission Guard

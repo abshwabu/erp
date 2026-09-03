@@ -36,8 +36,8 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
         Route::post('select-plan', [AuthController::class, 'selectPlan']);
     });
 
-    // Super Admin & Multi-Tenant Management
-    Route::prefix('super-admin')->group(function () {
+    // Super Admin & Multi-Tenant Management (Restricted to Platform Super Admins)
+    Route::prefix('super-admin')->middleware(\App\Http\Middleware\EnsureSuperAdmin::class)->group(function () {
         Route::get('metrics', [SuperAdminController::class, 'metrics']);
         Route::get('tenants', [SuperAdminController::class, 'index']);
         Route::post('tenants', [SuperAdminController::class, 'store']);
