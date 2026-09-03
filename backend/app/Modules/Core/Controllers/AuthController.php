@@ -122,7 +122,7 @@ class AuthController extends Controller
             }
 
             if (! $user) {
-                $tenants = Tenant::where('status', 'active')->get();
+                $tenants = Tenant::whereIn('status', ['active', 'trial'])->get();
                 foreach ($tenants as $t) {
                     try {
                         $found = $t->run(fn () => User::where('email', $request->email)->first());
@@ -134,6 +134,23 @@ class AuthController extends Controller
                         }
                     } catch (\Throwable $e) {
                         continue;
+                    }
+                }
+            }
+
+            if (! $user) {
+                // Check central database for platform superadmin
+                $centralUser = \App\Models\User::where('email', $request->email)->first();
+                if ($centralUser) {
+                    $user = $centralUser;
+                    $candidateTenant = Tenant::where('slug', 'demo')->first() ?? Tenant::first();
+                    if ($candidateTenant) {
+                        $tenant = $candidateTenant;
+                        try {
+                            tenancy()->initialize($tenant);
+                        } catch (\Throwable $e) {
+                            // continue with central context
+                        }
                     }
                 }
             }
