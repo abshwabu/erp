@@ -472,8 +472,8 @@ class AuthController extends Controller
                 ]
             );
 
-            // Laravel built-in reset notification
-            $user->notify(new \Illuminate\Auth\Notifications\ResetPassword($token));
+            // Send branded HTML reset password email
+            \App\Modules\Core\Services\EmailService::sendPasswordReset($user, $token);
         }
 
         return response()->json([

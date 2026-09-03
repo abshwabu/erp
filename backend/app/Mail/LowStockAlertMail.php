@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Mail;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Queue\SerializesModels;
+
+class LowStockAlertMail extends Mailable
+{
+    use Queueable, SerializesModels;
+
+    public function __construct(
+        public array $items = [],
+        public ?string $tenantName = null
+    ) {}
+
+    public function build(): self
+    {
+        $tenantName = $this->tenantName ?? (tenant('name') ?: config('app.name', 'ERP System'));
+
+        return $this->subject("⚠️ Low Stock & Reorder Alert - {$tenantName}")
+            ->view('emails.low-stock-alert')
+            ->with([
+                'items'      => $this->items,
+                'tenantName' => $tenantName,
+                'subtitle'   => 'Inventory & Stock Management',
+            ]);
+    }
+}

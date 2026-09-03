@@ -99,6 +99,12 @@ Route::prefix('api')->middleware('auth:api,sanctum')->group(function () {
     Route::post('core/modules/toggle', [\App\Modules\Core\Controllers\ModuleController::class, 'toggle'])
         ->middleware('permission:core.settings.edit');
 
+    // Email Diagnostics & SMTP Verification
+    Route::get('core/email/diagnostics', [\App\Modules\Core\Controllers\EmailDiagnosticsController::class, 'diagnostics'])
+        ->middleware('permission:core.settings.view');
+    Route::post('core/email/send-test', [\App\Modules\Core\Controllers\EmailDiagnosticsController::class, 'sendTest'])
+        ->middleware('permission:core.settings.edit');
+
     // Consolidated live dashboard stats
     Route::get('core/dashboard', [\App\Modules\Core\Controllers\DashboardController::class, 'stats']);
 });

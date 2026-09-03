@@ -2,10 +2,13 @@
 import { onMounted, ref } from 'vue'
 import { settingsApi, type TenantSettings } from '@/api/settings'
 import { authApi } from '@/api/auth'
+import { emailApi, type EmailDiagnostics } from '@/api/email'
+import { useAuthStore } from '@/stores/auth'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import UiSpinner from '@/components/ui/UiSpinner.vue'
 import { useToast } from '@/composables/useToast'
 import {
   Building2,
@@ -14,6 +17,8 @@ import {
   Lock,
   Shield,
   CheckCircle,
+  CheckCircle2,
+  AlertCircle,
   Eye,
   EyeOff,
   KeyRound,
@@ -26,11 +31,23 @@ import {
   Mail,
   MapPin,
   Save,
+  Send,
+  RefreshCw,
+  ExternalLink,
 } from '@lucide/vue'
 
 const toast = useToast()
-const activeTab = ref<'company' | 'localization' | 'invoicing' | 'security'>('company')
+const authStore = useAuthStore()
+const activeTab = ref<'company' | 'localization' | 'invoicing' | 'security' | 'email'>('company')
 const loading = ref(false)
+
+// Email diagnostics state
+const emailDiagnostics = ref<EmailDiagnostics | null>(null)
+const emailLoading = ref(false)
+const testEmailRecipient = ref('')
+const testEmailName = ref('')
+const testEmailSending = ref(false)
+const testEmailResult = ref<any>(null)
 
 const settingsForm = ref<TenantSettings>({
   display_name: '',
@@ -66,6 +83,11 @@ const passwordError = ref('')
 const passwordSuccess = ref('')
 
 onMounted(async () => {
+  if (authStore.user?.email) {
+    testEmailRecipient.value = authStore.user.email
+    testEmailName.value = authStore.user.name || 'Administrator'
+  }
+
   try {
     const res = await settingsApi.get()
     if (res.data?.data) {
@@ -74,7 +96,48 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to load settings', err)
   }
+
+  loadEmailDiagnostics()
 })
+
+async function loadEmailDiagnostics() {
+  emailLoading.value = true
+  try {
+    const res = await emailApi.getDiagnostics()
+    emailDiagnostics.value = res.data
+  } catch (err) {
+    console.error('Failed to load email diagnostics', err)
+  } finally {
+    emailLoading.value = false
+  }
+}
+
+async function sendTestEmail() {
+  if (!testEmailRecipient.value) {
+    toast.error('Recipient email address is required')
+    return
+  }
+
+  testEmailSending.value = true
+  testEmailResult.value = null
+
+  try {
+    const res = await emailApi.sendTest({
+      email: testEmailRecipient.value,
+      name: testEmailName.value || undefined,
+    })
+    testEmailResult.value = res.data
+    toast.success(res.message)
+  } catch (e: any) {
+    testEmailResult.value = {
+      success: false,
+      error: e?.response?.data?.message || 'Email delivery failed',
+    }
+    toast.error(e?.response?.data?.message || 'Failed to send test email')
+  } finally {
+    testEmailSending.value = false
+  }
+}
 
 async function saveSettings() {
   loading.value = true
@@ -183,6 +246,15 @@ async function changePassword() {
         :class="activeTab === 'security' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
         <Lock class="w-3.5 h-3.5" /> Password & Security
+      </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'email'"
+        class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
+        :class="activeTab === 'email' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
+      >
+        <Mail class="w-3.5 h-3.5" /> Email & Diagnostics
       </button>
     </div>
 
@@ -475,6 +547,129 @@ async function changePassword() {
           </div>
         </div>
         <UiBadge variant="success" class="font-bold">Active & Secure</UiBadge>
+      </div>
+    </div>
+
+    <!-- 5. Email & Diagnostics Tab -->
+    <div v-if="activeTab === 'email'" class="space-y-6">
+      <!-- SMTP Health & Server Telemetry -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Mail class="w-4 h-4 text-indigo-600" />
+              Active Mail Transport & Diagnostics
+            </h2>
+            <p class="text-xs text-slate-500">Real-time connectivity telemetry for transactional and operational emails.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <UiButton variant="outline" size="sm" :loading="emailLoading" @click="loadEmailDiagnostics">
+              <RefreshCw class="w-3.5 h-3.5 mr-1" /> Refresh Telemetry
+            </UiButton>
+          </div>
+        </div>
+
+        <div v-if="emailLoading && !emailDiagnostics" class="p-8 flex justify-center">
+          <UiSpinner size="md" />
+        </div>
+
+        <div v-else-if="emailDiagnostics" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Transport Status</span>
+            <div class="flex items-center gap-1.5 pt-0.5">
+              <span
+                class="w-2.5 h-2.5 rounded-full"
+                :class="emailDiagnostics.is_connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"
+              />
+              <span class="font-black text-sm" :class="emailDiagnostics.is_connected ? 'text-emerald-700' : 'text-red-700'">
+                {{ emailDiagnostics.is_connected ? 'Connected & Ready' : 'Connection Failed' }}
+              </span>
+            </div>
+            <span class="text-[11px] text-slate-500 block">
+              Ping Latency: {{ emailDiagnostics.latency_ms }} ms
+            </span>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Driver & Protocol</span>
+            <span class="font-bold text-slate-900 text-sm block uppercase">{{ emailDiagnostics.driver }}</span>
+            <span class="text-[11px] text-slate-500 block font-mono">Port {{ emailDiagnostics.smtp_port }}</span>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SMTP Server Host</span>
+            <span class="font-bold text-slate-900 text-sm block font-mono truncate">{{ emailDiagnostics.smtp_host }}</span>
+            <span class="text-[11px] text-slate-500 block">Local MailHog / Gateway</span>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Default From Address</span>
+            <span class="font-bold text-slate-900 text-sm block font-mono truncate">{{ emailDiagnostics.from_address }}</span>
+            <span class="text-[11px] text-slate-500 block truncate">{{ emailDiagnostics.from_name }}</span>
+          </div>
+        </div>
+
+        <!-- MailHog Web Inbox Link for local dev -->
+        <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-900">
+          <div class="flex items-center gap-2.5">
+            <Sparkles class="w-5 h-5 text-blue-600 shrink-0" />
+            <div>
+              <strong class="block text-sm">Local MailHog Testing Inbox</strong>
+              <span>All transactional emails (passwords, invoices, receipts) are captured and viewable in real-time.</span>
+            </div>
+          </div>
+          <a
+            href="http://localhost:8025"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold inline-flex items-center gap-1.5 shrink-0 hover:bg-blue-700 transition-colors"
+          >
+            Open MailHog UI <ExternalLink class="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+
+      <!-- Live Test Email Dispatcher -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-xs">
+        <div class="space-y-1 border-b border-slate-100 pb-3">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Send class="w-4 h-4 text-indigo-600" />
+            Send Live Verification Test Email
+          </h2>
+          <p class="text-xs text-slate-500">Dispatch an immediate test email to verify mailbox receipt and server throughput.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UiInput
+            v-model="testEmailRecipient"
+            label="Recipient Email Address"
+            type="email"
+            placeholder="e.g. yourname@domain.com"
+            required
+          />
+          <UiInput
+            v-model="testEmailName"
+            label="Recipient Full Name"
+            placeholder="e.g. John Doe"
+          />
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <span v-if="testEmailResult" class="text-xs font-bold flex items-center gap-1.5" :class="testEmailResult.success ? 'text-emerald-600' : 'text-red-600'">
+              <CheckCircle2 v-if="testEmailResult.success" class="w-4 h-4" />
+              <AlertCircle v-else class="w-4 h-4" />
+              {{ testEmailResult.message || (testEmailResult.success ? 'Delivered successfully' : testEmailResult.error) }}
+            </span>
+          </div>
+          <UiButton
+            :loading="testEmailSending"
+            @click="sendTestEmail"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white font-black"
+          >
+            <Send class="w-4 h-4 mr-1.5" /> Send Verification Email
+          </UiButton>
+        </div>
       </div>
     </div>
   </div>
