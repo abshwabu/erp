@@ -35,8 +35,8 @@ return [
     ],
     'database' => [
         'central_connection' => env('DB_CONNECTION', 'pgsql'),
-        'template_tenant_connection' => null,
-        'prefix' => 'tenant',
+        'template_tenant_connection' => env('TENANT_DB_CONNECTION', null),
+        'prefix' => env('TENANT_DB_PREFIX', 'tenant'),
         'suffix' => '',
         'managers' => [
             'sqlite' => Stancl\Tenancy\TenantDatabaseManagers\SQLiteDatabaseManager::class,
