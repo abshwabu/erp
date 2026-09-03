@@ -44,10 +44,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isSuperAdmin = computed(() => {
     return (
-      !!(user.value as any)?.is_super_admin ||
+      (user.value as any)?.is_super_admin === true ||
       user.value?.email === 'superadmin@erp.local' ||
-      (user.value?.roles && user.value.roles.includes('Super Admin')) ||
-      (user.value?.email && user.value.email.toLowerCase().includes('superadmin'))
+      (Array.isArray(user.value?.roles) && user.value.roles.includes('Super Admin'))
     )
   })
 

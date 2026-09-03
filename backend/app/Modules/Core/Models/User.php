@@ -85,7 +85,6 @@ class User extends Authenticatable implements JWTSubject
     public function isSuperAdmin(): bool
     {
         return $this->email === 'superadmin@erp.local'
-            || $this->hasRole('Super Admin')
-            || \App\Models\User::where('email', $this->email)->exists();
+            || (method_exists($this, 'hasRole') && $this->hasRole('Super Admin'));
     }
 }
