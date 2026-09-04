@@ -18,6 +18,7 @@ import UiDropdown from '@/components/ui/UiDropdown.vue'
 import NavClockWidget from './NavClockWidget.vue'
 import OfflineStatusWidget from './OfflineStatusWidget.vue'
 import PlanSelectionModal from './PlanSelectionModal.vue'
+import OnboardingHelper from './OnboardingHelper.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
@@ -97,6 +98,9 @@ const userMenuItems = [
 
       <!-- Quick Clock In / Out Widget for all users -->
       <NavClockWidget />
+
+      <!-- Quick Start / Onboarding Helper for new users -->
+      <OnboardingHelper />
 
       <!-- Notifications -->
       <UiDropdown align="right">

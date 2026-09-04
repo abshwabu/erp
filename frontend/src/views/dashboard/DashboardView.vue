@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/client'
+import OnboardingBanner from '@/components/shared/OnboardingBanner.vue'
 import {
   TrendingUp,
   TrendingDown,
@@ -290,6 +291,9 @@ const doughnutChartOptions = {
         </div>
       </div>
     </div>
+
+    <!-- Interactive Onboarding & Quick Start Checklist for New Users -->
+    <OnboardingBanner />
 
     <!-- Key Real Metrics Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
