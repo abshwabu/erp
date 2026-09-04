@@ -50,7 +50,22 @@ class POSTransactionController extends BaseController
             $data['location_id'] ?? null
         );
 
-        return $this->createdResponse($transaction);
+        $tenant = tenant();
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+
+        $companyInfo = [
+            'name' => $settings['display_name'] ?? ($tenant?->name ?? 'Bina ERP'),
+            'tin' => $settings['tax_id'] ?? '',
+            'tax_id' => $settings['tax_id'] ?? '',
+            'address' => $settings['company_address'] ?? '',
+            'phone' => $settings['company_phone'] ?? '',
+            'email' => $settings['company_email'] ?? '',
+        ];
+
+        $response = $transaction->toArray();
+        $response['company'] = $companyInfo;
+
+        return $this->createdResponse($response);
     }
 
     /**
@@ -62,6 +77,21 @@ class POSTransactionController extends BaseController
             ->where('receipt_number', $receiptNumber)
             ->firstOrFail();
 
-        return $this->successResponse($transaction);
+        $tenant = tenant();
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+
+        $companyInfo = [
+            'name' => $settings['display_name'] ?? ($tenant?->name ?? 'Bina ERP'),
+            'tin' => $settings['tax_id'] ?? '',
+            'tax_id' => $settings['tax_id'] ?? '',
+            'address' => $settings['company_address'] ?? '',
+            'phone' => $settings['company_phone'] ?? '',
+            'email' => $settings['company_email'] ?? '',
+        ];
+
+        $response = $transaction->toArray();
+        $response['company'] = $companyInfo;
+
+        return $this->successResponse($response);
     }
 }

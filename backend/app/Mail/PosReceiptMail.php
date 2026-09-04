@@ -18,12 +18,16 @@ class PosReceiptMail extends Mailable
         public string $paymentMethod = 'Cash',
         public ?string $terminalName = null,
         public string $currency = 'ETB',
-        public ?string $tenantName = null
+        public ?string $tenantName = null,
+        public ?string $tinNumber = null
     ) {}
 
     public function build(): self
     {
-        $tenantName = $this->tenantName ?? (tenant('name') ?: config('app.name', 'ERP System'));
+        $tenant = tenant();
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+        $tenantName = $this->tenantName ?? ($settings['display_name'] ?? ($tenant?->name ?: config('app.name', 'Bina ERP')));
+        $tin = $this->tinNumber ?? ($settings['tax_id'] ?? null);
 
         return $this->subject("🧾 POS Receipt #{$this->receiptNumber} from {$tenantName}")
             ->view('emails.pos-receipt')
@@ -34,6 +38,7 @@ class PosReceiptMail extends Mailable
                 'terminalName'     => $this->terminalName,
                 'currency'         => $this->currency,
                 'tenantName'       => $tenantName,
+                'tinNumber'        => $tin,
                 'subtitle'         => 'Point of Sale Checkout Receipt',
             ]);
     }

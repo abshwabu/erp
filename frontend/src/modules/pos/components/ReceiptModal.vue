@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { Printer, CheckCircle2, X } from '@lucide/vue'
 import { useTenantStore } from '@/stores/tenant'
+import { settingsApi, type TenantSettings } from '@/api/settings'
 
 const tenantStore = useTenantStore()
+const tenantSettings = ref<TenantSettings | null>(null)
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
@@ -12,8 +14,41 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'close'])
 
+onMounted(async () => {
+  try {
+    const res = await settingsApi.get()
+    if (res.data?.data) {
+      tenantSettings.value = res.data.data
+    }
+  } catch (err) {
+    console.debug('ReceiptModal: settings lookup skipped', err)
+  }
+})
+
 const companyName = computed(() => {
-  return tenantStore.currentTenant?.name || 'Bina Enterprise Solutions'
+  return props.orderData?.company?.name
+    || tenantSettings.value?.display_name
+    || tenantStore.currentTenant?.name
+    || 'Bina ERP'
+})
+
+const tinNumber = computed(() => {
+  return props.orderData?.company?.tin
+    || props.orderData?.company?.tax_id
+    || tenantSettings.value?.tax_id
+    || ''
+})
+
+const companyAddress = computed(() => {
+  return props.orderData?.company?.address
+    || tenantSettings.value?.company_address
+    || ''
+})
+
+const companyPhone = computed(() => {
+  return props.orderData?.company?.phone
+    || tenantSettings.value?.company_phone
+    || ''
 })
 
 function handleClose() {
@@ -25,6 +60,9 @@ function handlePrint() {
   const receiptNum = props.orderData?.receiptNumber || 'REC-884920'
   const dateStr = props.orderData?.date || new Date().toLocaleString()
   const compName = companyName.value
+  const compTin = tinNumber.value
+  const compAddress = companyAddress.value
+  const compPhone = companyPhone.value
   const items = props.orderData?.items || []
   const subtotal = (props.orderData?.subtotal || 0).toFixed(2)
   const total = (props.orderData?.total || 0).toFixed(2)
@@ -72,16 +110,32 @@ function handlePrint() {
           margin-bottom: 8px;
         }
         .company-title {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: bold;
           text-transform: uppercase;
           font-family: Arial, sans-serif;
-          margin: 0 0 4px 0;
+          margin: 0 0 3px 0;
+          letter-spacing: 0.5px;
+        }
+        .company-tin {
+          font-size: 11px;
+          font-weight: bold;
+          font-family: 'Courier New', monospace;
+          margin: 2px 0;
+          color: #000;
+        }
+        .company-contact {
+          font-size: 9px;
+          color: #444;
+          margin: 1px 0;
+          font-family: Arial, sans-serif;
         }
         .subtitle {
           font-size: 10px;
           color: #444;
-          margin: 0;
+          margin: 4px 0 0 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
         .meta-row {
           display: flex;
@@ -144,7 +198,10 @@ function handlePrint() {
     <body>
       <div class="header">
         <h1 class="company-title">${compName}</h1>
-        <p class="subtitle">Official Sales Receipt</p>
+        ${compTin ? `<div class="company-tin"><strong>TIN:</strong> ${compTin}</div>` : ''}
+        ${compAddress ? `<div class="company-contact">${compAddress}</div>` : ''}
+        ${compPhone ? `<div class="company-contact">Tel: ${compPhone}</div>` : ''}
+        <p class="subtitle">Official Sales Receipt / Tax Invoice</p>
         <div class="meta-row">
           <span>Receipt No: <strong>${receiptNum}</strong></span>
           <span>Date: ${dateStr}</span>
@@ -244,7 +301,15 @@ function handlePrint() {
           <h4 class="font-extrabold text-sm text-slate-900 font-sans uppercase tracking-wider mb-0.5">
             {{ companyName }}
           </h4>
-          <p class="text-[11px] text-slate-500 font-sans">Official Sales Receipt</p>
+          <div v-if="tinNumber" class="text-[11px] font-bold text-slate-900 font-mono tracking-wide">
+            TIN: {{ tinNumber }}
+          </div>
+          <div v-if="companyAddress || companyPhone" class="text-[10px] text-slate-500 font-sans mt-0.5">
+            <span v-if="companyAddress">{{ companyAddress }}</span>
+            <span v-if="companyAddress && companyPhone"> · </span>
+            <span v-if="companyPhone">Tel: {{ companyPhone }}</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-sans uppercase tracking-wider mt-1.5">Official Sales Receipt / Tax Invoice</p>
           
           <div class="mt-2 text-[10px] text-slate-600 space-y-0.5 font-mono">
             <div class="flex justify-between">

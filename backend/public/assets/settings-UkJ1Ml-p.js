@@ -1,0 +1,1 @@
+import{i as e}from"./createLucideIcon-DQNoEt_W.js";var t={get(){return e.get(`/core/settings`)},update(t){return e.post(`/core/settings`,t)}};export{t};

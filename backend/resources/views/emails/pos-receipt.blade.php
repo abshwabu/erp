@@ -3,14 +3,27 @@
 @section('content')
     <div style="text-align: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">
-            🧾 Digital Cashier Receipt
+            {{ $tenantName }}
         </h2>
+        @if(!empty($tinNumber))
+            <p style="color: #475569; font-size: 12px; font-weight: bold; margin: 0 0 8px 0; font-family: monospace;">TIN: {{ $tinNumber }}</p>
+        @endif
         <span class="badge badge-success">PAID & COMPLETED</span>
         <p style="color: #64748b; font-size: 13px; margin: 8px 0 0 0;">Receipt #: <strong>{{ $receiptNumber }}</strong></p>
     </div>
 
     <div class="card" style="font-size: 13px;">
         <table style="width: 100%;">
+            <tr>
+                <td style="padding: 3px 0; color: #64748b;">Merchant / Company:</td>
+                <td style="padding: 3px 0; font-weight: bold; text-align: right;">{{ $tenantName }}</td>
+            </tr>
+            @if(!empty($tinNumber))
+            <tr>
+                <td style="padding: 3px 0; color: #64748b;">Tax ID / TIN:</td>
+                <td style="padding: 3px 0; font-weight: bold; text-align: right; font-family: monospace;">{{ $tinNumber }}</td>
+            </tr>
+            @endif
             <tr>
                 <td style="padding: 3px 0; color: #64748b;">Terminal / Register:</td>
                 <td style="padding: 3px 0; font-weight: bold; text-align: right;">{{ $terminalName ?? 'Main Terminal' }}</td>

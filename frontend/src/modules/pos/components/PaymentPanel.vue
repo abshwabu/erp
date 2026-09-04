@@ -125,6 +125,7 @@ async function processPayment() {
       change: changeDue.value,
       date: new Date().toLocaleString(),
       receiptNumber: transaction.receipt_number,
+      company: transaction.company || null,
     }
 
     showReceipt.value = true
