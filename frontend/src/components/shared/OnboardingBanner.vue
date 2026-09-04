@@ -128,7 +128,7 @@ defineExpose({
 </script>
 
 <template>
-  <div v-if="!isDismissed" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800 space-y-4">
+  <div v-if="!isDismissed && !isAllCompleted" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800 space-y-4">
     <!-- Top Header -->
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">

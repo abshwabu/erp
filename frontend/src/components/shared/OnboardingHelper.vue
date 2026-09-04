@@ -153,20 +153,17 @@ defineExpose({
 
 <template>
   <div>
-    <!-- 1. Top Bar Trigger Button -->
+    <!-- 1. Top Bar Trigger Button (disappears when all tasks are completed) -->
     <button
+      v-if="!isAllCompleted"
       type="button"
       @click="openHelper"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs border"
-      :class="isAllCompleted ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-900 border-indigo-200 hover:border-indigo-300'"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs border bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-900 border-indigo-200 hover:border-indigo-300"
       title="Quick Start & Onboarding Helper"
     >
       <Rocket class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
       <span class="hidden sm:inline">Getting Started</span>
-      <span
-        class="px-1.5 py-0.2 rounded-md text-[10px] font-black"
-        :class="isAllCompleted ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white'"
-      >
+      <span class="px-1.5 py-0.2 rounded-md text-[10px] font-black bg-indigo-600 text-white">
         {{ completedCount }}/{{ totalSteps }}
       </span>
     </button>
