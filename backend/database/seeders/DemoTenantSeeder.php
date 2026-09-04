@@ -103,6 +103,9 @@ class DemoTenantSeeder extends Seeder
             $user->syncRoles([$data['role']]);
         }
 
+        // 5. Seed complete operational demo dataset (products, stock, shops, POS, HR, sales, projects)
+        $this->call(TenantDemoDataSeeder::class);
+
         tenancy()->end();
     }
 }
