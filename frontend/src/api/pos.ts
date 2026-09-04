@@ -48,8 +48,10 @@ export const posApi = {
     })
   },
 
-  getCurrentSession() {
-    return apiClient.get<{ data: PosSession | null }>('/pos/sessions/current')
+  getCurrentSession(shopId?: string) {
+    return apiClient.get<{ data: PosSession | null }>('/pos/sessions/current', {
+      params: shopId ? { shop_id: shopId } : undefined,
+    })
   },
 
   openSession(payload: { terminal_id: string; shop_id?: string; opening_cash_cents?: number }) {

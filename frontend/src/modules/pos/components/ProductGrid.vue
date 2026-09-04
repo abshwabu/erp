@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { shopsApi } from '@/api/shops'
 import { usePosStore } from '../stores/posStore'
@@ -9,11 +9,35 @@ import { resolveImageUrl } from '@/utils/format'
 import SelectVariantModal from './SelectVariantModal.vue'
 
 const posStore = usePosStore()
+const queryClient = useQueryClient()
 const searchQuery = ref('')
 const selectedCategoryId = ref<string | null>(null)
 const addedProductId = ref<string | null>(null)
 const variantModalOpen = ref(false)
 const activeModalProduct = ref<any>(null)
+
+let posChannel: BroadcastChannel | null = null
+
+onMounted(() => {
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      posChannel = new BroadcastChannel('pos-sync-channel')
+      posChannel.onmessage = () => {
+        queryClient.invalidateQueries({ queryKey: ['shops'] })
+        queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      }
+    }
+  } catch (e) {
+    console.debug('POS BroadcastChannel not available', e)
+  }
+})
+
+onUnmounted(() => {
+  if (posChannel) {
+    posChannel.close()
+    posChannel = null
+  }
+})
 
 const shopId = computed(() => posStore.selectedShopId || posStore.session?.shop_id || posStore.availableShops?.[0]?.id || null)
 const locationId = computed(() => posStore.selectedShop()?.stock_location_id || posStore.session?.terminal?.location_id || null)
@@ -36,8 +60,8 @@ const { data: categories, isLoading: isCategoriesLoading } = useQuery<any[]>({
   refetchOnWindowFocus: false,
 })
 
-// Null-safe shop stock query
-const { data: shopStock, isLoading: isShopStockLoading } = useQuery<any[]>({
+// Null-safe shop stock query with auto-sync across multiple POS sessions
+const { data: shopStock, isLoading: isShopStockLoading, refetch: refetchStock } = useQuery<any[]>({
   queryKey: computed(() => ['shops', shopId.value, 'stock-pos']),
   queryFn: async () => {
     if (!shopId.value) return []
@@ -52,8 +76,9 @@ const { data: shopStock, isLoading: isShopStockLoading } = useQuery<any[]>({
     }
   },
   enabled: computed(() => !!shopId.value),
-  staleTime: 1000 * 60 * 5,
-  refetchOnWindowFocus: false,
+  staleTime: 1000 * 5,
+  refetchInterval: 10000,
+  refetchOnWindowFocus: true,
 })
 
 // Null-safe direct inventory products query (always fetched for complete catalog metadata)
@@ -70,8 +95,9 @@ const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
       return []
     }
   },
-  staleTime: 1000 * 60 * 5,
-  refetchOnWindowFocus: false,
+  staleTime: 1000 * 30,
+  refetchInterval: 30000,
+  refetchOnWindowFocus: true,
 })
 
 const isLoading = computed(() => isCategoriesLoading.value || isShopStockLoading.value || isProductsLoading.value)

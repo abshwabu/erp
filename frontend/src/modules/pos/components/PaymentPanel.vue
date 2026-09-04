@@ -106,6 +106,16 @@ async function processPayment() {
     queryClient.invalidateQueries({ queryKey: ['inventory'] })
     queryClient.invalidateQueries({ queryKey: ['shops'] })
 
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('pos-sync-channel')
+        channel.postMessage({ type: 'POS_SALE_COMPLETED', timestamp: Date.now() })
+        channel.close()
+      }
+    } catch (e) {
+      console.debug('Failed to broadcast POS sale', e)
+    }
+
     lastOrderSummary.value = {
       items: cartItems,
       subtotal: (transaction.subtotal_cents ?? Math.round(subtotal.value * 100)) / 100,

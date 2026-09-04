@@ -117,13 +117,27 @@ class POSSessionController extends BaseController
     /**
      * GET /api/pos/sessions/current
      */
-    public function current(): JsonResponse
+    public function current(Request $request): JsonResponse
     {
-        $session = POSSession::with(['terminal', 'shop'])
+        $shopId = $request->query('shop_id');
+        $query = POSSession::with(['terminal', 'shop'])
             ->where('cashier_id', auth()->id())
-            ->where('status', 'open')
-            ->latest('opened_at')
-            ->first();
+            ->where('status', 'open');
+
+        if ($shopId) {
+            $query->where('shop_id', $shopId);
+        }
+
+        $session = $query->latest('opened_at')->first();
+
+        // Fallback to any open session for this cashier if not found for specific shop
+        if (! $session && $shopId) {
+            $session = POSSession::with(['terminal', 'shop'])
+                ->where('cashier_id', auth()->id())
+                ->where('status', 'open')
+                ->latest('opened_at')
+                ->first();
+        }
 
         if ($session && ! $session->shop_id && Schema::hasTable('shops')) {
             $shop = Shop::query()->where('is_active', true)->first();
@@ -147,21 +161,6 @@ class POSSessionController extends BaseController
             'opening_cash_cents' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $existing = POSSession::query()
-            ->where('cashier_id', auth()->id())
-            ->where('status', 'open')
-            ->first();
-
-        if ($existing) {
-            if (! $existing->shop_id && Schema::hasTable('shops')) {
-                $shop = Shop::query()->where('is_active', true)->first();
-                if ($shop) {
-                    $existing->update(['shop_id' => $shop->id]);
-                }
-            }
-            return $this->successResponse($existing->fresh()->load(['terminal', 'shop']));
-        }
-
         $terminal = POSTerminal::findOrFail($data['terminal_id']);
         $shopsExist = Schema::hasTable('shops') && Shop::query()->exists();
         $shopId = $data['shop_id'] ?? $terminal->shop_id;
@@ -170,32 +169,43 @@ class POSSessionController extends BaseController
             if (! $shopId) {
                 $shopId = Shop::query()->where('is_active', true)->value('id');
             }
-            $this->shopAccess->assertCanAccessShop($shopId);
+            if ($shopId) {
+                $this->shopAccess->assertCanAccessShop($shopId);
 
-            if ($terminal->shop_id && (string) $terminal->shop_id !== (string) $shopId) {
-                return $this->errorResponse('Terminal does not belong to the selected shop.', 422);
-            }
+                $shop = Shop::findOrFail($shopId);
+                if (! $shop->is_active) {
+                    return $this->errorResponse('Selected shop is inactive.', 422);
+                }
 
-            $shop = Shop::findOrFail($shopId);
-            if (! $shop->is_active) {
-                return $this->errorResponse('Selected shop is inactive.', 422);
-            }
-
-            // Keep terminal location aligned with shop
-            if ((string) $terminal->location_id !== (string) $shop->stock_location_id) {
-                $terminal->update(['location_id' => $shop->stock_location_id, 'shop_id' => $shop->id]);
+                // Keep terminal location aligned with shop
+                if ((string) $terminal->location_id !== (string) $shop->stock_location_id) {
+                    $terminal->update(['location_id' => $shop->stock_location_id, 'shop_id' => $shop->id]);
+                }
             }
         }
 
-        $openOnTerminal = POSSession::query()
-            ->where('terminal_id', $data['terminal_id'])
-            ->where('status', 'open')
-            ->exists();
+        // Return existing open session for this cashier in this shop if one is already active
+        $existingQuery = POSSession::query()
+            ->where('cashier_id', auth()->id())
+            ->where('status', 'open');
 
-        if ($openOnTerminal) {
-            return $this->errorResponse('This terminal already has an open session.', 422);
+        if ($shopId) {
+            $existingQuery->where(function ($q) use ($shopId) {
+                $q->where('shop_id', $shopId)->orWhereNull('shop_id');
+            });
         }
 
+        $existing = $existingQuery->latest('opened_at')->first();
+
+        if ($existing) {
+            if ($shopId && ! $existing->shop_id) {
+                $existing->update(['shop_id' => $shopId]);
+            }
+            return $this->successResponse($existing->fresh()->load(['terminal', 'shop']));
+        }
+
+        // Create new session for this cashier.
+        // Multiple cashiers/devices can have active sessions simultaneously on the same shop or terminal.
         $session = POSSession::create([
             'terminal_id' => $data['terminal_id'],
             'shop_id' => $shopId,
@@ -206,7 +216,7 @@ class POSSessionController extends BaseController
             'status' => 'open',
         ]);
 
-        return $this->createdResponse($session->load('terminal'));
+        return $this->createdResponse($session->load(['terminal', 'shop']));
     }
 
     /**

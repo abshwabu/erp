@@ -94,21 +94,9 @@ export const usePosStore = defineStore('pos', () => {
   }
 
   const selectShop = async (shopId: string) => {
-    if (
-      session.value?.status === 'open' &&
-      session.value.shop_id &&
-      session.value.shop_id !== shopId
-    ) {
-      try {
-        await posApi.closeSession(session.value.id, session.value.opening_cash_cents ?? 0)
-      } catch {
-        // continue — open may still succeed if terminal allows
-      }
-      session.value = null
-    }
-
     selectedShopId.value = shopId
     needsShopSelection.value = false
+    session.value = null
     clearCart()
     return ensureSession()
   }
@@ -120,16 +108,18 @@ export const usePosStore = defineStore('pos', () => {
       selectedShopId.value = shops[0].id
     }
 
-    if (session.value?.status === 'open') {
-      if (!session.value.shop_id && selectedShopId.value) {
-        session.value.shop_id = selectedShopId.value
+    const currentShopId = selectedShopId.value || shops[0]?.id || undefined
+
+    if (session.value?.status === 'open' && (!currentShopId || session.value.shop_id === currentShopId)) {
+      if (!session.value.shop_id && currentShopId) {
+        session.value.shop_id = currentShopId
       }
       return session.value
     }
 
     sessionLoading.value = true
     try {
-      const current = await posApi.getCurrentSession()
+      const current = await posApi.getCurrentSession(currentShopId)
       if (current.data.data) {
         session.value = current.data.data
         if (session.value.shop_id) {
