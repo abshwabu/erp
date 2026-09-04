@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/client'
+import { useOnboardingStore } from '@/stores/onboarding'
 import OnboardingBanner from '@/components/shared/OnboardingBanner.vue'
 import {
   TrendingUp,
@@ -61,6 +62,7 @@ ChartJS.register(
 
 const router = useRouter()
 const authStore = useAuthStore()
+const onboardingStore = useOnboardingStore()
 
 const loading = ref(true)
 
@@ -132,6 +134,7 @@ async function loadDashboardData() {
         inventory: { ...dashboardData.value.inventory, ...(data.inventory || {}) },
         operations: { ...dashboardData.value.operations, ...(data.operations || {}) },
       }
+      onboardingStore.syncWithWorkspaceData(data)
     }
   } catch (err) {
     console.error('Failed to load dashboard data:', err)
