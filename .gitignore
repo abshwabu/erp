@@ -43,3 +43,5 @@ pnpm-debug.log*
 *.iml
 *.swp
 backend/database/tenant*
+backend/storage/tenant*
+

@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico'],
       manifest: {
-        name: 'ERP POS',
-        short_name: 'POS',
+        name: 'Bina ERP - Enterprise Cloud Platform',
+        short_name: 'Bina ERP',
         theme_color: '#0f172a',
         icons: [
           {

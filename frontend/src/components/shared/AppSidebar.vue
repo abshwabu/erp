@@ -46,6 +46,7 @@ import {
 import { ref, markRaw, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import UiIcon from '@/components/ui/UiIcon.vue'
+import AppLogo from '@/components/shared/AppLogo.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
@@ -219,11 +220,13 @@ const filteredGroups = computed(() => {
     class="bg-sidebar text-white transition-all duration-300 flex flex-col fixed inset-y-0 left-0 z-40 lg:static"
     :class="[uiStore.sidebarOpen ? 'w-64 translate-x-0' : 'w-20 lg:w-20 -translate-x-full lg:translate-x-0']"
   >
-    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-800 shrink-0">
-      <span v-if="uiStore.sidebarOpen" class="text-xl font-bold truncate">ERP System</span>
-      <button @click="uiStore.toggleSidebar()" class="p-1 hover:bg-slate-800 rounded transition-colors ml-auto">
-        <Menu v-if="!uiStore.sidebarOpen" :size="20" />
-        <ChevronLeft v-else :size="20" />
+    <div class="h-16 flex items-center justify-between px-3.5 border-b border-slate-800 shrink-0">
+      <router-link to="/" class="flex items-center gap-2 overflow-hidden">
+        <AppLogo :show-text="uiStore.sidebarOpen" light size="sm" />
+      </router-link>
+      <button @click="uiStore.toggleSidebar()" class="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors ml-auto">
+        <Menu v-if="!uiStore.sidebarOpen" :size="18" />
+        <ChevronLeft v-else :size="18" />
       </button>
     </div>
 

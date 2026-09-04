@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { CheckCircle2, ShieldCheck, Zap, BarChart3, Building2 } from '@lucide/vue'
+import { CheckCircle2, ShieldCheck, Zap, BarChart3 } from '@lucide/vue'
+import AppLogo from '@/components/shared/AppLogo.vue'
 
 const route = useRoute()
 
@@ -34,13 +35,7 @@ const highlights = [
       <!-- Top Branding -->
       <div class="relative z-10">
         <router-link to="/" class="inline-flex items-center space-x-3 group">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-primary-600/30 group-hover:scale-105 transition-transform">
-            <Building2 class="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <span class="text-2xl font-black tracking-tight text-white block">ERP <span class="text-primary-400 font-light">CORE</span></span>
-            <span class="text-xs text-slate-400 font-mono tracking-widest uppercase">Enterprise Suite</span>
-          </div>
+          <AppLogo size="lg" light />
         </router-link>
       </div>
 
@@ -93,10 +88,7 @@ const highlights = [
       <!-- Mobile Logo Header -->
       <div class="lg:hidden flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
         <router-link to="/" class="inline-flex items-center space-x-2.5">
-          <div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center">
-            <Building2 class="w-5 h-5 text-white" />
-          </div>
-          <span class="text-xl font-bold text-white">ERP <span class="text-primary-400">CORE</span></span>
+          <AppLogo size="md" light />
         </router-link>
       </div>
 
@@ -113,7 +105,7 @@ const highlights = [
 
       <!-- Footer Copyright -->
       <div class="pt-8 text-center text-xs text-slate-500">
-        &copy; 2026 ERP System. Enterprise Architecture Edition.
+        &copy; {{ new Date().getFullYear() }} Bina ERP. Enterprise Cloud Edition.
       </div>
     </div>
   </div>

@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'close'])
 
 const companyName = computed(() => {
-  return tenantStore.currentTenant?.name || 'KESB Enterprise Solutions'
+  return tenantStore.currentTenant?.name || 'Bina Enterprise Solutions'
 })
 
 function handleClose() {
@@ -185,7 +185,7 @@ function handlePrint() {
 
       <div class="footer">
         <div style="font-size: 11px; font-weight: bold;">Thank you for shopping with us!</div>
-        <div class="footer-brand">Powered by KESB Tech</div>
+        <div class="footer-brand">Powered by Bina ERP</div>
       </div>
     </body>
     </html>
@@ -303,7 +303,7 @@ function handlePrint() {
         <div class="text-center pt-2 font-sans space-y-1">
           <p class="text-[11px] font-semibold text-slate-700">Thank you for shopping with us!</p>
           <div class="border-t border-slate-200 pt-2 text-[10px] font-mono text-slate-500 font-bold">
-            Powered by KESB Tech
+            Powered by Bina ERP
           </div>
         </div>
       </div>
