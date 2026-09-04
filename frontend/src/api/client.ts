@@ -4,8 +4,20 @@ import { useTenantStore } from '@/stores/tenant'
 import { offlineStorage } from '@/services/offlineStorage'
 import { offlineSyncService } from '@/services/offlineSync'
 
+function getBaseUrl(): string {
+  const apiUrl = import.meta.env.VITE_API_URL
+  if (apiUrl) {
+    return apiUrl
+  }
+  const base = import.meta.env.VITE_API_BASE_URL
+  if (base) {
+    return base.endsWith('/api') ? base : `${base}/api`
+  }
+  return '/api'
+}
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
