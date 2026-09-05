@@ -423,6 +423,8 @@ router.beforeEach(async (to) => {
   // Set Page Title
   if (to.meta.title) {
     uiStore.setPageTitle(to.meta.title as string)
+  } else {
+    document.title = 'Bina ERP - Enterprise Cloud Platform'
   }
 
   // Load user info if missing or permissions empty but authenticated (e.g., on page refresh or role change)

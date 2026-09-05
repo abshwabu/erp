@@ -18,7 +18,7 @@ export const useUIStore = defineStore('ui', () => {
 
   function setPageTitle(title: string) {
     pageTitle.value = title
-    document.title = `${title} | ERP`
+    document.title = title ? `${title} | Bina ERP` : 'Bina ERP - Enterprise Cloud Platform'
   }
 
   function setBreadcrumbs(items: Breadcrumb[]) {
