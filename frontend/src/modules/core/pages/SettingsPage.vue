@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { settingsApi, type TenantSettings } from '@/api/settings'
 import { authApi } from '@/api/auth'
 import { emailApi, type EmailDiagnostics } from '@/api/email'
@@ -48,6 +48,26 @@ const testEmailRecipient = ref('')
 const testEmailName = ref('')
 const testEmailSending = ref(false)
 const testEmailResult = ref<any>(null)
+
+const mailhogUrl = computed(() => {
+  if (emailDiagnostics.value?.mailhog_ui_url) {
+    const raw = emailDiagnostics.value.mailhog_ui_url
+    if (raw.includes('localhost') || raw.includes('127.0.0.1')) {
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const protocol = window.location.protocol || 'http:'
+        return `${protocol}//${window.location.hostname}:8025`
+      }
+    }
+    return raw
+  }
+
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    const protocol = window.location.protocol || 'http:'
+    return `${protocol}//${window.location.hostname}:8025`
+  }
+
+  return 'http://localhost:8025'
+})
 
 const settingsForm = ref<TenantSettings>({
   display_name: '',
@@ -609,20 +629,20 @@ async function changePassword() {
           </div>
         </div>
 
-        <!-- MailHog Web Inbox Link for local dev -->
+        <!-- MailHog Web Inbox Link -->
         <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-900">
           <div class="flex items-center gap-2.5">
             <Sparkles class="w-5 h-5 text-blue-600 shrink-0" />
             <div>
-              <strong class="block text-sm">Local MailHog Testing Inbox</strong>
+              <strong class="block text-sm">MailHog Testing Inbox</strong>
               <span>All transactional emails (passwords, invoices, receipts) are captured and viewable in real-time.</span>
             </div>
           </div>
           <a
-            href="http://localhost:8025"
+            :href="mailhogUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold inline-flex items-center gap-1.5 shrink-0 hover:bg-blue-700 transition-colors"
+            class="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold inline-flex items-center gap-1.5 shrink-0 hover:bg-blue-700 transition-colors shadow-xs"
           >
             Open MailHog UI <ExternalLink class="w-3.5 h-3.5" />
           </a>

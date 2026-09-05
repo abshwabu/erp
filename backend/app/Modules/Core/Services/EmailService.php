@@ -275,6 +275,20 @@ class EmailService
             $isReachable = true;
         }
 
+        $mailhogUiUrl = env('MAILHOG_UI_URL') ?: env('MAIL_UI_URL');
+        if (! $mailhogUiUrl) {
+            $requestHost = request()?->getHost();
+            if ($requestHost && $requestHost !== '127.0.0.1' && $requestHost !== 'localhost') {
+                $scheme = request()?->getScheme() ?: 'http';
+                $mailhogUiUrl = "{$scheme}://{$requestHost}:8025";
+            } else {
+                $appUrl = config('app.url', 'http://localhost');
+                $host = parse_url($appUrl, PHP_URL_HOST) ?: 'localhost';
+                $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?: 'http';
+                $mailhogUiUrl = "{$scheme}://{$host}:8025";
+            }
+        }
+
         return [
             'driver'           => $driver,
             'smtp_host'        => $host,
@@ -284,7 +298,7 @@ class EmailService
             'is_connected'     => $isReachable,
             'latency_ms'       => $pingMs,
             'connection_error' => $connectionError,
-            'mailhog_ui_url'   => 'http://localhost:8025',
+            'mailhog_ui_url'   => $mailhogUiUrl,
         ];
     }
 }
