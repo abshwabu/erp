@@ -26,7 +26,7 @@ const handleLogin = async () => {
   try {
     await authStore.login(email.value, password.value)
     toast.success('Signed in successfully!')
-    router.push('/')
+    router.push('/dashboard')
   } catch (error: any) {
     errorMessage.value =
       error.response?.data?.message ||

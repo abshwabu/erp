@@ -112,7 +112,7 @@ const handleRegister = async () => {
     })
 
     toast.success('Workspace created successfully! Welcome to ERP Core.')
-    router.push('/')
+    router.push('/dashboard')
   } catch (error: any) {
     errorMessage.value =
       error.response?.data?.message ||

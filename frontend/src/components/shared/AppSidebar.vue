@@ -77,7 +77,7 @@ const navigationGroups = [
   {
     title: 'OPERATIONS',
     items: [
-      { name: 'Dashboard', to: '/', icon: markRaw(LayoutDashboard) },
+      { name: 'Dashboard', to: '/dashboard', icon: markRaw(LayoutDashboard) },
       { name: 'Point of Sale', to: '/pos', icon: markRaw(ShoppingCart), permission: 'pos.sessions.open', module: 'pos' },
       { 
         name: 'Inventory', 
@@ -221,7 +221,7 @@ const filteredGroups = computed(() => {
     :class="[uiStore.sidebarOpen ? 'w-64 translate-x-0' : 'w-20 lg:w-20 -translate-x-full lg:translate-x-0']"
   >
     <div class="h-16 flex items-center justify-between px-3.5 border-b border-slate-800 shrink-0">
-      <router-link to="/" class="flex items-center gap-2 overflow-hidden">
+      <router-link to="/dashboard" class="flex items-center gap-2 overflow-hidden">
         <AppLogo :show-text="uiStore.sidebarOpen" light size="sm" />
       </router-link>
       <button @click="uiStore.toggleSidebar()" class="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors ml-auto">

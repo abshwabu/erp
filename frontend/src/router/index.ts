@@ -69,11 +69,17 @@ const router = createRouter({
     },
     {
       path: '/',
+      name: 'landing',
+      component: () => import('@/views/landing/LandingView.vue'),
+      meta: { title: 'Bina ERP - Enterprise Cloud Platform', requiresAuth: false }
+    },
+    {
+      path: '/',
       component: AppLayout,
       meta: { requiresAuth: true },
       children: [
         {
-          path: '',
+          path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/dashboard/DashboardView.vue'),
           meta: { title: 'Dashboard' }
