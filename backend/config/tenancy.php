@@ -19,10 +19,12 @@ return [
     'tenant_model' => Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
     'domain_model' => Stancl\Tenancy\Database\Models\Domain::class,
-    'central_domains' => [
+    'central_domains' => array_values(array_unique(array_filter([
         '127.0.0.1',
         'localhost',
-    ],
+        'erp.abshewabu.dev',
+        parse_url((string) env('APP_URL', 'http://localhost:8000'), PHP_URL_HOST) ?? null,
+    ]))),
     'tenant_finders' => [
         SubdomainTenantFinder::class,
         DomainTenantFinder::class,

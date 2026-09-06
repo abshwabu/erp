@@ -463,4 +463,26 @@ router.beforeEach(async (to) => {
   }
 })
 
+// Auto-recover from deployment chunk mismatches or strict MIME type failures
+router.onError((error: any, to) => {
+  const errMsg = error?.message || String(error || '')
+  const isChunkLoadFailed =
+    errMsg.includes('Failed to fetch dynamically imported module') ||
+    errMsg.includes('Importing a module script failed') ||
+    errMsg.includes('error loading dynamically imported module') ||
+    errMsg.includes('MIME type of "text/html"') ||
+    errMsg.includes('dynamically imported module')
+
+  if (isChunkLoadFailed) {
+    const target = to?.fullPath || window.location.pathname || '/'
+    const storageKey = 'erp_chunk_reload_lock'
+    const lastReload = sessionStorage.getItem(storageKey)
+    const now = Date.now()
+    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+      sessionStorage.setItem(storageKey, now.toString())
+      window.location.href = target
+    }
+  }
+})
+
 export default router
