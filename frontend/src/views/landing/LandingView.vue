@@ -18,13 +18,6 @@ import {
   BarChart3,
   Sparkles,
   Calculator,
-  Clock,
-  Layers,
-  FileText,
-  Check,
-  ChevronDown,
-  Menu,
-  X,
   Receipt,
   DollarSign,
   Activity,
@@ -32,11 +25,9 @@ import {
   Plus,
   Trash2,
   Store,
-  PhoneCall,
-  Award,
-  Search,
-  Building2,
-  BadgeCheck
+  ChevronDown,
+  Menu,
+  X
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -67,7 +58,7 @@ const navigateToDashboard = () => {
 }
 
 // -------------------------------------------------------------
-// Real Currency State (ETB / USD)
+// Currency State (ETB / USD)
 // -------------------------------------------------------------
 const selectedCurrency = ref<'ETB' | 'USD'>('ETB')
 const currencyRate = 100 // 100 ETB per 1 USD for display conversion parity
@@ -220,18 +211,17 @@ const currentHourlyWage = computed(() => {
   return selectedCurrency.value === 'ETB' ? averageWageEtb.value : averageWageUsd.value
 })
 
-// Store staff spend ~6 hours/week on manual notebook logs, counting change, reconciling errors
 const wastedHoursPerWeek = computed(() => Math.round(staffCount.value * 5))
 const monthlyMoneySaved = computed(() => {
   const weeklyHours = wastedHoursPerWeek.value
-  const weeklySavings = weeklyHours * currentHourlyWage.value * 0.75 // 75% error & paperwork reduction
+  const weeklySavings = weeklyHours * currentHourlyWage.value * 0.75
   return Math.round(weeklySavings * 4.33)
 })
 const yearlyMoneySaved = computed(() => monthlyMoneySaved.value * 12)
 const hoursSavedPerYear = computed(() => Math.round(wastedHoursPerWeek.value * 52 * 0.75))
 
 // -------------------------------------------------------------
-// Real Business Pricing Plans (Straightforward and transparent)
+// Real Business Pricing Plans
 // -------------------------------------------------------------
 const isAnnual = ref(true)
 
@@ -356,7 +346,7 @@ const faqs = [
 <template>
   <div class="min-h-screen bg-[#070a12] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
     
-    <!-- Subtle Ambient Lighting (Low Saturation - Robi's Design System) -->
+    <!-- Subtle Ambient Background (Low Saturation - Robi's Design System) -->
     <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
       <div class="absolute top-[-8%] left-[25%] w-[600px] h-[600px] bg-cyan-700/10 rounded-full blur-[140px]"></div>
       <div class="absolute top-[35%] right-[8%] w-[500px] h-[500px] bg-blue-700/10 rounded-full blur-[140px]"></div>
@@ -365,140 +355,93 @@ const faqs = [
     </div>
 
     <!-- ========================================================= -->
-    <!-- HEADER / NAVIGATION BAR -->
+    <!-- SIMPLE, CLEAN TOP BAR (NAVIGATION HEADER) -->
     <!-- ========================================================= -->
     <header 
-      class="fixed top-0 inset-x-0 z-50 transition-all duration-300 backdrop-blur-xl"
-      :class="[isScrolled ? 'bg-[#070a12]/90 border-b border-slate-800/80 shadow-2xl shadow-black/40 py-3.5' : 'bg-transparent py-5']"
+      class="fixed top-0 inset-x-0 z-50 transition-all duration-200 backdrop-blur-md"
+      :class="[isScrolled ? 'bg-[#070a12]/90 border-b border-slate-800 shadow-lg py-3' : 'bg-[#070a12]/50 border-b border-slate-800/40 py-4']"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         
         <!-- Brand Logo -->
-        <router-link to="/" class="flex items-center gap-3 group">
+        <router-link to="/" class="flex items-center">
           <AppLogo light size="sm" />
-          <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium tracking-wide bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 rounded-full">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Ready for Retail & Wholesale
-          </span>
         </router-link>
 
-        <!-- Navigation Links for Business Owners -->
+        <!-- Clean Navigation Links -->
         <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-          <a href="#how-it-works" class="hover:text-cyan-400 transition-colors">How It Helps You</a>
-          <a href="#live-demo" class="hover:text-cyan-400 transition-colors">See Live Store POS</a>
-          <a href="#calculator" class="hover:text-cyan-400 transition-colors">Profit & Time Savings</a>
-          <a href="#pricing" class="hover:text-cyan-400 transition-colors">Pricing</a>
-          <a href="#faq" class="hover:text-cyan-400 transition-colors">Questions & Answers</a>
+          <a href="#features" class="hover:text-white transition-colors">Features</a>
+          <a href="#demo" class="hover:text-white transition-colors">Demo</a>
+          <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+          <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
         </nav>
 
-        <!-- Currency Selector & Login/Register -->
-        <div class="hidden sm:flex items-center gap-3">
-          <!-- Currency Toggle -->
-          <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-semibold">
-            <button 
-              @click="selectedCurrency = 'ETB'"
-              class="px-2.5 py-1 rounded-md transition-all"
-              :class="[selectedCurrency === 'ETB' ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
-            >
-              ETB (Br)
-            </button>
-            <button 
-              @click="selectedCurrency = 'USD'"
-              class="px-2.5 py-1 rounded-md transition-all"
-              :class="[selectedCurrency === 'USD' ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
-            >
-              USD ($)
-            </button>
-          </div>
-
+        <!-- Simple Right Actions -->
+        <div class="hidden sm:flex items-center gap-4">
           <template v-if="authStore.isAuthenticated">
             <button 
               @click="navigateToDashboard"
-              class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              class="px-4 py-2 text-sm font-medium rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white transition-all shadow-sm"
             >
-              <LayoutDashboard :size="16" />
-              <span>Go to My Store</span>
-              <ArrowRight :size="15" />
+              Dashboard
             </button>
           </template>
           <template v-else>
             <button 
               @click="navigateToAuth('login')"
-              class="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors"
+              class="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
               Sign In
             </button>
             <button 
               @click="navigateToAuth('register')"
-              class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              class="px-4 py-2 text-sm font-semibold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98]"
             >
-              <span>Try It Free (14 Days)</span>
-              <ArrowRight :size="15" />
+              Get Started
             </button>
           </template>
         </div>
 
-        <!-- Mobile Menu Button -->
+        <!-- Mobile Menu Toggle -->
         <button 
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg"
+          class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg"
           aria-label="Toggle Menu"
         >
-          <Menu v-if="!mobileMenuOpen" :size="22" />
-          <X v-else :size="22" />
+          <Menu v-if="!mobileMenuOpen" :size="20" />
+          <X v-else :size="20" />
         </button>
       </div>
 
       <!-- Mobile Dropdown -->
-      <div v-if="mobileMenuOpen" class="md:hidden border-b border-slate-800 bg-[#090e1a]/98 px-6 py-5 space-y-4 shadow-2xl backdrop-blur-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <span class="text-xs text-slate-400">Display Currency:</span>
-          <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-semibold">
-            <button 
-              @click="selectedCurrency = 'ETB'"
-              class="px-3 py-1 rounded-md transition-all"
-              :class="[selectedCurrency === 'ETB' ? 'bg-cyan-500 text-white' : 'text-slate-400']"
-            >
-              ETB (Br)
-            </button>
-            <button 
-              @click="selectedCurrency = 'USD'"
-              class="px-3 py-1 rounded-md transition-all"
-              :class="[selectedCurrency === 'USD' ? 'bg-cyan-500 text-white' : 'text-slate-400']"
-            >
-              USD ($)
-            </button>
-          </div>
-        </div>
-        <nav class="flex flex-col space-y-3 text-base font-medium text-slate-300">
-          <a @click="mobileMenuOpen = false" href="#how-it-works" class="hover:text-cyan-400 py-1">How It Helps You</a>
-          <a @click="mobileMenuOpen = false" href="#live-demo" class="hover:text-cyan-400 py-1">See Live Store POS</a>
-          <a @click="mobileMenuOpen = false" href="#calculator" class="hover:text-cyan-400 py-1">Profit & Time Savings</a>
-          <a @click="mobileMenuOpen = false" href="#pricing" class="hover:text-cyan-400 py-1">Pricing</a>
-          <a @click="mobileMenuOpen = false" href="#faq" class="hover:text-cyan-400 py-1">Questions & Answers</a>
+      <div v-if="mobileMenuOpen" class="md:hidden border-b border-slate-800 bg-[#090e1a] px-6 py-4 space-y-3">
+        <nav class="flex flex-col space-y-2 text-sm font-medium text-slate-300">
+          <a @click="mobileMenuOpen = false" href="#features" class="py-1 hover:text-white">Features</a>
+          <a @click="mobileMenuOpen = false" href="#demo" class="py-1 hover:text-white">Demo</a>
+          <a @click="mobileMenuOpen = false" href="#pricing" class="py-1 hover:text-white">Pricing</a>
+          <a @click="mobileMenuOpen = false" href="#faq" class="py-1 hover:text-white">FAQ</a>
         </nav>
-        <div class="pt-4 border-t border-slate-800 flex flex-col gap-2.5">
+        <div class="pt-3 border-t border-slate-800 flex flex-col gap-2">
           <template v-if="authStore.isAuthenticated">
             <button 
               @click="navigateToDashboard"
-              class="w-full justify-center inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-cyan-500 text-white shadow-lg shadow-cyan-500/20"
+              class="w-full py-2.5 text-center text-sm font-medium bg-cyan-500 text-white rounded-lg"
             >
-              <LayoutDashboard :size="16" />
-              <span>Go to My Store</span>
+              Dashboard
             </button>
           </template>
           <template v-else>
             <button 
               @click="navigateToAuth('login')"
-              class="w-full py-2.5 text-center text-sm font-medium text-slate-300 bg-slate-800/60 rounded-lg"
+              class="w-full py-2 text-center text-sm font-medium text-slate-300 hover:text-white"
             >
               Sign In
             </button>
             <button 
               @click="navigateToAuth('register')"
-              class="w-full py-2.5 text-center text-sm font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg shadow-lg shadow-cyan-500/20"
+              class="w-full py-2.5 text-center text-sm font-semibold bg-cyan-500 text-white rounded-lg"
             >
-              Try It Free (14 Days)
+              Get Started
             </button>
           </template>
         </div>
@@ -506,16 +449,14 @@ const faqs = [
     </header>
 
     <!-- ========================================================= -->
-    <!-- HERO SECTION (WRITTEN FOR BUSINESS OWNERS & SALES REPS) -->
+    <!-- HERO SECTION -->
     <!-- ========================================================= -->
-    <section class="relative pt-32 pb-20 md:pt-40 md:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center z-10">
+    <section class="relative pt-28 pb-16 md:pt-36 md:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center z-10">
       
-      <!-- Value Proposition Pill -->
-      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/70 text-xs sm:text-sm font-medium text-slate-200 shadow-xl mb-8 backdrop-blur-md">
-        <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-        <span class="text-emerald-400 font-semibold">Built for Ethiopian Businesses</span>
-        <span class="text-slate-600">•</span>
-        <span class="text-slate-300">Fast POS Checkout • Stock Control • Tax Receipts</span>
+      <!-- Clean, Simple Value Pill -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300 mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        <span>Store Management for Retail & Wholesale</span>
       </div>
 
       <!-- Main Headline: Focus on Sales, Profits & Peace of Mind -->
@@ -535,14 +476,14 @@ const faqs = [
       <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto sm:max-w-none">
         <button 
           @click="authStore.isAuthenticated ? navigateToDashboard() : navigateToAuth('register')"
-          class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 text-base font-bold rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 text-base font-bold rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-xl shadow-cyan-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <span>{{ authStore.isAuthenticated ? 'Open My Store Workspace' : 'Start 14-Day Free Trial' }}</span>
+          <span>{{ authStore.isAuthenticated ? 'Open My Store' : 'Start 14-Day Free Trial' }}</span>
           <ArrowRight :size="18" />
         </button>
         <a 
-          href="#live-demo"
-          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 transition-all duration-200 hover:border-slate-600"
+          href="#demo"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 transition-all duration-200 hover:border-slate-600"
         >
           <Sparkles :size="18" class="text-cyan-400" />
           <span>Try the Checkout Screen Below</span>
@@ -550,7 +491,7 @@ const faqs = [
       </div>
 
       <!-- Trust Badges For Retailers -->
-      <div class="mt-16 pt-10 border-t border-slate-800/80 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-4xl mx-auto text-left">
+      <div class="mt-14 pt-10 border-t border-slate-800/80 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-4xl mx-auto text-left">
         <div class="flex items-center gap-3.5 p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/60">
           <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
             <Zap :size="22" />
@@ -596,7 +537,7 @@ const faqs = [
     <!-- ========================================================= -->
     <!-- INTERACTIVE STORE POS DEMO (CLICKABLE BY SALES PERSONS) -->
     <!-- ========================================================= -->
-    <section id="live-demo" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
+    <section id="demo" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
       <div class="text-center max-w-3xl mx-auto mb-10">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/50 text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-3">
           <Sparkles :size="13" />
@@ -660,20 +601,37 @@ const faqs = [
 
       <!-- Sandbox Window Container -->
       <div class="rounded-2xl border border-slate-800 bg-[#090d18] shadow-2xl overflow-hidden">
-        <!-- Mockup Store Header -->
-        <div class="px-5 py-3.5 bg-[#0c1220] border-b border-slate-800 flex items-center justify-between">
+        <!-- Mockup Store Header With Contextual Currency Toggle -->
+        <div class="px-5 py-3 bg-[#0c1220] border-b border-slate-800 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
             <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
             <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
             <span class="ml-3 text-xs text-slate-400 font-medium hidden sm:inline-block">
-              Store Location: <span class="text-white font-semibold">Bole Mega Mall Flagship Store</span>
+              Store: <span class="text-white font-semibold">Bole Mega Mall Flagship Store</span>
             </span>
           </div>
           <div class="flex items-center gap-3">
-            <span class="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 flex items-center gap-1.5">
+            <!-- Contextual Currency Switcher -->
+            <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-semibold">
+              <button 
+                @click="selectedCurrency = 'ETB'"
+                class="px-2.5 py-0.5 rounded-md transition-all text-xs"
+                :class="[selectedCurrency === 'ETB' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-white']"
+              >
+                ETB (Br)
+              </button>
+              <button 
+                @click="selectedCurrency = 'USD'"
+                class="px-2.5 py-0.5 rounded-md transition-all text-xs"
+                :class="[selectedCurrency === 'USD' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-white']"
+              >
+                USD ($)
+              </button>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 hidden md:flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Store System: Active & Ready
+              Live Store Simulation
             </span>
           </div>
         </div>
@@ -815,7 +773,7 @@ const faqs = [
               <div class="text-2xl font-mono font-bold text-amber-400 mt-2">420 Units</div>
               <div class="text-xs text-slate-300 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                 <span>Stock Status:</span>
-                <span class="text-amber-400 font-medium">Low Stock Alert (Reorder Sent)</span>
+                <span class="text-amber-400 font-medium">Low Stock Alert</span>
               </div>
             </div>
 
@@ -1010,7 +968,7 @@ const faqs = [
           </div>
         </div>
 
-        <!-- TAB 5: Staff & Payroll (Real Roles & Ethiopian Tax Breakdown) -->
+        <!-- TAB 5: Staff & Payroll -->
         <div v-if="activeTab === 'payroll'" class="p-6 sm:p-8 space-y-5">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
             <div>
@@ -1086,9 +1044,9 @@ const faqs = [
     </section>
 
     <!-- ========================================================= -->
-    <!-- HOW BINA ERP HELPS YOUR BUSINESS (REAL STORE VALUES) -->
+    <!-- FEATURES SECTION (HOW BINA ERP HELPS YOUR BUSINESS) -->
     <!-- ========================================================= -->
-    <section id="how-it-works" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
+    <section id="features" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
       <div class="text-center max-w-3xl mx-auto mb-16">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/60 border border-indigo-800/50 text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">
           <Store :size="13" />
@@ -1302,26 +1260,49 @@ const faqs = [
           No surprise setup fees. No long contracts. Upgrade, change, or export your full store data at any time.
         </p>
 
-        <!-- Annual / Monthly Toggle -->
-        <div class="mt-8 flex items-center justify-center gap-3">
-          <span class="text-sm font-medium" :class="[!isAnnual ? 'text-white' : 'text-slate-400']">Monthly Billing</span>
-          <button 
-            @click="isAnnual = !isAnnual"
-            class="w-12 h-6 rounded-full bg-slate-800 p-1 transition-colors relative"
-            :class="[isAnnual ? 'bg-cyan-500' : 'bg-slate-700']"
-            aria-label="Toggle annual billing"
-          >
-            <div 
-              class="w-4 h-4 rounded-full bg-white transition-transform"
-              :class="[isAnnual ? 'translate-x-6' : 'translate-x-0']"
-            ></div>
-          </button>
-          <span class="text-sm font-medium flex items-center gap-1.5" :class="[isAnnual ? 'text-white' : 'text-slate-400']">
-            Annual Billing
-            <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              2 Months Free (~17% Savings)
+        <!-- Controls: Billing Toggle & Currency Switcher -->
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+          <!-- Currency Toggle -->
+          <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-semibold">
+            <button 
+              @click="selectedCurrency = 'ETB'"
+              class="px-2.5 py-1 rounded-md transition-all"
+              :class="[selectedCurrency === 'ETB' ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
+            >
+              ETB (Br)
+            </button>
+            <button 
+              @click="selectedCurrency = 'USD'"
+              class="px-2.5 py-1 rounded-md transition-all"
+              :class="[selectedCurrency === 'USD' ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
+            >
+              USD ($)
+            </button>
+          </div>
+
+          <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+
+          <!-- Billing Period -->
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-medium" :class="[!isAnnual ? 'text-white' : 'text-slate-400']">Monthly Billing</span>
+            <button 
+              @click="isAnnual = !isAnnual"
+              class="w-12 h-6 rounded-full bg-slate-800 p-1 transition-colors relative"
+              :class="[isAnnual ? 'bg-cyan-500' : 'bg-slate-700']"
+              aria-label="Toggle annual billing"
+            >
+              <div 
+                class="w-4 h-4 rounded-full bg-white transition-transform"
+                :class="[isAnnual ? 'translate-x-6' : 'translate-x-0']"
+              ></div>
+            </button>
+            <span class="text-sm font-medium flex items-center gap-1.5" :class="[isAnnual ? 'text-white' : 'text-slate-400']">
+              Annual Billing
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                2 Months Free (~17% Savings)
+              </span>
             </span>
-          </span>
+          </div>
         </div>
       </div>
 
@@ -1486,11 +1467,11 @@ const faqs = [
         <div>
           <div class="font-semibold text-white mb-3 text-xs uppercase tracking-wider">Store Features</div>
           <ul class="space-y-2">
-            <li><a href="#live-demo" class="hover:text-cyan-400 transition-colors">Cashier POS Checkout</a></li>
-            <li><a href="#live-demo" class="hover:text-cyan-400 transition-colors">Stock & Warehousing</a></li>
-            <li><a href="#live-demo" class="hover:text-cyan-400 transition-colors">Daily Sales & Profits</a></li>
-            <li><a href="#live-demo" class="hover:text-cyan-400 transition-colors">TIN & 15% VAT Invoicing</a></li>
-            <li><a href="#live-demo" class="hover:text-cyan-400 transition-colors">Staff & Salary Payroll</a></li>
+            <li><a href="#demo" class="hover:text-cyan-400 transition-colors">Cashier POS Checkout</a></li>
+            <li><a href="#demo" class="hover:text-cyan-400 transition-colors">Stock & Warehousing</a></li>
+            <li><a href="#demo" class="hover:text-cyan-400 transition-colors">Daily Sales & Profits</a></li>
+            <li><a href="#demo" class="hover:text-cyan-400 transition-colors">TIN & 15% VAT Invoicing</a></li>
+            <li><a href="#demo" class="hover:text-cyan-400 transition-colors">Staff & Salary Payroll</a></li>
           </ul>
         </div>
 
