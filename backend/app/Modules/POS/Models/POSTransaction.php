@@ -17,6 +17,8 @@ class POSTransaction extends Model
     protected $fillable = [
         'session_id',
         'customer_id',
+        'customer_tin',
+        'customer_name',
         'subtotal_cents',
         'discount_cents',
         'tax_cents',
@@ -35,6 +37,11 @@ class POSTransaction extends Model
     public function session()
     {
         return $this->belongsTo(POSSession::class, 'session_id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(\App\Modules\Sales\Models\Customer::class, 'customer_id');
     }
 
     public function items()

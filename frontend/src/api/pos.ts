@@ -21,6 +21,8 @@ export interface PosSession {
 export interface CheckoutPayload {
   session_id: string
   customer_id?: string | null
+  customer_tin?: string | null
+  customer_name?: string | null
   location_id?: string | null
   items: Array<{
     product_id: string
@@ -39,6 +41,17 @@ export interface CheckoutPayload {
     percent?: number
     amount_cents?: number
   }
+}
+
+export interface TinLookupResult {
+  found: boolean
+  source: string | null
+  tin: string
+  name: string | null
+  customer_id?: string | null
+  phone?: string | null
+  email?: string | null
+  message?: string
 }
 
 export const posApi = {
@@ -64,6 +77,12 @@ export const posApi = {
 
   checkout(payload: CheckoutPayload) {
     return apiClient.post<{ data: any }>('/pos/checkout', payload)
+  },
+
+  lookupTin(tin: string) {
+    return apiClient.get<{ data: TinLookupResult }>('/pos/customers/lookup-tin', {
+      params: { tin },
+    })
   },
 
   getReceipt(receiptNumber: string) {

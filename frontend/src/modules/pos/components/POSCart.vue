@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { usePosStore } from '../stores/posStore'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, RotateCcw, CreditCard } from '@lucide/vue'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, RotateCcw, CreditCard, User, Search, Loader2 } from '@lucide/vue'
 
 const posStore = usePosStore()
 const emit = defineEmits(['checkout', 'switch-to-catalog'])
+const showCustomerForm = ref(false)
+
+async function handleTinSearch() {
+  await posStore.lookupCustomerByTin()
+}
 
 const subtotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -53,6 +58,96 @@ const totalItems = computed(() => {
         <RotateCcw class="w-3.5 h-3.5" />
         Clear
       </button>
+    </div>
+
+    <!-- Customer Bar / Inline Input (Optional) -->
+    <div class="px-3.5 py-2 border-b border-slate-200/80 bg-slate-50/60 shrink-0">
+      <div v-if="!showCustomerForm && (posStore.customer.tin || posStore.customer.name)" class="flex items-center justify-between text-xs">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <User class="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <span class="font-semibold text-slate-800 truncate">
+            {{ posStore.customer.name || 'Customer' }}
+          </span>
+          <span v-if="posStore.customer.tin" class="text-blue-700 font-mono text-[10px] bg-blue-100/70 px-1.5 py-0.5 rounded font-bold shrink-0">
+            TIN: {{ posStore.customer.tin }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0 ml-2">
+          <button
+            type="button"
+            @click="showCustomerForm = true"
+            class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            @click="posStore.clearCustomer"
+            class="text-[11px] text-slate-400 hover:text-red-500"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="!showCustomerForm" class="flex items-center justify-between">
+        <button
+          type="button"
+          @click="showCustomerForm = true"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
+        >
+          <User class="w-3.5 h-3.5 text-slate-400" />
+          <span>+ Add Customer / TIN <span class="text-[10px] text-slate-400 font-normal">(Optional)</span></span>
+        </button>
+      </div>
+
+      <!-- Expanded Customer Quick Entry Form -->
+      <div v-else class="space-y-2 py-0.5">
+        <div class="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+          <span>Customer & TIN (Optional)</span>
+          <button
+            type="button"
+            @click="showCustomerForm = false"
+            class="text-blue-600 hover:text-blue-700 font-bold text-xs"
+          >
+            Done
+          </button>
+        </div>
+
+        <div class="flex gap-1.5">
+          <input
+            v-model="posStore.customer.tin"
+            @keydown.enter.prevent="handleTinSearch"
+            type="text"
+            maxlength="30"
+            placeholder="TIN (e.g. 0012345678)"
+            class="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400"
+          />
+          <button
+            type="button"
+            @click="handleTinSearch"
+            :disabled="posStore.isLookingUpTin || !posStore.customer.tin?.trim()"
+            class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 shrink-0"
+            title="Lookup customer name from eTrade or database records"
+          >
+            <Loader2 v-if="posStore.isLookingUpTin" class="w-3 h-3 animate-spin" />
+            <Search v-else class="w-3 h-3" />
+            <span>Lookup</span>
+          </button>
+        </div>
+
+        <input
+          v-model="posStore.customer.name"
+          type="text"
+          maxlength="255"
+          placeholder="Customer / Business name (optional)"
+          class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400"
+        />
+
+        <p v-if="posStore.tinLookupMessage" class="text-[10px] text-slate-500 leading-tight">
+          {{ posStore.tinLookupMessage }}
+        </p>
+      </div>
     </div>
 
     <!-- Items List -->

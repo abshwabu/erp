@@ -22,6 +22,9 @@ Route::prefix('api/pos')->middleware('auth:api,sanctum')->group(function () {
     Route::post('checkout', [POSTransactionController::class, 'checkout'])
         ->middleware('permission:pos.sessions.open');
 
+    Route::get('customers/lookup-tin', [POSTransactionController::class, 'lookupTin'])
+        ->middleware('permission:pos.sessions.open');
+
     Route::get('receipts/{receiptNumber}', [POSTransactionController::class, 'receipt'])
         ->middleware('permission:pos.sessions.open');
 });

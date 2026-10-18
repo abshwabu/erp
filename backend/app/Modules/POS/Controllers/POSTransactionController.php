@@ -24,6 +24,8 @@ class POSTransactionController extends BaseController
         $data = $request->validate([
             'session_id' => ['required', 'uuid', 'exists:pos_sessions,id'],
             'customer_id' => ['nullable', 'uuid'],
+            'customer_tin' => ['nullable', 'string', 'max:50'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
             'location_id' => ['nullable', 'uuid'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'uuid'],
@@ -47,7 +49,9 @@ class POSTransactionController extends BaseController
             $data['payments'],
             $data['customer_id'] ?? null,
             $data['discounts'] ?? [],
-            $data['location_id'] ?? null
+            $data['location_id'] ?? null,
+            $data['customer_tin'] ?? null,
+            $data['customer_name'] ?? null
         );
 
         $tenant = tenant();
@@ -69,11 +73,25 @@ class POSTransactionController extends BaseController
     }
 
     /**
+     * GET /api/pos/customers/lookup-tin
+     */
+    public function lookupTin(Request $request, \App\Modules\POS\Services\CustomerTinLookupService $lookupService): JsonResponse
+    {
+        $validated = $request->validate([
+            'tin' => ['required', 'string', 'max:50'],
+        ]);
+
+        $result = $lookupService->lookup((string) $validated['tin']);
+
+        return $this->successResponse($result);
+    }
+
+    /**
      * GET /api/pos/receipts/{receiptNumber}
      */
     public function receipt(string $receiptNumber): JsonResponse
     {
-        $transaction = POSTransaction::with(['items', 'payments', 'session.terminal'])
+        $transaction = POSTransaction::with(['items', 'payments', 'session.terminal', 'customer'])
             ->where('receipt_number', $receiptNumber)
             ->firstOrFail();
 

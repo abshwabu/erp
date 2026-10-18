@@ -37,6 +37,7 @@ class CustomerController extends BaseController
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
+            'tin' => ['nullable', 'string', 'max:50'],
         ]);
 
         $customer = Customer::create($validated);
@@ -66,6 +67,7 @@ class CustomerController extends BaseController
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
+            'tin' => ['nullable', 'string', 'max:50'],
         ]);
 
         $customer->update($validated);

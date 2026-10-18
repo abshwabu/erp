@@ -2,8 +2,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "dev": "if [ -d frontend ]; then npm --prefix frontend run dev; else npm --prefix ../frontend run dev; fi",
+        "build": "if [ -d frontend ]; then npm --prefix frontend run build-only && cp -r frontend/dist/* public/; else npm --prefix ../frontend run build-only && cp -r ../frontend/dist/* public/; fi"
     },
     "devDependencies": {
         "autoprefixer": "^10.4.20",

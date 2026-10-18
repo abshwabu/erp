@@ -5,7 +5,7 @@ import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
 import { useToast } from '@/composables/useToast'
 import ReceiptModal from './ReceiptModal.vue'
-import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone } from '@lucide/vue'
+import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone, User, Search, Loader2, XCircle } from '@lucide/vue'
 
 const posStore = usePosStore()
 const queryClient = useQueryClient()
@@ -16,6 +16,10 @@ const showReceipt = ref(false)
 const lastOrderSummary = ref<any>(null)
 const isProcessing = ref(false)
 const paymentError = ref('')
+
+async function handleTinSearch() {
+  await posStore.lookupCustomerByTin()
+}
 
 const paymentMethods = [
   { id: 'cash', name: 'Cash', icon: DollarSign },
@@ -81,6 +85,9 @@ async function processPayment() {
 
     const response = await posApi.checkout({
       session_id: session.id,
+      customer_id: posStore.customer.id || null,
+      customer_tin: posStore.customer.tin?.trim() || null,
+      customer_name: posStore.customer.name?.trim() || null,
       location_id: posStore.selectedShop()?.stock_location_id
         ?? session.terminal?.location_id
         ?? null,
@@ -126,10 +133,13 @@ async function processPayment() {
       date: new Date().toLocaleString(),
       receiptNumber: transaction.receipt_number,
       company: transaction.company || null,
+      customerTin: transaction.customer_tin || posStore.customer.tin || null,
+      customerName: transaction.customer_name || posStore.customer.name || null,
     }
 
     showReceipt.value = true
     posStore.clearCart()
+    posStore.clearCustomer()
   } catch (err: any) {
     const message = err?.errors?.items?.[0]
       || err?.response?.data?.message
@@ -176,6 +186,91 @@ function handleReceiptClose() {
       <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-lg shadow-blue-600/15 text-center">
         <span class="text-xs font-medium text-blue-200 uppercase tracking-wider block mb-1">Total Amount Due</span>
         <span class="text-3xl font-extrabold font-mono">${{ grandTotal.toFixed(2) }}</span>
+      </div>
+
+      <!-- Customer Details (Optional) -->
+      <div class="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3.5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+            <User class="w-4 h-4 text-slate-500" />
+            <span>Customer Details</span>
+            <span class="text-[10px] font-normal text-slate-500 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-2xs">
+              Optional (Neither required)
+            </span>
+          </div>
+
+          <button
+            v-if="posStore.customer.tin || posStore.customer.name"
+            type="button"
+            @click="posStore.clearCustomer"
+            class="text-[11px] font-medium text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
+          >
+            <XCircle class="w-3.5 h-3.5" />
+            Clear
+          </button>
+        </div>
+
+        <!-- Customer TIN with eTrade Lookup -->
+        <div class="space-y-1">
+          <label class="block text-[11px] font-medium text-slate-600">
+            Customer TIN (Tax ID)
+          </label>
+          <div class="relative flex items-center">
+            <input
+              v-model="posStore.customer.tin"
+              @keydown.enter.prevent="handleTinSearch"
+              type="text"
+              maxlength="30"
+              placeholder="e.g. 0012345678 (optional)"
+              class="w-full pl-3 pr-20 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+            />
+            <button
+              type="button"
+              @click="handleTinSearch"
+              :disabled="posStore.isLookingUpTin || !posStore.customer.tin?.trim()"
+              class="absolute right-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+              title="Lookup customer name from eTrade or database records"
+            >
+              <Loader2 v-if="posStore.isLookingUpTin" class="w-3 h-3 animate-spin" />
+              <Search v-else class="w-3 h-3" />
+              <span>Lookup</span>
+            </button>
+          </div>
+
+          <!-- Lookup feedback badge / message -->
+          <div
+            v-if="posStore.tinLookupMessage"
+            class="text-[11px] px-2.5 py-1.5 rounded-lg flex items-start gap-1.5 mt-1 transition-all"
+            :class="[
+              posStore.tinLookupStatus === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+              posStore.tinLookupStatus === 'not_found' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+              posStore.tinLookupStatus === 'error' ? 'bg-rose-50 text-rose-800 border border-rose-200' :
+              'bg-slate-100 text-slate-600'
+            ]"
+          >
+            <CheckCircle2 v-if="posStore.tinLookupStatus === 'success'" class="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <span class="leading-tight">{{ posStore.tinLookupMessage }}</span>
+          </div>
+        </div>
+
+        <!-- Customer Name (Optional, auto-filled or manual) -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <label class="font-medium text-slate-600">
+              Customer / Business Name
+            </label>
+            <span v-if="posStore.customer.source === 'etrade_api'" class="text-[10px] text-emerald-600 font-semibold">
+              via eTrade
+            </span>
+          </div>
+          <input
+            v-model="posStore.customer.name"
+            type="text"
+            maxlength="255"
+            placeholder="e.g. Abebe Kebede Trading (optional)"
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+          />
+        </div>
       </div>
 
       <!-- Payment Methods Grid -->

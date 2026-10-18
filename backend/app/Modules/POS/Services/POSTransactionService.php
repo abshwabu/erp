@@ -32,11 +32,13 @@ class POSTransactionService
         string $sessionId,
         array $items,
         array $payments,
-        ?string $customerId,
+        ?string $customerId = null,
         array $discounts = [],
-        ?string $locationId = null
+        ?string $locationId = null,
+        ?string $customerTin = null,
+        ?string $customerName = null
     ): POSTransaction {
-        return DB::transaction(function () use ($sessionId, $items, $payments, $customerId, $discounts, $locationId) {
+        return DB::transaction(function () use ($sessionId, $items, $payments, $customerId, $discounts, $locationId, $customerTin, $customerName) {
             $session = POSSession::with('terminal')->findOrFail($sessionId);
 
             if ($session->status !== 'open') {
@@ -78,9 +80,30 @@ class POSTransactionService
                 ]);
             }
 
+            // Resolve customer from database by TIN if customerId was not explicitly provided
+            if (!$customerId && !empty($customerTin)) {
+                $existingCustomer = \App\Modules\Sales\Models\Customer::where('tin', trim($customerTin))->first();
+                if ($existingCustomer) {
+                    $customerId = $existingCustomer->id;
+                    if (empty($customerName)) {
+                        $customerName = $existingCustomer->name;
+                    }
+                }
+            }
+
+            if ($customerId && (empty($customerName) || empty($customerTin))) {
+                $cust = \App\Modules\Sales\Models\Customer::find($customerId);
+                if ($cust) {
+                    $customerName = $customerName ?: $cust->name;
+                    $customerTin = $customerTin ?: ($cust->tin ?? null);
+                }
+            }
+
             $transaction = POSTransaction::create([
                 'session_id' => $sessionId,
                 'customer_id' => $customerId,
+                'customer_tin' => $customerTin ? trim($customerTin) : null,
+                'customer_name' => $customerName ? trim($customerName) : null,
                 'subtotal_cents' => $totals['subtotal'],
                 'discount_cents' => $totals['discount'],
                 'tax_cents' => $totals['tax'],

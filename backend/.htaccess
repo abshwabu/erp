@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Prevent direct access to sensitive files
+    RewriteRule ^(\.env|composer\.(json|lock)|package\.(json|lock)|phpunit\.xml|artisan)$ - [F,L,NC]
+
+    # Block access to hidden files and directories (starting with a dot)
+    RewriteRule (^|/)\.(?!well-known) - [F]
+
+    # Forward all requests to the public directory
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>

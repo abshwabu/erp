@@ -51,6 +51,20 @@ const companyPhone = computed(() => {
     || ''
 })
 
+const customerName = computed(() => {
+  return props.orderData?.customerName
+    || props.orderData?.customer_name
+    || props.orderData?.customer?.name
+    || ''
+})
+
+const customerTin = computed(() => {
+  return props.orderData?.customerTin
+    || props.orderData?.customer_tin
+    || props.orderData?.customer?.tin
+    || ''
+})
+
 function handleClose() {
   emit('update:modelValue', false)
   emit('close')
@@ -63,6 +77,8 @@ function handlePrint() {
   const compTin = tinNumber.value
   const compAddress = companyAddress.value
   const compPhone = companyPhone.value
+  const custName = customerName.value
+  const custTin = customerTin.value
   const items = props.orderData?.items || []
   const subtotal = (props.orderData?.subtotal || 0).toFixed(2)
   const total = (props.orderData?.total || 0).toFixed(2)
@@ -206,6 +222,13 @@ function handlePrint() {
           <span>Receipt No: <strong>${receiptNum}</strong></span>
           <span>Date: ${dateStr}</span>
         </div>
+        ${(custName || custTin) ? `
+          <div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed #000; text-align: left; font-size: 10px;">
+            <div style="font-size: 8px; text-transform: uppercase; font-weight: bold; color: #333;">Customer / Buyer:</div>
+            ${custName ? `<div style="font-weight: bold; font-size: 11px;">${custName}</div>` : ''}
+            ${custTin ? `<div><strong>TIN:</strong> ${custTin}</div>` : ''}
+          </div>
+        ` : ''}
       </div>
 
       <table>
@@ -320,6 +343,13 @@ function handlePrint() {
               <span class="text-slate-400">Date:</span>
               <span>{{ orderData?.date || new Date().toLocaleString() }}</span>
             </div>
+          </div>
+
+          <!-- Customer / Billed To Section if provided -->
+          <div v-if="customerName || customerTin" class="mt-2.5 pt-2 border-t border-dashed border-slate-200 text-left font-sans space-y-0.5">
+            <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Customer / Billed To:</span>
+            <div v-if="customerName" class="font-bold text-slate-900 text-xs">{{ customerName }}</div>
+            <div v-if="customerTin" class="text-slate-600 font-mono text-[11px]">TIN: {{ customerTin }}</div>
           </div>
         </div>
 

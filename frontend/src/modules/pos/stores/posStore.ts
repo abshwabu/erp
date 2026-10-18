@@ -15,6 +15,73 @@ export const usePosStore = defineStore('pos', () => {
   const selectedShopId = ref<string | null>(null)
   const needsShopSelection = ref(false)
 
+  // Optional customer details for checkout / receipts
+  const customer = ref<{
+    tin: string
+    name: string
+    id: string | null
+    source: string | null
+  }>({
+    tin: '',
+    name: '',
+    id: null,
+    source: null,
+  })
+  const isLookingUpTin = ref(false)
+  const tinLookupStatus = ref<'idle' | 'success' | 'not_found' | 'error'>('idle')
+  const tinLookupMessage = ref('')
+
+  const setCustomer = (data: { tin?: string; name?: string; id?: string | null; source?: string | null }) => {
+    if (data.tin !== undefined) customer.value.tin = data.tin
+    if (data.name !== undefined) customer.value.name = data.name
+    if (data.id !== undefined) customer.value.id = data.id
+    if (data.source !== undefined) customer.value.source = data.source
+  }
+
+  const clearCustomer = () => {
+    customer.value = { tin: '', name: '', id: null, source: null }
+    tinLookupStatus.value = 'idle'
+    tinLookupMessage.value = ''
+  }
+
+  const lookupCustomerByTin = async (rawTin?: string) => {
+    const tin = (rawTin !== undefined ? rawTin : customer.value.tin).trim()
+    if (!tin) {
+      tinLookupStatus.value = 'idle'
+      tinLookupMessage.value = 'Please enter a TIN to look up.'
+      return null
+    }
+
+    isLookingUpTin.value = true
+    tinLookupStatus.value = 'idle'
+    tinLookupMessage.value = ''
+
+    try {
+      const res = await posApi.lookupTin(tin)
+      const data = res.data?.data
+      if (data?.found && data.name) {
+        customer.value.tin = data.tin || tin
+        customer.value.name = data.name
+        customer.value.id = data.customer_id || null
+        customer.value.source = data.source || 'found'
+        tinLookupStatus.value = 'success'
+        tinLookupMessage.value = data.source === 'etrade_api'
+          ? `Verified via eTrade: ${data.name}`
+          : `Found in records: ${data.name}`
+      } else {
+        tinLookupStatus.value = 'not_found'
+        tinLookupMessage.value = data?.message || 'TIN not found in eTrade / records. You can enter the customer name manually.'
+      }
+      return data
+    } catch (err: any) {
+      tinLookupStatus.value = 'error'
+      tinLookupMessage.value = err?.response?.data?.message || 'Could not verify TIN with eTrade. You can enter the customer name manually.'
+      return null
+    } finally {
+      isLookingUpTin.value = false
+    }
+  }
+
   const selectedShop = () =>
     availableShops.value.find((s) => s.id === selectedShopId.value) || null
 
@@ -211,6 +278,13 @@ export const usePosStore = defineStore('pos', () => {
     loadShops,
     selectShop,
     ensureSession,
-    syncOfflineQueue
+    syncOfflineQueue,
+    customer,
+    isLookingUpTin,
+    tinLookupStatus,
+    tinLookupMessage,
+    setCustomer,
+    clearCustomer,
+    lookupCustomerByTin,
   }
 })
