@@ -30,6 +30,9 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
         ->middleware('permission:inventory.products.delete');
 
     // ── Products ──────────────────────────────────────────────────────────────
+    Route::get('products/template', [ProductController::class, 'downloadTemplate'])
+        ->middleware('permission:inventory.products.view');
+
     Route::post('products/import', [ProductController::class, 'import'])
         ->middleware('permission:inventory.products.create');
 
@@ -64,6 +67,12 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
         ->middleware('permission:inventory.stock.view');
 
     // ── Stock Management ──────────────────────────────────────────────────────
+    Route::get('stock/template', [ProductController::class, 'downloadTemplate'])
+        ->middleware('permission:inventory.stock.view');
+
+    Route::post('stock/import', [ProductController::class, 'import'])
+        ->middleware('permission:inventory.stock.adjust');
+
     Route::get('stock', [StockController::class, 'index'])
         ->middleware('permission:inventory.stock.view');
 

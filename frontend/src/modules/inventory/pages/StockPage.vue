@@ -10,6 +10,7 @@ import {
   TrendingDown,
   Layers,
   Settings2,
+  FileSpreadsheet,
 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -19,6 +20,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import StockAdjustmentModal from '../components/StockAdjustmentModal.vue'
+import ImportModal from '../components/ImportModal.vue'
 import { formatCurrency } from '@/utils/format'
 import type { Product } from '@/types/inventory'
 
@@ -57,6 +59,7 @@ const { data: locations } = useQuery({
 })
 
 const isAdjustmentModalOpen = ref(false)
+const isImportModalOpen = ref(false)
 const selectedProductId = ref<string | undefined>(undefined)
 
 const openAdjustment = (productId?: string) => {
@@ -121,9 +124,14 @@ const stats = computed(() => {
         <h1 class="text-2xl font-bold text-slate-900">Stock Levels</h1>
         <p class="text-slate-500 text-sm">Monitor quantity on hand across locations.</p>
       </div>
-      <UiButton size="sm" @click="openAdjustment()">
-        <Plus class="h-4 w-4 mr-2" /> Adjust Stock
-      </UiButton>
+      <div class="flex items-center gap-2">
+        <UiButton variant="outline" size="sm" @click="isImportModalOpen = true">
+          <FileSpreadsheet class="h-4 w-4 mr-1.5 text-emerald-600" /> Import Spreadsheet
+        </UiButton>
+        <UiButton size="sm" @click="openAdjustment()">
+          <Plus class="h-4 w-4 mr-2" /> Adjust Stock
+        </UiButton>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -218,5 +226,6 @@ const stats = computed(() => {
     </div>
 
     <StockAdjustmentModal v-model="isAdjustmentModalOpen" :product-id="selectedProductId" />
+    <ImportModal v-model="isImportModalOpen" />
   </div>
 </template>

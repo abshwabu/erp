@@ -9,6 +9,7 @@ import {
   Edit2,
   Trash2,
   Upload,
+  FileSpreadsheet,
   Package,
   Tag,
   AlertTriangle,
@@ -279,8 +280,8 @@ const hasActiveFilters = computed(() => {
           @click="isImportModalOpen = true"
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all"
         >
-          <Upload class="h-4 w-4 text-slate-400" />
-          <span>Import CSV</span>
+          <FileSpreadsheet class="h-4 w-4 text-emerald-600" />
+          <span>Import Excel / CSV</span>
         </button>
 
         <button

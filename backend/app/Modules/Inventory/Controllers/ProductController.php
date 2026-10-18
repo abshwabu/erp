@@ -15,11 +15,13 @@ use App\Modules\Inventory\Requests\UpdateProductRequest;
 use App\Modules\Inventory\Resources\ProductBarcodeResource;
 use App\Modules\Inventory\Resources\ProductResource;
 use App\Modules\Inventory\Resources\ProductVariantResource;
+use App\Modules\Inventory\Services\InventorySpreadsheetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ProductController extends BaseController
 {
@@ -525,21 +527,71 @@ class ProductController extends BaseController
         ]);
     }
 
-    // ── Import ────────────────────────────────────────────────────────────────
+    // ── Template & Import ─────────────────────────────────────────────────────
+
+    /**
+     * GET /api/inventory/products/template
+     * Download inventory import spreadsheet template (XLSX or CSV).
+     */
+    public function downloadTemplate(Request $request, InventorySpreadsheetService $spreadsheetService): SymfonyResponse
+    {
+        $format = (string) $request->query('format', 'xlsx');
+        $template = $spreadsheetService->generateTemplate($format);
+
+        return response($template['content'], 200, [
+            'Content-Type'        => $template['mime'],
+            'Content-Disposition' => 'attachment; filename="' . $template['filename'] . '"',
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
+        ]);
+    }
 
     /**
      * POST /api/inventory/products/import
-     * Expects a multipart upload with a 'file' field (CSV).
+     * Expects a multipart upload with a 'file' field (.xlsx, .csv, .xls, .tsv).
      */
-    public function import(Request $request): JsonResponse
+    public function import(Request $request, InventorySpreadsheetService $spreadsheetService): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+            'file' => ['required', 'file', 'max:20480'],
         ]);
 
-        $path = $request->file('file')->store('imports/products');
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        $allowed = ['csv', 'txt', 'xlsx', 'xls', 'tsv'];
+        if (!in_array($ext, $allowed, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['The file must be an Excel or CSV spreadsheet (.xlsx, .csv, .xls, .tsv).'],
+            ]);
+        }
 
-        ImportProductsJob::dispatch($path);
+        $sync = $request->boolean('sync')
+            || $request->input('mode') === 'sync'
+            || $request->header('X-Import-Sync') === 'true';
+
+        $options = [
+            'update_existing'     => $request->boolean('update_existing', true),
+            'default_location_id' => $request->input('location_id') ?: $request->input('default_location_id'),
+        ];
+
+        if ($sync) {
+            $rows = $spreadsheetService->parseFile($file);
+            if (empty($rows)) {
+                return $this->errorResponse('The spreadsheet appears to be empty or has no readable product rows.', 422);
+            }
+
+            $result = $spreadsheetService->importRows($rows, $options);
+
+            return response()->json([
+                'message' => "Import processed: {$result['created_count']} created, {$result['updated_count']} updated, {$result['failed_count']} failed.",
+                'data'    => $result,
+            ], 200);
+        }
+
+        $path = $file->store('imports/products');
+
+        ImportProductsJob::dispatch($path, $options);
 
         return $this->successResponse(['message' => 'Import queued successfully.'], 202);
     }

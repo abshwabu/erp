@@ -223,3 +223,132 @@ it('ImportProductsJob deletes the file after processing', function (): void {
 
     $tenant->run(fn () => expect(Storage::exists($path))->toBeFalse());
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Template Download & Spreadsheet Import Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+it('downloads spreadsheet template in XLSX format', function (): void {
+    [$tenant, $slug, $token] = makeImportTenant();
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->get("http://{$slug}.localhost/api/inventory/products/template?format=xlsx");
+
+    $response->assertStatus(200);
+    $response->assertHeader('Content-Disposition', 'attachment; filename="inventory_import_template.xlsx"');
+    expect($response->getContent())->not()->toBeEmpty();
+});
+
+it('downloads spreadsheet template in CSV format', function (): void {
+    [$tenant, $slug, $token] = makeImportTenant();
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->get("http://{$slug}.localhost/api/inventory/products/template?format=csv");
+
+    $response->assertStatus(200);
+    $response->assertHeader('Content-Disposition', 'attachment; filename="inventory_import_template.csv"');
+    $content = $response->getContent();
+    expect($content)->toContain('sku,name,category,type,cost_price,selling_price');
+    expect($content)->toContain('PRD-OIL-5W30');
+});
+
+it('imports products and initial stock from XLSX spreadsheet synchronously', function (): void {
+    [$tenant, $slug, $token] = makeImportTenant();
+
+    $service = app(\App\Modules\Inventory\Services\InventorySpreadsheetService::class);
+    $tpl = $service->generateTemplate('xlsx');
+
+    $file = UploadedFile::fake()->createWithContent('inventory_upload.xlsx', $tpl['content']);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post(
+            "http://{$slug}.localhost/api/inventory/products/import",
+            [
+                'file'            => $file,
+                'sync'            => '1',
+                'update_existing' => '1',
+            ],
+            ['Content-Type' => 'multipart/form-data']
+        );
+
+    $response->assertStatus(200);
+    expect($response->json('data.errors'))->toBe([]);
+    $response->assertJsonPath('data.total_rows', 4);
+    $response->assertJsonPath('data.created_count', 4);
+    $response->assertJsonPath('data.failed_count', 0);
+
+    $tenant->run(function () {
+        // Verify product was created
+        $product = Product::where('sku', 'PRD-OIL-5W30')->first();
+        expect($product)->not()->toBeNull();
+        expect($product->name)->toBe('Total Quartz 9000 5W-30 (4L)');
+        expect($product->cost_price)->toBe(320000);
+        expect($product->selling_price)->toBe(410000);
+
+        // Verify stock level was initialized
+        $level = \App\Modules\Inventory\Models\StockLevel::where('product_id', $product->id)->first();
+        expect($level)->not()->toBeNull();
+        expect($level->quantity_on_hand)->toBe(45);
+
+        // Verify barcode was registered
+        $barcode = \App\Modules\Inventory\Models\ProductBarcode::where('product_id', $product->id)->first();
+        expect($barcode)->not()->toBeNull();
+        expect($barcode->barcode)->toBe('600109283741');
+
+        // Verify category was created
+        expect(ProductCategory::where('name', 'Lubricants')->exists())->toBeTrue();
+    });
+});
+
+it('handles product updates and row errors in synchronous spreadsheet import', function (): void {
+    [$tenant, $slug, $token] = makeImportTenant();
+
+    // Pre-create a product to update
+    $tenant->run(fn () => Product::create([
+        'sku'           => 'PRD-UPDATE-1',
+        'name'          => 'Old Name',
+        'type'          => 'stockable',
+        'status'        => 'active',
+        'cost_price'    => 1000,
+        'selling_price' => 2000,
+    ]));
+
+    // CSV with: 1 update, 1 new, 1 invalid row (missing name)
+    $csv = "sku,name,category,cost_price,selling_price,initial_stock\n"
+         . "PRD-UPDATE-1,Updated Product Name,Upgraded Category,15.00,25.00,10\n"
+         . "PRD-NEW-1,Brand New Product,New Category,5.00,10.00,50\n"
+         . "PRD-INVALID,,Missing Name Category,5.00,10.00,5\n";
+
+    $file = UploadedFile::fake()->createWithContent('import_test.csv', $csv);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post(
+            "http://{$slug}.localhost/api/inventory/products/import",
+            [
+                'file'            => $file,
+                'sync'            => '1',
+                'update_existing' => '1',
+            ],
+            ['Content-Type' => 'multipart/form-data']
+        );
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.created_count', 1);
+    $response->assertJsonPath('data.updated_count', 1);
+    $response->assertJsonPath('data.failed_count', 1);
+
+    $errors = $response->json('data.errors');
+    expect($errors)->toHaveCount(1);
+    expect($errors[0]['row'])->toBe(4);
+    expect($errors[0]['error'])->toContain('Product Name is required');
+
+    $tenant->run(function () {
+        expect(Product::where('sku', 'PRD-UPDATE-1')->value('name'))->toBe('Updated Product Name');
+        expect(Product::where('sku', 'PRD-NEW-1')->value('name'))->toBe('Brand New Product');
+    });
+});
+

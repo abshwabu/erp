@@ -128,10 +128,41 @@ export const inventoryApi = {
     })
   },
 
-  importProducts(file: File) {
+  downloadTemplate(format: 'xlsx' | 'csv' = 'xlsx') {
+    return apiClient.get(`/inventory/products/template?format=${format}`, {
+      responseType: 'blob',
+    })
+  },
+
+  importProducts(
+    file: File,
+    options: {
+      update_existing?: boolean
+      location_id?: string
+      sync?: boolean
+    } = {}
+  ) {
     const formData = new FormData()
     formData.append('file', file)
-    return apiClient.post<{ jobId?: string; message?: string }>('/inventory/products/import', formData, {
+    formData.append('sync', options.sync !== false ? '1' : '0')
+    if (options.update_existing !== undefined) {
+      formData.append('update_existing', options.update_existing ? '1' : '0')
+    }
+    if (options.location_id) {
+      formData.append('location_id', options.location_id)
+    }
+
+    return apiClient.post<{
+      message: string
+      data?: {
+        total_rows: number
+        created_count: number
+        updated_count: number
+        skipped_count: number
+        failed_count: number
+        errors: Array<{ row: number; sku: string; name?: string; error: string }>
+      }
+    }>('/inventory/products/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
