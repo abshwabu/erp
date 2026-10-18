@@ -7,6 +7,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import { formatCurrency, formatDate } from '@/utils/format'
 import JournalDetailModal from '../components/JournalDetailModal.vue'
 import JournalEntryModal from '../components/JournalEntryModal.vue'
+import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import type { Account, AccountType, Journal } from '@/types/accounting'
 
@@ -191,19 +192,21 @@ const handleSaved = async (payload: {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <AccountingNav />
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Journal Entries</h1>
-        <p class="text-sm text-slate-500">Track manual and system-generated postings across the ledger.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Journal Entries</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Track manual and system-generated postings across the ledger.</p>
       </div>
-      <UiButton @click="createJournal">
-        <Plus class="mr-2 h-4 w-4" /> New Journal Entry
+      <UiButton class="w-full sm:w-auto justify-center" @click="createJournal">
+        <Plus class="mr-2 h-4 w-4 shrink-0" /> New Journal Entry
       </UiButton>
     </div>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="flex flex-wrap items-center gap-2">
-        <Filter class="h-4 w-4 text-slate-400" />
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <Filter class="h-4 w-4 text-slate-400 shrink-0 hidden sm:block" />
         <button
           v-for="tab in [
             { label: 'All', value: 'all' },
@@ -212,15 +215,15 @@ const handleSaved = async (payload: {
             { label: 'Reversed', value: 'reversed' },
           ]"
           :key="tab.label"
-          class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
-          :class="statusFilter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+          class="whitespace-nowrap rounded-full border px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors shrink-0"
+          :class="statusFilter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
           @click="statusFilter = tab.value as 'all' | Journal['status']"
         >
           {{ tab.label }}
         </button>
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-4">
-        <div class="relative lg:col-span-2">
+      <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="relative sm:col-span-2 lg:col-span-2">
           <UiInput v-model="searchQuery" placeholder="Search reference, description, or source..." />
           <Search class="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-400" />
         </div>
@@ -230,35 +233,39 @@ const handleSaved = async (payload: {
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reference</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Total Amount</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Source</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          <tr
-            v-for="journal in filteredJournals"
-            :key="journal.id"
-            class="cursor-pointer hover:bg-slate-50"
-            @click="openJournal(journal)"
-          >
-            <td class="px-4 py-3 text-slate-700">{{ formatDate(journal.journalDate) }}</td>
-            <td class="px-4 py-3 font-medium text-slate-900">{{ journal.reference }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ journal.description }}</td>
-            <td class="px-4 py-3 text-right font-semibold text-slate-900">{{ formatCurrency(journal.totalDebit) }}</td>
-            <td class="px-4 py-3">
-              <UiBadge :variant="statusVariant(journal.status)">{{ journal.status }}</UiBadge>
-            </td>
-            <td class="px-4 py-3 text-slate-600">{{ journal.sourceType }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="min-w-full min-w-[700px] divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Reference</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">Description</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Total Amount</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Source</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            <tr
+              v-for="journal in filteredJournals"
+              :key="journal.id"
+              class="cursor-pointer hover:bg-slate-50 transition-colors"
+              @click="openJournal(journal)"
+            >
+              <td class="px-4 py-3 text-slate-700 whitespace-nowrap text-sm">{{ formatDate(journal.journalDate) }}</td>
+              <td class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap text-sm">{{ journal.reference }}</td>
+              <td class="px-4 py-3 text-slate-600 text-sm">
+                <div class="line-clamp-2">{{ journal.description }}</div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-900 whitespace-nowrap text-sm">{{ formatCurrency(journal.totalDebit) }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <UiBadge :variant="statusVariant(journal.status)">{{ journal.status }}</UiBadge>
+              </td>
+              <td class="px-4 py-3 text-slate-600 whitespace-nowrap text-sm capitalize">{{ journal.sourceType }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <JournalEntryModal

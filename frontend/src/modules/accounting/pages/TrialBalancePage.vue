@@ -4,6 +4,7 @@ import { Download } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
+import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { AccountType, TrialBalanceRow, TrialBalanceSection } from '@/types/accounting'
@@ -187,18 +188,20 @@ const periodLabel = computed(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <AccountingNav />
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Trial Balance</h1>
-        <p class="text-sm text-slate-500">Grouped ledger balances for the selected reporting period.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Trial Balance</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Grouped ledger balances for the selected reporting period.</p>
       </div>
-      <UiButton variant="outline" @click="downloadCsv">
-        <Download class="mr-2 h-4 w-4" /> Export to Excel
+      <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="downloadCsv">
+        <Download class="mr-2 h-4 w-4 shrink-0" /> Export to Excel
       </UiButton>
     </div>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="grid gap-4 lg:grid-cols-4">
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <UiSelect
           v-model="mode"
           label="Period Mode"
@@ -215,68 +218,69 @@ const periodLabel = computed(() => {
           label="Fiscal Period"
           :options="accountingFiscalPeriods.map((period) => ({ label: `${period.year}-${String(period.month).padStart(2, '0')}`, value: period.id }))"
         />
-        <label class="flex items-end gap-3 rounded-2xl border border-slate-200 px-4 py-3">
-          <input v-model="comparePreviousPeriod" type="checkbox" class="mt-1 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-          <span>
+        <label class="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 sm:col-span-2 lg:col-span-1">
+          <input v-model="comparePreviousPeriod" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 shrink-0" />
+          <span class="min-w-0">
             <span class="block text-sm font-medium text-slate-900">Compare previous period</span>
             <span class="block text-xs text-slate-500">Shows a prior-period balance column.</span>
           </span>
         </label>
       </div>
-      <p class="mt-4 text-sm text-slate-500">Reporting window: {{ periodLabel }}</p>
+      <p class="text-xs sm:text-sm text-slate-500">Reporting window: {{ periodLabel }}</p>
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Code</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Opening Balance</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Debits</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Credits</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Closing Balance</th>
-            <th v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Prior Period</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          <template v-for="section in visibleSections" :key="section.type">
-            <tr class="bg-slate-100">
-              <td :colspan="comparePreviousPeriod ? 7 : 6" class="px-4 py-3 text-sm font-semibold uppercase tracking-wide text-slate-700">
-                {{ section.label }}
-              </td>
+      <div class="overflow-x-auto">
+        <table class="min-w-full min-w-[760px] divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Code</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">Name</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Opening Balance</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Debits</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Credits</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Closing Balance</th>
+              <th v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Prior Period</th>
             </tr>
-            <tr v-for="row in section.rows" :key="row.accountId" class="hover:bg-slate-50">
-              <td class="px-4 py-3 font-medium text-slate-900">{{ row.code }}</td>
-              <td class="px-4 py-3 text-slate-700">{{ row.name }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.openingBalance) }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.debits) }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.credits) }}</td>
-              <td class="px-4 py-3 text-right font-semibold text-slate-900">{{ formatCurrency(row.closingBalance) }}</td>
-              <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.priorPeriodBalance || 0) }}</td>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-sm">
+            <template v-for="section in visibleSections" :key="section.type">
+              <tr class="bg-slate-100">
+                <td :colspan="comparePreviousPeriod ? 7 : 6" class="px-4 py-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-700">
+                  {{ section.label }}
+                </td>
+              </tr>
+              <tr v-for="row in section.rows" :key="row.accountId" class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{{ row.code }}</td>
+                <td class="px-4 py-3 text-slate-700">{{ row.name }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.openingBalance) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.debits) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.credits) }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">{{ formatCurrency(row.closingBalance) }}</td>
+                <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.priorPeriodBalance || 0) }}</td>
+              </tr>
+              <tr class="bg-slate-50/70 font-semibold">
+                <td class="px-4 py-3" colspan="2"></td>
+                <td class="px-4 py-3 text-right text-xs uppercase tracking-wider text-slate-500">Subtotal</td>
+                <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.debits) }}</td>
+                <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.credits) }}</td>
+                <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.closingBalance) }}</td>
+                <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.priorPeriodBalance || 0) }}</td>
+              </tr>
+            </template>
+          </tbody>
+          <tfoot class="bg-slate-900 text-white">
+            <tr>
+              <td colspan="2" class="px-4 py-3.5 text-xs sm:text-sm font-semibold uppercase tracking-wider">Grand Total</td>
+              <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.openingBalance) }}</td>
+              <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.debits) }}</td>
+              <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.credits) }}</td>
+              <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.closingBalance) }}</td>
+              <td v-if="comparePreviousPeriod" class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.priorPeriodBalance || 0) }}</td>
             </tr>
-            <tr class="bg-slate-50">
-              <td class="px-4 py-3" colspan="2"></td>
-              <td class="px-4 py-3 text-right text-sm font-semibold text-slate-700">Subtotal</td>
-              <td class="px-4 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(section.subtotal.openingBalance) }}</td>
-              <td class="px-4 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(section.subtotal.debits) }}</td>
-              <td class="px-4 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(section.subtotal.credits) }}</td>
-              <td class="px-4 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(section.subtotal.closingBalance) }}</td>
-              <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(section.subtotal.priorPeriodBalance || 0) }}</td>
-            </tr>
-          </template>
-        </tbody>
-        <tfoot class="bg-slate-900 text-white">
-          <tr>
-            <td colspan="2" class="px-4 py-3 text-sm font-semibold">Grand Total</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.openingBalance) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.debits) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.credits) }}</td>
-            <td class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.closingBalance) }}</td>
-            <td v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-sm font-semibold">{{ formatCurrency(totals.priorPeriodBalance || 0) }}</td>
-          </tr>
-        </tfoot>
-      </table>
+          </tfoot>
+        </table>
+      </div>
     </div>
   </div>
 </template>

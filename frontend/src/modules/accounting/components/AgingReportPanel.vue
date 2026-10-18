@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import AccountingNav from './AccountingNav.vue'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 interface AgingInvoice {
@@ -102,38 +103,41 @@ const sendReminders = () => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <AccountingNav />
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">{{ title }}</h1>
-        <p class="text-sm text-slate-500">{{ subtitle }}</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ title }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ subtitle }}</p>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <UiButton variant="outline" @click="selectOverdue">Select Overdue</UiButton>
-        <UiButton :disabled="selectedIds.length === 0" @click="sendReminders">Send Reminders</UiButton>
+      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <UiButton variant="outline" class="flex-1 sm:flex-none justify-center" @click="selectOverdue">Select Overdue</UiButton>
+        <UiButton :disabled="selectedIds.length === 0" class="flex-1 sm:flex-none justify-center" @click="sendReminders">Send Reminders</UiButton>
       </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-5">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       <div
-        v-for="item in summary"
+        v-for="(item, index) in summary"
         :key="item.label"
-        class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+        class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm"
+        :class="index === 0 ? 'col-span-2 sm:col-span-1' : ''"
       >
-        <p class="text-sm font-medium text-slate-500">{{ item.label }}</p>
-        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ formatCurrency(item.value) }}</p>
-        <p class="mt-1 text-sm text-slate-500">{{ item.percent }}% of total</p>
+        <p class="text-xs sm:text-sm font-medium text-slate-500">{{ item.label }}</p>
+        <p class="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-slate-900">{{ formatCurrency(item.value) }}</p>
+        <p class="mt-1 text-xs text-slate-500">{{ item.percent }}% of total</p>
       </div>
     </div>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div class="mb-4 flex items-center justify-between">
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <div>
-          <h2 class="text-lg font-semibold text-slate-900">Aging Distribution</h2>
-          <p class="text-sm text-slate-500">Stacked mix of outstanding balances across buckets.</p>
+          <h2 class="text-base sm:text-lg font-semibold text-slate-900">Aging Distribution</h2>
+          <p class="text-xs sm:text-sm text-slate-500">Stacked mix of outstanding balances across buckets.</p>
         </div>
-        <div class="text-sm text-slate-500">{{ partyLabel }}s with open balances</div>
+        <div class="text-xs sm:text-sm text-slate-500">{{ partyLabel }}s with open balances</div>
       </div>
-      <div class="flex h-5 overflow-hidden rounded-full bg-slate-100">
+      <div class="flex h-4 sm:h-5 overflow-hidden rounded-full bg-slate-100">
         <div
           v-for="segment in chartSegments"
           :key="segment.label"
@@ -142,10 +146,11 @@ const sendReminders = () => {
           :style="{ width: `${segment.width}%` }"
         />
       </div>
-      <div class="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
-        <span v-for="segment in chartSegments" :key="segment.label" class="inline-flex items-center gap-2">
-          <span class="h-3 w-3 rounded-full" :class="segment.color" />
-          {{ segment.label }} {{ formatCurrency(segment.value) }}
+      <div class="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-slate-600">
+        <span v-for="segment in chartSegments" :key="segment.label" class="inline-flex items-center gap-1.5">
+          <span class="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full shrink-0" :class="segment.color" />
+          <span>{{ segment.label }}</span>
+          <span class="font-medium text-slate-900">{{ formatCurrency(segment.value) }}</span>
         </span>
       </div>
     </div>
@@ -157,78 +162,80 @@ const sendReminders = () => {
           Aging will appear here once invoices or bills with open balances exist. Until Sales/AP data is available, this report stays empty.
         </p>
       </div>
-      <table v-else class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"></th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ partyLabel }}</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Invoices</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">0-30</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">31-60</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">61-90</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">90+</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Total</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          <template v-for="row in rows" :key="row.id">
-            <tr class="hover:bg-slate-50">
-              <td class="px-4 py-3">
-                <input
-                  type="checkbox"
-                  class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                  :checked="selectedIds.includes(row.id)"
-                  @change="toggleSelection(row.id)"
-                />
-              </td>
-              <td class="px-4 py-3">
-                <button class="text-left" @click="toggleRow(row.id)">
-                  <div class="font-medium text-slate-900">{{ resolveName(row) }}</div>
-                  <div class="text-xs text-slate-500">Click to expand invoices</div>
-                </button>
-              </td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ row.invoiceCount }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.bucket0_30) }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.bucket31_60) }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.bucket61_90) }}</td>
-              <td class="px-4 py-3 text-right text-slate-700">{{ formatCurrency(row.bucket90_plus) }}</td>
-              <td class="px-4 py-3 text-right font-semibold text-slate-900">{{ formatCurrency(row.outstanding) }}</td>
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full min-w-[760px] divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="w-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"></th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">{{ partyLabel }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Invoices</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">0-30</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">31-60</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">61-90</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">90+</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Total</th>
             </tr>
-            <tr v-if="expandedId === row.id" class="bg-slate-50/80">
-              <td colspan="8" class="px-4 py-4">
-                <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div class="mb-3 flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-slate-900">Overdue invoices</h3>
-                    <UiBadge variant="info">{{ row.invoices.length }} items</UiBadge>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-sm">
+            <template v-for="row in rows" :key="row.id">
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    :checked="selectedIds.includes(row.id)"
+                    @change="toggleSelection(row.id)"
+                  />
+                </td>
+                <td class="px-4 py-3">
+                  <button class="text-left group" @click="toggleRow(row.id)">
+                    <div class="font-medium text-slate-900 group-hover:text-primary-600 transition-colors">{{ resolveName(row) }}</div>
+                    <div class="text-xs text-slate-500">Click to expand invoices</div>
+                  </button>
+                </td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ row.invoiceCount }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.bucket0_30) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.bucket31_60) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.bucket61_90) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ formatCurrency(row.bucket90_plus) }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">{{ formatCurrency(row.outstanding) }}</td>
+              </tr>
+              <tr v-if="expandedId === row.id" class="bg-slate-50/80">
+                <td colspan="8" class="p-3 sm:p-4">
+                  <div class="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-xs sm:text-sm font-semibold text-slate-900">Overdue invoices</h3>
+                      <UiBadge variant="info">{{ row.invoices.length }} items</UiBadge>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                      <table class="min-w-full min-w-[550px] divide-y divide-slate-200 text-xs sm:text-sm">
+                        <thead class="bg-slate-50">
+                          <tr>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Reference</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Invoice Date</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Due Date</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">Days Overdue</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                          <tr v-for="invoice in row.invoices" :key="invoice.id">
+                            <td class="px-3 py-2 font-medium text-slate-900 whitespace-nowrap">{{ invoice.reference }}</td>
+                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap">{{ formatDate(invoice.invoiceDate) }}</td>
+                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap">{{ formatDate(invoice.dueDate) }}</td>
+                            <td class="px-3 py-2 text-right text-slate-700 whitespace-nowrap">{{ invoice.daysOverdue }}</td>
+                            <td class="px-3 py-2 text-right font-semibold text-slate-900 whitespace-nowrap">{{ formatCurrency(invoice.amount) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div class="overflow-hidden rounded-xl border border-slate-200">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
-                      <thead class="bg-slate-50">
-                        <tr>
-                          <th class="px-3 py-2 text-left font-medium text-slate-500">Reference</th>
-                          <th class="px-3 py-2 text-left font-medium text-slate-500">Invoice Date</th>
-                          <th class="px-3 py-2 text-left font-medium text-slate-500">Due Date</th>
-                          <th class="px-3 py-2 text-right font-medium text-slate-500">Days Overdue</th>
-                          <th class="px-3 py-2 text-right font-medium text-slate-500">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-slate-200">
-                        <tr v-for="invoice in row.invoices" :key="invoice.id">
-                          <td class="px-3 py-2 font-medium text-slate-900">{{ invoice.reference }}</td>
-                          <td class="px-3 py-2 text-slate-600">{{ formatDate(invoice.invoiceDate) }}</td>
-                          <td class="px-3 py-2 text-slate-600">{{ formatDate(invoice.dueDate) }}</td>
-                          <td class="px-3 py-2 text-right text-slate-700">{{ invoice.daysOverdue }}</td>
-                          <td class="px-3 py-2 text-right font-semibold text-slate-900">{{ formatCurrency(invoice.amount) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <p v-if="statusMessage" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">

@@ -5,6 +5,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import AccountModal from '../components/AccountModal.vue'
+import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import { formatCurrency } from '@/utils/format'
 import type { Account, AccountType } from '@/types/accounting'
@@ -254,26 +255,28 @@ const handleDeleteAccount = async (id: string) => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <AccountingNav />
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Chart of Accounts</h1>
-        <p class="text-sm text-slate-500">Browse the full account hierarchy and manage account definitions.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Chart of Accounts</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Browse the full account hierarchy and manage account definitions.</p>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <UiButton @click="openCreateAccount">
-          <Plus class="mr-2 h-4 w-4" /> New Account
+      <div class="flex items-center gap-2">
+        <UiButton class="w-full sm:w-auto justify-center" @click="openCreateAccount">
+          <Plus class="mr-2 h-4 w-4 shrink-0" /> New Account
         </UiButton>
       </div>
     </div>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div class="relative flex-1">
           <UiInput v-model="searchQuery" placeholder="Search by code, name, or description..." />
           <Search class="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-400" />
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <Filter class="h-4 w-4 text-slate-400" />
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none shrink-0">
+          <Filter class="h-4 w-4 text-slate-400 shrink-0 hidden sm:block" />
           <button
             v-for="tab in [
               { label: 'All', value: 'all' },
@@ -284,8 +287,8 @@ const handleDeleteAccount = async (id: string) => {
               { label: 'Expenses', value: 'expense' },
             ]"
             :key="tab.label"
-            class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
-            :class="filter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+            class="whitespace-nowrap rounded-full border px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors shrink-0"
+            :class="filter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
             @click="filter = tab.value as TypeFilter"
           >
             {{ tab.label }}
@@ -295,55 +298,57 @@ const handleDeleteAccount = async (id: string) => {
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Code</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Type</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Balance</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          <tr v-for="row in visibleRows" :key="row.account.id" class="hover:bg-slate-50">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2" :style="{ paddingLeft: `${row.depth * 24}px` }">
-                <button
-                  v-if="row.hasChildren"
-                  type="button"
-                  class="rounded-full border border-slate-200 p-1 text-slate-500 hover:bg-slate-100"
-                  @click="toggleExpanded(row.account.id)"
-                >
-                  <ChevronDown v-if="expandedIds.includes(row.account.id)" class="h-3.5 w-3.5" />
-                  <ChevronRight v-else class="h-3.5 w-3.5" />
-                </button>
-                <span class="font-medium text-slate-900">{{ row.account.code }}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-              <div class="font-medium text-slate-900">{{ row.account.name }}</div>
-              <div v-if="row.account.description" class="text-xs text-slate-500">{{ row.account.description }}</div>
-            </td>
-            <td class="px-4 py-3">
-              <UiBadge variant="info">{{ typeLabel(row.account.type) }}</UiBadge>
-            </td>
-            <td class="px-4 py-3 text-right font-semibold text-slate-900">
-              {{ formatCurrency(row.displayBalance) }}
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex justify-end gap-2">
-                <UiButton variant="ghost" size="sm" @click="openEditAccount(row.account)">
-                  <Pencil class="h-4 w-4" />
-                </UiButton>
-                <UiButton variant="ghost" size="sm" @click="handleDeleteAccount(row.account.id)">
-                  <Trash2 class="h-4 w-4" />
-                </UiButton>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="min-w-full min-w-[650px] divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Code</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Type</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Balance</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            <tr v-for="row in visibleRows" :key="row.account.id" class="hover:bg-slate-50">
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex items-center gap-2" :style="{ paddingLeft: `${row.depth * 20}px` }">
+                  <button
+                    v-if="row.hasChildren"
+                    type="button"
+                    class="rounded-full border border-slate-200 p-1 text-slate-500 hover:bg-slate-100"
+                    @click="toggleExpanded(row.account.id)"
+                  >
+                    <ChevronDown v-if="expandedIds.includes(row.account.id)" class="h-3.5 w-3.5" />
+                    <ChevronRight v-else class="h-3.5 w-3.5" />
+                  </button>
+                  <span class="font-medium text-slate-900">{{ row.account.code }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <div class="font-medium text-slate-900">{{ row.account.name }}</div>
+                <div v-if="row.account.description" class="text-xs text-slate-500 line-clamp-1 sm:line-clamp-none">{{ row.account.description }}</div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <UiBadge variant="info">{{ typeLabel(row.account.type) }}</UiBadge>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                {{ formatCurrency(row.displayBalance) }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex justify-end gap-1 sm:gap-2">
+                  <UiButton variant="ghost" size="sm" @click="openEditAccount(row.account)">
+                    <Pencil class="h-4 w-4" />
+                  </UiButton>
+                  <UiButton variant="ghost" size="sm" @click="handleDeleteAccount(row.account.id)">
+                    <Trash2 class="h-4 w-4" />
+                  </UiButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <AccountModal

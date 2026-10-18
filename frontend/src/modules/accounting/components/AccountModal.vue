@@ -64,7 +64,7 @@ const handleSave = () => {
 
 <template>
   <UiModal :model-value="modelValue" :title="isEditing ? 'Edit Account' : 'New Account'" size="lg" @update:modelValue="emit('update:modelValue', $event)">
-    <div class="grid gap-4 md:grid-cols-2">
+    <div class="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
       <UiInput v-model="form.code" label="Account Code" placeholder="1100" />
       <UiInput v-model="form.name" label="Account Name" placeholder="Cash and Cash Equivalents" />
       <UiSelect
@@ -89,15 +89,15 @@ const handleSave = () => {
           { label: 'Inactive', value: 'false' },
         ]"
       />
-      <div class="md:col-span-2">
+      <div class="sm:col-span-2">
         <UiInput v-model="form.description" label="Description" placeholder="Optional account notes" />
       </div>
     </div>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-3">
-        <UiButton variant="outline" @click="close">Cancel</UiButton>
-        <UiButton @click="handleSave">{{ isEditing ? 'Save Changes' : 'Create Account' }}</UiButton>
+      <div class="flex flex-col-reverse sm:flex-row w-full justify-end gap-2 sm:gap-3">
+        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">Cancel</UiButton>
+        <UiButton class="w-full sm:w-auto justify-center" @click="handleSave">{{ isEditing ? 'Save Changes' : 'Create Account' }}</UiButton>
       </div>
     </template>
   </UiModal>

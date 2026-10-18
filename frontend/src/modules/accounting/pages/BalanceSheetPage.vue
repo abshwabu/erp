@@ -4,6 +4,7 @@ import { AlertTriangle, Download } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
+import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { BalanceSheetGroup } from '@/types/accounting'
@@ -144,46 +145,48 @@ const downloadCsv = () => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <AccountingNav />
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Balance Sheet</h1>
-        <p class="text-sm text-slate-500">A two-column statement of financial position as of the selected date.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Balance Sheet</h1>
+        <p class="text-xs sm:text-sm text-slate-500">A statement of financial position as of the selected date.</p>
       </div>
-      <UiButton variant="outline" @click="downloadCsv">
-        <Download class="mr-2 h-4 w-4" /> Export to Excel
+      <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="downloadCsv">
+        <Download class="mr-2 h-4 w-4 shrink-0" /> Export to Excel
       </UiButton>
     </div>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="grid gap-4 lg:grid-cols-2">
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="grid gap-3 grid-cols-1 sm:grid-cols-2">
         <UiInput v-model="asOfDate" label="As of Date" type="date" />
         <UiInput v-model="comparisonDate" label="Comparison Date" type="date" />
       </div>
-      <p class="mt-4 text-sm text-slate-500">
+      <p class="text-xs sm:text-sm text-slate-500">
         Current as of {{ formatDate(asOfDate) }}. Comparison against {{ comparisonDate ? formatDate(comparisonDate) : 'prior date' }}.
       </p>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-      <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-900">Assets</h2>
+    <div class="grid gap-6 grid-cols-1 lg:grid-cols-2">
+      <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <h2 class="text-base sm:text-lg font-semibold text-slate-900">Assets</h2>
           <UiBadge variant="info">{{ formatCurrency(reportTotals.assetsTotal) }}</UiBadge>
         </div>
         <div class="space-y-4">
-          <div v-for="group in assets" :key="group.label" class="rounded-2xl border border-slate-200">
-            <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('assets', group)">
-              <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
-              <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+          <div v-for="group in assets" :key="group.label" class="rounded-2xl border border-slate-200 overflow-hidden">
+            <button class="flex w-full items-center justify-between px-3.5 sm:px-4 py-3 text-left gap-2 hover:bg-slate-50 transition-colors" @click="toggleGroup('assets', group)">
+              <span class="text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-700 min-w-0 break-words">{{ group.label }}</span>
+              <span class="text-xs sm:text-sm font-semibold text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
             </button>
             <div v-if="isOpen('assets', group)" class="border-t border-slate-200">
-              <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
-                <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
-                <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
+              <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm gap-2">
+                <span class="text-slate-700 min-w-0 break-words">{{ row.code }} - {{ row.name }}</span>
+                <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
               </div>
-              <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
-                <span class="text-slate-950">Subtotal {{ group.label }}</span>
-                <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+              <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
+                <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
               </div>
             </div>
           </div>
@@ -191,50 +194,50 @@ const downloadCsv = () => {
       </section>
 
       <div class="space-y-6">
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Liabilities</h2>
+        <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+          <div class="mb-4 flex items-center justify-between gap-2">
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900">Liabilities</h2>
             <UiBadge variant="info">{{ formatCurrency(reportTotals.liabilitiesTotal) }}</UiBadge>
           </div>
           <div class="space-y-4">
-            <div v-for="group in liabilities" :key="group.label" class="rounded-2xl border border-slate-200">
-              <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('liabilities', group)">
-                <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
-                <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+            <div v-for="group in liabilities" :key="group.label" class="rounded-2xl border border-slate-200 overflow-hidden">
+              <button class="flex w-full items-center justify-between px-3.5 sm:px-4 py-3 text-left gap-2 hover:bg-slate-50 transition-colors" @click="toggleGroup('liabilities', group)">
+                <span class="text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-700 min-w-0 break-words">{{ group.label }}</span>
+                <span class="text-xs sm:text-sm font-semibold text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
               </button>
               <div v-if="isOpen('liabilities', group)" class="border-t border-slate-200">
-                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
-                  <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
-                  <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
+                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm gap-2">
+                  <span class="text-slate-700 min-w-0 break-words">{{ row.code }} - {{ row.name }}</span>
+                  <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
                 </div>
-                <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
-                  <span class="text-slate-950">Subtotal {{ group.label }}</span>
-                  <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+                <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
+                  <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Equity</h2>
+        <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+          <div class="mb-4 flex items-center justify-between gap-2">
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900">Equity</h2>
             <UiBadge variant="info">{{ formatCurrency(reportTotals.equityTotal) }}</UiBadge>
           </div>
           <div class="space-y-4">
-            <div v-for="group in equity" :key="group.label" class="rounded-2xl border border-slate-200">
-              <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleGroup('equity', group)">
-                <span class="text-sm font-semibold uppercase tracking-wide text-slate-700">{{ group.label }}</span>
-                <span class="text-sm font-semibold text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+            <div v-for="group in equity" :key="group.label" class="rounded-2xl border border-slate-200 overflow-hidden">
+              <button class="flex w-full items-center justify-between px-3.5 sm:px-4 py-3 text-left gap-2 hover:bg-slate-50 transition-colors" @click="toggleGroup('equity', group)">
+                <span class="text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-700 min-w-0 break-words">{{ group.label }}</span>
+                <span class="text-xs sm:text-sm font-semibold text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
               </button>
               <div v-if="isOpen('equity', group)" class="border-t border-slate-200">
-                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-4 py-3 text-sm">
-                  <span class="text-slate-700">{{ row.code }} - {{ row.name }}</span>
-                  <span class="font-medium text-slate-900">{{ formatCurrency(row.balance) }}</span>
+                <div v-for="row in group.rows" :key="row.accountId" class="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm gap-2">
+                  <span class="text-slate-700 min-w-0 break-words">{{ row.code }} - {{ row.name }}</span>
+                  <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
                 </div>
-                <div class="flex items-center justify-between bg-slate-50 px-4 py-3 text-sm font-semibold border-t">
-                  <span class="text-slate-950">Subtotal {{ group.label }}</span>
-                  <span class="text-slate-900">{{ formatCurrency(group.subtotal) }}</span>
+                <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
+                  <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
                 </div>
               </div>
             </div>
@@ -243,10 +246,10 @@ const downloadCsv = () => {
 
         <div
           v-if="Math.abs(balanceDifference) > 0.01"
-          class="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+          class="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-xs sm:text-sm text-rose-800"
         >
           <div class="flex items-center gap-2">
-            <AlertTriangle class="h-5 w-5 text-rose-600" />
+            <AlertTriangle class="h-5 w-5 text-rose-600 shrink-0" />
             <span class="font-semibold text-rose-900">Ledger is out of balance!</span>
           </div>
           <p class="mt-1">

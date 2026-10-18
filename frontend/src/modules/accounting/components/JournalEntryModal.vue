@@ -176,113 +176,115 @@ const postJournal = () => {
 <template>
   <UiModal :model-value="modelValue" title="New Journal Entry" size="full" @update:modelValue="emit('update:modelValue', $event)">
     <div class="space-y-6">
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid gap-3 grid-cols-1 sm:grid-cols-3">
         <UiInput v-model="form.reference" label="Reference" placeholder="JE-2026-0040" />
         <UiInput v-model="form.journalDate" label="Date" type="date" />
         <UiInput v-model="form.description" label="Description" placeholder="Brief entry description" />
       </div>
 
       <div class="overflow-hidden rounded-2xl border border-slate-200">
-        <table class="min-w-full divide-y divide-slate-200">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Account</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Debit</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Credit</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
-            <tr v-for="(line, index) in lineState" :key="`${index}-${line.accountId}`" class="align-top">
-              <td class="px-4 py-3">
-                <div class="relative">
-                  <input
-                    v-model="line.accountSearch"
-                    type="text"
-                    placeholder="Search account..."
-                    class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
-                    @focus="line.pickerOpen = true"
-                    @input="line.pickerOpen = true"
-                  />
-                  <Search class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <div v-if="line.pickerOpen" class="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-                    <button
-                      v-for="account in filteredAccountsFor(index)"
-                      :key="account.id"
-                      type="button"
-                      class="flex w-full items-start justify-between gap-3 px-3 py-2 text-left hover:bg-slate-50"
-                      @click="selectAccount(index, account)"
-                    >
-                      <span>
-                        <span class="block text-sm font-medium text-slate-900">{{ account.code }} - {{ account.name }}</span>
-                        <span class="block text-xs text-slate-500">{{ account.type }}</span>
-                      </span>
-                      <span class="text-xs text-slate-500">{{ formatCurrency(account.currentPeriodBalance) }}</span>
-                    </button>
+        <div class="overflow-x-auto">
+          <table class="min-w-full min-w-[700px] divide-y divide-slate-200">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="w-64 sm:w-72 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Account</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">Description</th>
+                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Debit</th>
+                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Credit</th>
+                <th class="w-14 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              <tr v-for="(line, index) in lineState" :key="`${index}-${line.accountId}`" class="align-top">
+                <td class="px-4 py-3">
+                  <div class="relative">
+                    <input
+                      v-model="line.accountSearch"
+                      type="text"
+                      placeholder="Search account..."
+                      class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
+                      @focus="line.pickerOpen = true"
+                      @input="line.pickerOpen = true"
+                    />
+                    <Search class="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <div v-if="line.pickerOpen" class="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                      <button
+                        v-for="account in filteredAccountsFor(index)"
+                        :key="account.id"
+                        type="button"
+                        class="flex w-full items-start justify-between gap-3 px-3 py-2 text-left hover:bg-slate-50"
+                        @click="selectAccount(index, account)"
+                      >
+                        <span>
+                          <span class="block text-sm font-medium text-slate-900">{{ account.code }} - {{ account.name }}</span>
+                          <span class="block text-xs text-slate-500">{{ account.type }}</span>
+                        </span>
+                        <span class="text-xs text-slate-500">{{ formatCurrency(account.currentPeriodBalance) }}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <input
-                  v-model="line.description"
-                  type="text"
-                  placeholder="Line description"
-                  class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
-                />
-              </td>
-              <td class="px-4 py-3">
-                <input
-                  v-model="line.debit"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="block w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
-                />
-              </td>
-              <td class="px-4 py-3">
-                <input
-                  v-model="line.credit"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="block w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
-                />
-              </td>
-              <td class="px-4 py-3 text-right">
-                <button
-                  type="button"
-                  class="inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                  :disabled="lineState.length <= 2"
-                  @click="removeLine(index)"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="px-4 py-3">
+                  <input
+                    v-model="line.description"
+                    type="text"
+                    placeholder="Line description"
+                    class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
+                  />
+                </td>
+                <td class="px-4 py-3">
+                  <input
+                    v-model="line.debit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="block w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
+                  />
+                </td>
+                <td class="px-4 py-3">
+                  <input
+                    v-model="line.credit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="block w-full rounded-md border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
+                  />
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                    :disabled="lineState.length <= 2"
+                    @click="removeLine(index)"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-        <UiButton variant="outline" @click="addLine">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 sm:p-4">
+        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="addLine">
           <Plus class="mr-2 h-4 w-4" /> Add Line
         </UiButton>
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="rounded-xl bg-white px-4 py-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+          <div class="rounded-xl bg-white px-3 sm:px-4 py-2 border border-slate-200">
             <p class="text-xs uppercase tracking-wide text-slate-500">Total Debits</p>
-            <p class="text-lg font-semibold text-slate-900">{{ formatCurrency(totalDebits) }}</p>
+            <p class="text-base sm:text-lg font-semibold text-slate-900">{{ formatCurrency(totalDebits) }}</p>
           </div>
-          <div class="rounded-xl bg-white px-4 py-2">
+          <div class="rounded-xl bg-white px-3 sm:px-4 py-2 border border-slate-200">
             <p class="text-xs uppercase tracking-wide text-slate-500">Total Credits</p>
-            <p class="text-lg font-semibold text-slate-900">{{ formatCurrency(totalCredits) }}</p>
+            <p class="text-base sm:text-lg font-semibold text-slate-900">{{ formatCurrency(totalCredits) }}</p>
           </div>
           <div
-            class="rounded-xl px-4 py-2"
-            :class="isBalanced ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'"
+            class="rounded-xl px-3 sm:px-4 py-2 border"
+            :class="isBalanced ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'"
           >
             <p class="text-xs uppercase tracking-wide">Balance</p>
-            <p class="text-lg font-semibold">
+            <p class="text-base sm:text-lg font-semibold">
               {{ isBalanced ? 'Balanced' : `Out by ${formatCurrency(Math.abs(balanceDifference))}` }}
             </p>
           </div>
@@ -295,10 +297,10 @@ const postJournal = () => {
     </div>
 
     <template #footer>
-      <div class="flex w-full flex-wrap justify-end gap-3">
-        <UiButton variant="outline" @click="close">Cancel</UiButton>
-        <UiButton variant="secondary" @click="saveAsDraft">Save as Draft</UiButton>
-        <UiButton :disabled="!isBalanced" @click="postJournal">Post</UiButton>
+      <div class="flex flex-col-reverse sm:flex-row w-full justify-end gap-2 sm:gap-3">
+        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">Cancel</UiButton>
+        <UiButton variant="secondary" class="w-full sm:w-auto justify-center" @click="saveAsDraft">Save as Draft</UiButton>
+        <UiButton :disabled="!isBalanced" class="w-full sm:w-auto justify-center" @click="postJournal">Post</UiButton>
       </div>
     </template>
   </UiModal>
