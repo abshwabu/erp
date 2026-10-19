@@ -167,11 +167,19 @@ const navigationGroups = [
     title: 'FINANCE',
     items: [
       {
+        name: 'Income & Expenses',
+        to: '/finance',
+        icon: markRaw(Banknote),
+        permission: 'accounting.journals.view',
+        module: 'accounting',
+      },
+      {
         name: 'Accounting',
         icon: markRaw(Calculator),
         permission: 'accounting.journals.view',
         module: 'accounting',
         children: [
+          { name: 'Income & Expenses', to: '/accounting/finance', icon: markRaw(Banknote) },
           { name: 'Chart of Accounts', to: '/accounting/chart-of-accounts', icon: markRaw(Calculator) },
           { name: 'Journals', to: '/accounting/journals', icon: markRaw(FileText) },
           { name: 'Trial Balance', to: '/accounting/trial-balance', icon: markRaw(BarChart2) },

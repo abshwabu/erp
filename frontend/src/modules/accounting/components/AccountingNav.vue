@@ -8,11 +8,13 @@ import {
   Landmark,
   ArrowDownLeft,
   ArrowUpRight,
+  Banknote,
 } from '@lucide/vue'
 
 const route = useRoute()
 
 const tabs = [
+  { name: 'Income & Expenses', to: '/accounting/finance', icon: Banknote },
   { name: 'Chart of Accounts', to: '/accounting/chart-of-accounts', icon: Calculator },
   { name: 'Journals', to: '/accounting/journals', icon: FileText },
   { name: 'Trial Balance', to: '/accounting/trial-balance', icon: Scale },

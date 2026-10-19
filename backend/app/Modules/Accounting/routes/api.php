@@ -33,4 +33,18 @@ Route::prefix('api/accounting')->middleware('auth:api,sanctum')->group(function 
     Route::get('reports/general-ledger', [ReportController::class, 'generalLedger']);
     Route::get('reports/ar-aging', [ReportController::class, 'arAging']);
     Route::get('reports/ap-aging', [ReportController::class, 'apAging']);
+
+    // Finance & Cash Flow (Income & Expenses integrated into Accounting)
+    Route::get('finance/summary', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'summary']);
+    Route::get('finance/accounts', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'accounts']);
+    Route::match(['get', 'post'], 'finance/export', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'export']);
+    Route::get('finance/categories', [\App\Modules\Finance\Controllers\FinanceCategoryController::class, 'index']);
+    Route::post('finance/categories', [\App\Modules\Finance\Controllers\FinanceCategoryController::class, 'store']);
+    Route::put('finance/categories/{id}', [\App\Modules\Finance\Controllers\FinanceCategoryController::class, 'update']);
+    Route::delete('finance/categories/{id}', [\App\Modules\Finance\Controllers\FinanceCategoryController::class, 'destroy']);
+    Route::get('finance/transactions', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'index']);
+    Route::post('finance/transactions', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'store']);
+    Route::get('finance/transactions/{id}', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'show']);
+    Route::put('finance/transactions/{id}', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'update']);
+    Route::delete('finance/transactions/{id}', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'destroy']);
 });

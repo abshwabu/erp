@@ -332,10 +332,23 @@ const router = createRouter({
           component: () => import('@/modules/notifications/pages/NotificationsPage.vue'),
           meta: { title: 'Notifications' }
         },
+        // Finance & Cash Flow (Income & Expenses)
+        {
+          path: 'finance',
+          name: 'finance-transactions',
+          component: () => import('@/modules/finance/pages/FinanceTransactionsPage.vue'),
+          meta: { title: 'Income & Expenses', permission: 'accounting.journals.view' }
+        },
         // Accounting Module
         {
           path: 'accounting',
-          redirect: 'accounting/chart-of-accounts',
+          redirect: 'accounting/finance',
+        },
+        {
+          path: 'accounting/finance',
+          name: 'accounting-finance',
+          component: () => import('@/modules/finance/pages/FinanceTransactionsPage.vue'),
+          meta: { title: 'Income & Expenses', permission: 'accounting.journals.view' }
         },
         {
           path: 'accounting/chart-of-accounts',
