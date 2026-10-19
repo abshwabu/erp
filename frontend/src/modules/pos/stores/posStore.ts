@@ -1,32 +1,69 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { posApi, type PosSession } from '@/api/pos'
 import { shopsApi, type Shop } from '@/api/shops'
 
+export interface PosCartItem {
+  id: string
+  cartKey?: string
+  productId: string
+  variantId?: string | null
+  variant_id?: string | null
+  variantName?: string | null
+  name: string
+  sku?: string
+  price: number
+  stock: number
+  quantity: number
+  [key: string]: any
+}
+
+export interface PosCustomer {
+  tin: string
+  name: string
+  id: string | null
+  source: string | null
+}
+
 export const usePosStore = defineStore('pos', () => {
   const catalog = ref<any[]>([])
-  const cart = ref<any[]>([])
-  const heldTransactions = ref<any[]>([])
+  // Persistent POS cart across page reloads & sessions
+  const cart = useStorage<PosCartItem[]>('pos_cart', [], undefined, { deep: true })
+  const heldTransactions = useStorage<any[]>('pos_held_transactions', [], undefined, { deep: true })
   const isOnline = ref(true)
   const session = ref<PosSession | null>(null)
   const sessionLoading = ref(false)
   const offlineQueue = ref<any[]>([])
   const availableShops = ref<Shop[]>([])
-  const selectedShopId = ref<string | null>(null)
+  const selectedShopId = useStorage<string | null>('pos_selected_shop_id', null)
   const needsShopSelection = ref(false)
 
-  // Optional customer details for checkout / receipts
-  const customer = ref<{
-    tin: string
-    name: string
-    id: string | null
-    source: string | null
-  }>({
+  // Defensive sanity checks against corrupt or invalid storage data
+  if (!Array.isArray(cart.value)) {
+    cart.value = []
+  }
+  if (!Array.isArray(heldTransactions.value)) {
+    heldTransactions.value = []
+  }
+
+  // Persistent customer details for checkout / receipts
+  const customer = useStorage<PosCustomer>('pos_customer', {
     tin: '',
     name: '',
     id: null,
     source: null,
-  })
+  }, undefined, { deep: true })
+
+  if (!customer.value || typeof customer.value !== 'object') {
+    customer.value = {
+      tin: '',
+      name: '',
+      id: null,
+      source: null,
+    }
+  }
+
   const isLookingUpTin = ref(false)
   const tinLookupStatus = ref<'idle' | 'success' | 'not_found' | 'error'>('idle')
   const tinLookupMessage = ref('')
@@ -37,6 +74,30 @@ export const usePosStore = defineStore('pos', () => {
     if (data.id !== undefined) customer.value.id = data.id
     if (data.source !== undefined) customer.value.source = data.source
   }
+
+  // Keep cart items' live stock aligned whenever catalog updates or reloads
+  const syncCartWithCatalog = () => {
+    if (!Array.isArray(cart.value) || cart.value.length === 0 || !Array.isArray(catalog.value) || catalog.value.length === 0) {
+      return
+    }
+    for (const item of cart.value) {
+      const match = catalog.value.find((p: any) => String(p.id) === String(item.productId || item.id))
+      if (match) {
+        if (item.variantId && Array.isArray(match.variants)) {
+          const v = match.variants.find((variant: any) => String(variant.id) === String(item.variantId))
+          if (v && typeof v.stock === 'number') {
+            item.stock = v.stock
+          }
+        } else if (typeof match.stock === 'number') {
+          item.stock = match.stock
+        }
+      }
+    }
+  }
+
+  watch(catalog, () => {
+    syncCartWithCatalog()
+  }, { deep: true })
 
   // Custom POS Alert / Modal state
   const alertState = ref<{
@@ -222,6 +283,15 @@ export const usePosStore = defineStore('pos', () => {
   const updateQuantity = (cartKeyOrId: number | string, delta: number) => {
     const item = cart.value.find(i => i.cartKey === String(cartKeyOrId) || String(i.id) === String(cartKeyOrId))
     if (item) {
+      if (delta > 0 && typeof item.stock === 'number' && item.quantity >= item.stock) {
+        showAlert({
+          title: 'Stock Limit Reached',
+          message: `Cannot add more "${item.name}". Only ${item.stock} unit(s) available in stock.`,
+          type: 'warning',
+          confirmText: 'Understood',
+        })
+        return
+      }
       item.quantity += delta
       if (item.quantity <= 0) {
         removeFromCart(cartKeyOrId)
@@ -370,6 +440,7 @@ export const usePosStore = defineStore('pos', () => {
     loadShops,
     selectShop,
     ensureSession,
+    syncCartWithCatalog,
     syncOfflineQueue,
     customer,
     isLookingUpTin,

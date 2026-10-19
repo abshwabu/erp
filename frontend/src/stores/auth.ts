@@ -149,6 +149,14 @@ export const useAuthStore = defineStore('auth', () => {
       accessToken.value = null
       refreshToken.value = null
       permissions.value = []
+      try {
+        localStorage.removeItem('pos_cart')
+        localStorage.removeItem('pos_customer')
+        localStorage.removeItem('pos_selected_shop_id')
+        localStorage.removeItem('pos_held_transactions')
+      } catch (e) {
+        console.error('Failed to clear POS localStorage on logout', e)
+      }
     }
   }
 
