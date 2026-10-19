@@ -3,6 +3,9 @@ import { ref, computed, watch } from 'vue'
 import { resolveImageUrl } from '@/utils/format'
 import { X, Package, Check, ShoppingCart } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import { usePosStore } from '../stores/posStore'
+
+const posStore = usePosStore()
 
 const props = defineProps<{
   product: any
@@ -49,7 +52,12 @@ function handleConfirm() {
   if (!selectedVariant.value) return
   const availableStock = selectedVariant.value.stock ?? selectedVariant.value.available_quantity ?? 0
   if (availableStock <= 0) {
-    alert(`${selectedVariant.value.name} is currently out of stock at this store.`)
+    posStore.showAlert({
+      title: 'Variant Out of Stock',
+      message: `"${selectedVariant.value.name}" is currently out of stock at this store.`,
+      type: 'warning',
+      confirmText: 'Got It',
+    })
     return
   }
 

@@ -38,6 +38,98 @@ export const usePosStore = defineStore('pos', () => {
     if (data.source !== undefined) customer.value.source = data.source
   }
 
+  // Custom POS Alert / Modal state
+  const alertState = ref<{
+    open: boolean
+    title: string
+    message: string
+    type: 'warning' | 'error' | 'info' | 'success'
+    confirmText: string
+    cancelText?: string
+    onConfirm?: () => void
+    onCancel?: () => void
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    confirmText: 'Understood',
+  })
+
+  const showAlert = (options: {
+    title?: string
+    message: string
+    type?: 'warning' | 'error' | 'info' | 'success'
+    confirmText?: string
+    onConfirm?: () => void
+  } | string) => {
+    if (typeof options === 'string') {
+      alertState.value = {
+        open: true,
+        title: 'Notice',
+        message: options,
+        type: 'warning',
+        confirmText: 'Got It',
+      }
+    } else {
+      alertState.value = {
+        open: true,
+        title: options.title || (options.type === 'error' ? 'Notice' : 'Item Alert'),
+        message: options.message,
+        type: options.type || 'warning',
+        confirmText: options.confirmText || 'Got It',
+        onConfirm: options.onConfirm,
+      }
+    }
+  }
+
+  const showConfirm = (options: {
+    title: string
+    message: string
+    confirmText?: string
+    cancelText?: string
+    type?: 'warning' | 'error' | 'info'
+    onConfirm: () => void
+    onCancel?: () => void
+  }) => {
+    alertState.value = {
+      open: true,
+      title: options.title,
+      message: options.message,
+      type: options.type || 'warning',
+      confirmText: options.confirmText || 'Confirm',
+      cancelText: options.cancelText || 'Cancel',
+      onConfirm: options.onConfirm,
+      onCancel: options.onCancel,
+    }
+  }
+
+  const closeAlert = () => {
+    alertState.value.open = false
+  }
+
+  const confirmAlert = () => {
+    if (alertState.value.onConfirm) {
+      try {
+        alertState.value.onConfirm()
+      } catch (e) {
+        console.error('POS Alert onConfirm error', e)
+      }
+    }
+    closeAlert()
+  }
+
+  const cancelAlert = () => {
+    if (alertState.value.onCancel) {
+      try {
+        alertState.value.onCancel()
+      } catch (e) {
+        console.error('POS Alert onCancel error', e)
+      }
+    }
+    closeAlert()
+  }
+
   const clearCustomer = () => {
     customer.value = { tin: '', name: '', id: null, source: null }
     tinLookupStatus.value = 'idle'
@@ -286,5 +378,11 @@ export const usePosStore = defineStore('pos', () => {
     setCustomer,
     clearCustomer,
     lookupCustomerByTin,
+    alertState,
+    showAlert,
+    showConfirm,
+    closeAlert,
+    confirmAlert,
+    cancelAlert,
   }
 })

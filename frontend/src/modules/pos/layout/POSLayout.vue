@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import ProductGrid from '../components/ProductGrid.vue'
 import POSCart from '../components/POSCart.vue'
 import PaymentPanel from '../components/PaymentPanel.vue'
+import POSAlertModal from '../components/POSAlertModal.vue'
 import { usePosStore } from '../stores/posStore'
 import { ShoppingCart, Grid, Store } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -188,5 +189,8 @@ function handlePaymentComplete() {
         View Order
       </button>
     </div>
+
+    <!-- Custom POS Alert Modal -->
+    <POSAlertModal />
   </div>
 </template>

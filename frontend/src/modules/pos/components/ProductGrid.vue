@@ -234,7 +234,12 @@ function handleAddProduct(product: any) {
   }
 
   if (product.stock <= 0) {
-    alert(`${product.name} is currently out of stock at this store.`)
+    posStore.showAlert({
+      title: 'Item Out of Stock',
+      message: `"${product.name}" is currently out of stock at this store.`,
+      type: 'warning',
+      confirmText: 'Got It',
+    })
     return
   }
 
@@ -242,7 +247,12 @@ function handleAddProduct(product: any) {
   const currentInCart = cartItem ? cartItem.quantity : 0
 
   if (currentInCart >= product.stock) {
-    alert(`Cannot add more ${product.name}. Only ${product.stock} unit(s) available in this store!`)
+    posStore.showAlert({
+      title: 'Stock Limit Reached',
+      message: `Cannot add more "${product.name}". Only ${product.stock} unit(s) are available in stock at this store!`,
+      type: 'warning',
+      confirmText: 'Understood',
+    })
     return
   }
 

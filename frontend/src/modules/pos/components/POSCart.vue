@@ -11,6 +11,17 @@ async function handleTinSearch() {
   await posStore.lookupCustomerByTin()
 }
 
+function handleClearCart() {
+  posStore.showConfirm({
+    title: 'Clear Order Cart?',
+    message: 'Are you sure you want to remove all items from this order? This action cannot be undone.',
+    type: 'warning',
+    confirmText: 'Clear Cart',
+    cancelText: 'Keep Items',
+    onConfirm: () => posStore.clearCart(),
+  })
+}
+
 const subtotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
@@ -52,8 +63,9 @@ const totalItems = computed(() => {
 
       <button
         v-if="posStore.cart.length > 0"
-        @click="posStore.clearCart()"
-        class="text-xs font-medium text-slate-400 hover:text-red-600 inline-flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+        type="button"
+        @click="handleClearCart"
+        class="text-xs font-medium text-slate-400 hover:text-red-600 inline-flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
       >
         <RotateCcw class="w-3.5 h-3.5" />
         Clear
