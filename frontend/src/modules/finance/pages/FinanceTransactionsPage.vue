@@ -286,6 +286,22 @@ const handleExport = async (format: 'xlsx' | 'csv' | 'pdf') => {
     isExporting.value = null
   }
 }
+
+// Sync POS & Invoices handler
+const isSyncing = ref(false)
+const handleSyncSales = async () => {
+  try {
+    isSyncing.value = true
+    const res = await financeApi.syncSales()
+    toast.success(res.data?.message || 'Sales and invoices synced successfully')
+    refetchAll()
+  } catch (err: any) {
+    console.error('Sync failed', err)
+    toast.error(err?.response?.data?.message || 'Failed to sync sales')
+  } finally {
+    isSyncing.value = false
+  }
+}
 </script>
 
 <template>
@@ -311,6 +327,17 @@ const handleExport = async (format: 'xlsx' | 'csv' | 'pdf') => {
 
       <!-- Action Buttons -->
       <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          :disabled="isSyncing"
+          @click="handleSyncSales"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-2xs transition-all disabled:opacity-50"
+          title="Sync POS sales and invoice payments into Income"
+        >
+          <RefreshCw class="h-4 w-4 text-emerald-600" :class="{ 'animate-spin': isSyncing }" />
+          <span>{{ isSyncing ? 'Syncing...' : 'Sync Sales' }}</span>
+        </button>
+
         <button
           type="button"
           @click="isCategoryModalOpen = true"
@@ -563,16 +590,30 @@ const handleExport = async (format: 'xlsx' | 'csv' | 'pdf') => {
                   <span class="font-mono font-bold text-slate-900 block">
                     {{ item.transaction_number }}
                   </span>
-                  <span
-                    class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase"
-                    :class="[
-                      item.type === 'income'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-rose-50 text-rose-700',
-                    ]"
-                  >
-                    {{ item.type }}
-                  </span>
+                  <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                    <span
+                      class="inline-block px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase"
+                      :class="[
+                        item.type === 'income'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-rose-50 text-rose-700',
+                      ]"
+                    >
+                      {{ item.type }}
+                    </span>
+                    <span
+                      v-if="item.source_type === 'pos_transaction' || (item.transaction_number && item.transaction_number.startsWith('POS-'))"
+                      class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100"
+                    >
+                      POS Sale
+                    </span>
+                    <span
+                      v-else-if="item.source_type === 'sales_payment' || (item.transaction_number && item.transaction_number.startsWith('PAY-'))"
+                      class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-sky-50 text-sky-700 border border-sky-100"
+                    >
+                      Invoice Payment
+                    </span>
+                  </div>
                 </td>
 
                 <!-- Date -->

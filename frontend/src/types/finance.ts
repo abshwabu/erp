@@ -73,6 +73,8 @@ export interface FinanceTransaction {
   payee_payer?: string | null
   description?: string | null
   status: TransactionStatus
+  source_type?: string | null
+  source_id?: string | null
   receipt_url?: string | null
   created_by_id?: string | null
   created_by?: {

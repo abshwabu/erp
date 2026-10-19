@@ -197,6 +197,15 @@ class InvoiceController extends BaseController
             // Post to Accounting Cash/Bank & Settle Accounts Receivable
             app(\App\Modules\Sales\Services\SalesAccountingService::class)->postPaymentJournal($payment, $invoice);
 
+            // Record Income in Finance Module
+            try {
+                if (class_exists(\App\Modules\Finance\Services\FinanceService::class)) {
+                    app(\App\Modules\Finance\Services\FinanceService::class)->recordInvoicePayment($payment, $invoice);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to record invoice payment in finance: ' . $e->getMessage());
+            }
+
             if ($invoice->status === 'paid') {
                 \App\Modules\Integrations\Services\IntegrationDispatcherService::dispatch('invoice.paid', [
                     'invoice_id'     => $invoice->id,

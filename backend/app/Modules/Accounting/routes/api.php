@@ -36,6 +36,7 @@ Route::prefix('api/accounting')->middleware('auth:api,sanctum')->group(function 
 
     // Finance & Cash Flow (Income & Expenses integrated into Accounting)
     Route::get('finance/summary', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'summary']);
+    Route::post('finance/sync', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'sync']);
     Route::get('finance/accounts', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'accounts']);
     Route::match(['get', 'post'], 'finance/export', [\App\Modules\Finance\Controllers\FinanceTransactionController::class, 'export']);
     Route::get('finance/categories', [\App\Modules\Finance\Controllers\FinanceCategoryController::class, 'index']);

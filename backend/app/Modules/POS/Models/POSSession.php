@@ -7,7 +7,7 @@ namespace App\Modules\POS\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\User;
+use App\Modules\Core\Models\User;
 
 class POSSession extends Model
 {

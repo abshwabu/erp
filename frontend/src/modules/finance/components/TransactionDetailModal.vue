@@ -143,12 +143,30 @@ const goToJournal = (journalId?: string) => {
       </div>
 
       <!-- Reference & Description -->
-      <div v-if="transaction.reference || transaction.description" class="space-y-2 text-xs">
-        <div v-if="transaction.reference" class="flex items-center gap-2 text-slate-600">
-          <span class="font-bold text-slate-400">Reference:</span>
-          <span class="font-mono bg-slate-100 px-2 py-0.5 rounded-md font-semibold text-slate-800">
-            {{ transaction.reference }}
-          </span>
+      <div v-if="transaction.reference || transaction.description || transaction.source_type" class="space-y-2 text-xs">
+        <div class="flex flex-wrap items-center gap-4 text-slate-600">
+          <div v-if="transaction.reference" class="flex items-center gap-2">
+            <span class="font-bold text-slate-400">Reference:</span>
+            <span class="font-mono bg-slate-100 px-2 py-0.5 rounded-md font-semibold text-slate-800">
+              {{ transaction.reference }}
+            </span>
+          </div>
+          <div v-if="transaction.source_type" class="flex items-center gap-2">
+            <span class="font-bold text-slate-400">Source:</span>
+            <span
+              v-if="transaction.source_type === 'pos_transaction'"
+              class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[11px]"
+            >
+              Point of Sale (POS)
+            </span>
+            <span
+              v-else-if="transaction.source_type === 'sales_payment'"
+              class="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold text-[11px]"
+            >
+              Sales Invoice Payment
+            </span>
+            <span v-else class="capitalize text-slate-700 font-semibold">{{ transaction.source_type }}</span>
+          </div>
         </div>
         <div v-if="transaction.description" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-slate-700 leading-relaxed">
           <span class="font-bold text-slate-400 block mb-0.5">Description / Memo:</span>

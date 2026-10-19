@@ -155,6 +155,20 @@ class FinanceTransactionController extends Controller
     }
 
     /**
+     * POST /api/finance/sync
+     */
+    public function sync(): JsonResponse
+    {
+        $result = $this->financeService->syncExistingIncomes();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Successfully synced {$result['pos_synced']} POS sales and {$result['invoices_synced']} invoice payments.",
+            'data'    => $result,
+        ]);
+    }
+
+    /**
      * GET /api/finance/accounts
      */
     public function accounts(): JsonResponse

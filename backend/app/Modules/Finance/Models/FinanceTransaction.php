@@ -34,6 +34,8 @@ class FinanceTransaction extends Model
         'payee_payer',
         'description',
         'status',
+        'source_type',
+        'source_id',
         'receipt_url',
         'created_by_id',
     ];

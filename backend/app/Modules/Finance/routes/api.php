@@ -8,6 +8,7 @@ use App\Modules\Finance\Controllers\FinanceCategoryController;
 
 Route::prefix('api/finance')->middleware('auth:api,sanctum')->group(function () {
     Route::get('summary', [FinanceTransactionController::class, 'summary']);
+    Route::post('sync', [FinanceTransactionController::class, 'sync']);
     Route::get('accounts', [FinanceTransactionController::class, 'accounts']);
     Route::match(['get', 'post'], 'export', [FinanceTransactionController::class, 'export']);
 

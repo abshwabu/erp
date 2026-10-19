@@ -158,6 +158,15 @@ class POSTransactionService
 
             event(new SaleCompleted($transaction->load(['items', 'payments'])));
 
+            // Record Income & Accounting Journal in Finance Module
+            try {
+                if (class_exists(\App\Modules\Finance\Services\FinanceService::class)) {
+                    app(\App\Modules\Finance\Services\FinanceService::class)->recordPosSale($transaction);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to record POS sale in finance: ' . $e->getMessage());
+            }
+
             return $transaction->load(['items', 'payments']);
         });
     }

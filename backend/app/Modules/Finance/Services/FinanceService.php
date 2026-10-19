@@ -146,11 +146,312 @@ class FinanceService
     }
 
     /**
+     * Record a POS Sale as an Income transaction with balanced double-entry Accounting Journal.
+     */
+    public function recordPosSale(\App\Modules\POS\Models\POSTransaction $posTransaction): ?FinanceTransaction
+    {
+        $this->ensureDefaultCategories();
+
+        if ($posTransaction->status !== 'completed' || (int) $posTransaction->total_cents <= 0) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($posTransaction) {
+            // Check if already recorded by source_id or reference
+            $existing = FinanceTransaction::where('source_type', 'pos_transaction')
+                ->where('source_id', (string) $posTransaction->id)
+                ->first();
+
+            if (!$existing && $posTransaction->receipt_number) {
+                $existing = FinanceTransaction::where('reference', $posTransaction->receipt_number)
+                    ->where('type', 'income')
+                    ->first();
+            }
+
+            if ($existing) {
+                return $existing;
+            }
+
+            // Category: "Sales & Product Revenue"
+            $category = FinanceCategory::where('name', 'Sales & Product Revenue')->first()
+                ?: FinanceCategory::where('type', 'income')->first();
+
+            $posTransaction->loadMissing(['payments', 'customer', 'session.terminal']);
+            $firstPayment = $posTransaction->payments->first();
+            $paymentMethod = $firstPayment?->method ?? 'cash';
+            if (!in_array($paymentMethod, ['cash', 'bank_transfer', 'check', 'credit_card', 'mobile_money'], true)) {
+                $paymentMethod = 'cash';
+            }
+
+            $isBank = in_array($paymentMethod, ['bank_transfer', 'check', 'credit_card'], true);
+            $paymentAccount = $isBank
+                ? (Account::where('code', '1020')->first() ?: Account::where('code', '1010')->first())
+                : (Account::where('code', '1010')->first() ?: Account::where('code', '1020')->first());
+
+            if (!$paymentAccount) {
+                $paymentAccount = Account::whereHas('accountType', fn ($q) => $q->where('name', 'Asset'))->first();
+            }
+
+            $salesAccount = Account::where('code', '4100')->first()
+                ?: Account::where('code', '4000')->first()
+                ?: Account::whereHas('accountType', fn ($q) => $q->where('name', 'Revenue'))->first();
+
+            $taxAccount = Account::where('code', '2200')->first()
+                ?: Account::whereHas('accountType', fn ($q) => $q->where('name', 'Liability'))->first();
+
+            $date = $posTransaction->created_at ? Carbon::parse($posTransaction->created_at)->toDateString() : now()->toDateString();
+            $customerName = $posTransaction->customer_name ?: ($posTransaction->customer?->name ?: 'POS Walk-in Customer');
+            $ref = $posTransaction->receipt_number ?: ('REC-' . substr((string) $posTransaction->id, 0, 8));
+            $txnNumber = 'POS-' . $ref;
+
+            // Guarantee unique transaction_number
+            if (FinanceTransaction::where('transaction_number', $txnNumber)->exists()) {
+                $txnNumber = 'POS-' . $ref . '-' . substr((string) $posTransaction->id, 0, 4);
+            }
+
+            $totalCents = (int) $posTransaction->total_cents;
+            $taxCents = (int) ($posTransaction->tax_cents ?? 0);
+            $salesCents = max(0, $totalCents - $taxCents);
+
+            // Create Journal in Accounting if accounts are available
+            $journal = null;
+            if ($paymentAccount && $salesAccount) {
+                $dateObj = Carbon::parse($date);
+                $period = FiscalPeriod::firstOrCreate(
+                    ['year' => $dateObj->year, 'month' => $dateObj->month],
+                    [
+                        'start_date' => $dateObj->copy()->startOfMonth()->toDateString(),
+                        'end_date'   => $dateObj->copy()->endOfMonth()->toDateString(),
+                        'status'     => 'open',
+                    ]
+                );
+                if ($period->status !== 'open') {
+                    $period->update(['status' => 'open']);
+                }
+
+                $journal = Journal::create([
+                    'reference'    => 'JE-POS-' . $ref,
+                    'description'  => "POS Sale #{$ref} - {$customerName}",
+                    'journal_date' => $date,
+                    'period_id'    => $period->id,
+                    'status'       => 'posted',
+                    'source_type'  => 'pos_transaction',
+                    'source_id'    => (string) $posTransaction->id,
+                    'posted_at'    => now(),
+                    'posted_by_id' => $posTransaction->session?->cashier_id ?? Auth::id(),
+                ]);
+
+                // 1. Dr Cash or Bank (Total)
+                JournalLine::create([
+                    'journal_id'        => $journal->id,
+                    'account_id'        => $paymentAccount->id,
+                    'debit_cents'       => $totalCents,
+                    'credit_cents'      => 0,
+                    'currency_code'     => $posTransaction->currency_code ?: 'USD',
+                    'base_debit_cents'  => $totalCents,
+                    'base_credit_cents' => 0,
+                    'exchange_rate'     => 1,
+                    'description'       => "POS Receipt #{$ref} Payment",
+                ]);
+
+                // 2. Cr Sales Revenue
+                JournalLine::create([
+                    'journal_id'        => $journal->id,
+                    'account_id'        => $salesAccount->id,
+                    'debit_cents'       => 0,
+                    'credit_cents'      => $salesCents,
+                    'currency_code'     => $posTransaction->currency_code ?: 'USD',
+                    'base_debit_cents'  => 0,
+                    'base_credit_cents' => $salesCents,
+                    'exchange_rate'     => 1,
+                    'description'       => "POS Sales Revenue #{$ref}",
+                ]);
+
+                // 3. Cr Tax Payable if tax exists
+                if ($taxCents > 0 && $taxAccount) {
+                    JournalLine::create([
+                        'journal_id'        => $journal->id,
+                        'account_id'        => $taxAccount->id,
+                        'debit_cents'       => 0,
+                        'credit_cents'      => $taxCents,
+                        'currency_code'     => $posTransaction->currency_code ?: 'USD',
+                        'base_debit_cents'  => 0,
+                        'base_credit_cents' => $taxCents,
+                        'exchange_rate'     => 1,
+                        'description'       => "Tax collected on POS #{$ref}",
+                    ]);
+                }
+            }
+
+            $financeTxn = FinanceTransaction::create([
+                'transaction_number' => $txnNumber,
+                'type'               => 'income',
+                'category_id'        => $category?->id,
+                'account_id'         => $salesAccount?->id,
+                'payment_account_id' => $paymentAccount?->id,
+                'journal_id'         => $journal?->id,
+                'amount_cents'       => $totalCents,
+                'currency_code'      => $posTransaction->currency_code ?: 'USD',
+                'transaction_date'   => $date,
+                'payment_method'     => $paymentMethod,
+                'reference'          => $ref,
+                'payee_payer'        => $customerName,
+                'description'        => "POS Sale #{$ref}" . ($posTransaction->session?->terminal?->name ? " ({$posTransaction->session->terminal->name})" : ''),
+                'status'             => 'completed',
+                'source_type'        => 'pos_transaction',
+                'source_id'          => (string) $posTransaction->id,
+                'created_by_id'      => $posTransaction->session?->cashier_id ?? Auth::id(),
+            ]);
+
+            return $financeTxn;
+        });
+    }
+
+    /**
+     * Record an Invoice Payment as an Income transaction.
+     */
+    public function recordInvoicePayment(\App\Modules\Sales\Models\InvoicePayment $payment, \App\Modules\Sales\Models\Invoice $invoice): ?FinanceTransaction
+    {
+        $this->ensureDefaultCategories();
+
+        if ((int) $payment->amount_cents <= 0) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($payment, $invoice) {
+            $existing = FinanceTransaction::where('source_type', 'sales_payment')
+                ->where('source_id', (string) $payment->id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $category = FinanceCategory::where('name', 'Customer Payments')->first()
+                ?: FinanceCategory::where('name', 'Sales & Product Revenue')->first()
+                ?: FinanceCategory::where('type', 'income')->first();
+
+            $method = strtolower((string) ($payment->method ?? 'bank_transfer'));
+            $isCash = $method === 'cash';
+            $paymentAccount = $isCash
+                ? (Account::where('code', '1010')->first() ?: Account::where('code', '1020')->first())
+                : (Account::where('code', '1020')->first() ?: Account::where('code', '1010')->first());
+
+            $salesAccount = Account::where('code', '1200')->first()
+                ?: Account::where('code', '4100')->first()
+                ?: Account::where('code', '4000')->first();
+
+            $date = $payment->paid_at ? Carbon::parse($payment->paid_at)->toDateString() : now()->toDateString();
+            $customerName = $invoice->customer?->name ?? 'Customer';
+            $ref = $invoice->number;
+            $payRef = substr((string) $payment->id, 0, 8);
+            $txnNumber = "PAY-{$ref}-{$payRef}";
+
+            $journal = Journal::where('source_type', 'sales_payment')
+                ->where('source_id', (string) $payment->id)
+                ->first();
+
+            $financeTxn = FinanceTransaction::create([
+                'transaction_number' => $txnNumber,
+                'type'               => 'income',
+                'category_id'        => $category?->id,
+                'account_id'         => $salesAccount?->id,
+                'payment_account_id' => $paymentAccount?->id,
+                'journal_id'         => $journal?->id,
+                'amount_cents'       => (int) $payment->amount_cents,
+                'currency_code'      => $invoice->currency_code ?: 'USD',
+                'transaction_date'   => $date,
+                'payment_method'     => in_array($method, ['cash', 'bank_transfer', 'check', 'credit_card', 'mobile_money'], true) ? $method : 'bank_transfer',
+                'reference'          => $ref,
+                'payee_payer'        => $customerName,
+                'description'        => "Payment for Invoice #{$ref}",
+                'status'             => 'completed',
+                'source_type'        => 'sales_payment',
+                'source_id'          => (string) $payment->id,
+                'created_by_id'      => Auth::id(),
+            ]);
+
+            return $financeTxn;
+        });
+    }
+
+    /**
+     * Retroactively sync existing POS sales and invoice payments into finance income transactions.
+     */
+    public function syncExistingIncomes(): array
+    {
+        $this->ensureDefaultCategories();
+
+        $syncedPos = 0;
+        $syncedInvoices = 0;
+
+        // 1. Sync POS Transactions
+        if (class_exists(\App\Modules\POS\Models\POSTransaction::class)) {
+            $alreadySyncedIds = FinanceTransaction::where('source_type', 'pos_transaction')
+                ->whereNotNull('source_id')
+                ->pluck('source_id')
+                ->all();
+
+            $posQuery = \App\Modules\POS\Models\POSTransaction::with(['payments', 'customer', 'session.terminal'])
+                ->where('status', 'completed');
+
+            if (!empty($alreadySyncedIds)) {
+                $posQuery->whereNotIn('id', $alreadySyncedIds);
+            }
+
+            $unSyncedPos = $posQuery->get();
+
+            foreach ($unSyncedPos as $pos) {
+                try {
+                    $this->recordPosSale($pos);
+                    $syncedPos++;
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Failed to sync POS {$pos->id}: " . $e->getMessage());
+                }
+            }
+        }
+
+        // 2. Sync Invoice Payments
+        if (class_exists(\App\Modules\Sales\Models\InvoicePayment::class)) {
+            $alreadySyncedPayIds = FinanceTransaction::where('source_type', 'sales_payment')
+                ->whereNotNull('source_id')
+                ->pluck('source_id')
+                ->all();
+
+            $payQuery = \App\Modules\Sales\Models\InvoicePayment::with('invoice.customer');
+
+            if (!empty($alreadySyncedPayIds)) {
+                $payQuery->whereNotIn('id', $alreadySyncedPayIds);
+            }
+
+            $unSyncedPayments = $payQuery->get();
+
+            foreach ($unSyncedPayments as $payment) {
+                if ($payment->invoice) {
+                    try {
+                        $this->recordInvoicePayment($payment, $payment->invoice);
+                        $syncedInvoices++;
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning("Failed to sync payment {$payment->id}: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        return [
+            'pos_synced'      => $syncedPos,
+            'invoices_synced' => $syncedInvoices,
+            'total_synced'    => $syncedPos + $syncedInvoices,
+        ];
+    }
+
+    /**
      * List transactions with dynamic filtering & eager relationships.
      */
     public function getTransactions(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $this->ensureDefaultCategories();
+        $this->syncExistingIncomes();
 
         $query = FinanceTransaction::query()
             ->with(['category', 'account', 'paymentAccount', 'journal.lines.account', 'createdBy']);
@@ -491,6 +792,7 @@ class FinanceService
     public function getSummary(array $filters = []): array
     {
         $this->ensureDefaultCategories();
+        $this->syncExistingIncomes();
 
         $base = FinanceTransaction::query();
         if (!empty($filters['start_date'])) {
@@ -615,6 +917,9 @@ class FinanceService
      */
     public function exportTransactions(array $filters = [], string $format = 'xlsx'): array
     {
+        $this->ensureDefaultCategories();
+        $this->syncExistingIncomes();
+
         $query = FinanceTransaction::query()
             ->with(['category', 'account', 'paymentAccount', 'createdBy']);
 

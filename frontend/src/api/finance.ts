@@ -66,4 +66,8 @@ export const financeApi = {
     apiClient.post('/finance/export', payload, {
       responseType: 'blob',
     }),
+
+  // Sync POS Sales & Invoice Incomes
+  syncSales: () =>
+    apiClient.post<{ status: string; message: string; data: any }>('/finance/sync'),
 }
