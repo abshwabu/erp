@@ -9,12 +9,15 @@ import { resolveImageUrl } from '@/utils/format'
 import SelectVariantModal from './SelectVariantModal.vue'
 
 const posStore = usePosStore()
+const emit = defineEmits(['switch-shop'])
 const queryClient = useQueryClient()
 const searchQuery = ref('')
 const selectedCategoryId = ref<string | null>(null)
 const addedProductId = ref<string | null>(null)
 const variantModalOpen = ref(false)
 const activeModalProduct = ref<any>(null)
+
+const shopName = computed(() => posStore.selectedShop()?.name || '')
 
 let posChannel: BroadcastChannel | null = null
 
@@ -266,27 +269,42 @@ function handleVariantSelect(variant: any, quantity: number) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full w-full p-4 md:p-6 overflow-hidden">
-    <!-- Top Search & Filter Bar -->
-    <div class="flex flex-col sm:flex-row gap-3 mb-4 shrink-0">
+  <div class="flex flex-col h-full min-h-0 w-full p-3 sm:p-4 overflow-hidden">
+    <!-- Top Search & Filter Bar with Desktop Shop Indicator -->
+    <div class="flex flex-col sm:flex-row gap-2.5 mb-3 shrink-0 items-stretch sm:items-center">
+      <!-- Desktop Shop Info / Switcher -->
+      <div v-if="shopName" class="hidden md:flex items-center gap-1.5 shrink-0">
+        <span class="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl shadow-xs">
+          {{ shopName }}
+        </span>
+        <button
+          v-if="posStore.availableShops.length > 1"
+          type="button"
+          @click="emit('switch-shop')"
+          class="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 px-2.5 py-2 rounded-xl transition-colors cursor-pointer"
+        >
+          Switch shop
+        </button>
+      </div>
+
       <div class="relative flex-1">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search products by name or SKU..."
-          class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
+          class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
         />
       </div>
     </div>
 
     <!-- Category Pill Selector -->
-    <div class="flex gap-2 overflow-x-auto pb-3 mb-2 shrink-0 no-scrollbar">
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-2 shrink-0 no-scrollbar">
       <button
         v-for="cat in categoryList"
         :key="String(cat.id)"
         @click="selectedCategoryId = cat.id"
-        class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors shadow-sm"
+        class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors shadow-xs cursor-pointer"
         :class="selectedCategoryId === cat.id
           ? 'bg-blue-600 text-white border-blue-600'
           : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'"
@@ -296,8 +314,8 @@ function handleVariantSelect(variant: any, quantity: number) {
     </div>
 
     <!-- Products Grid & Safe Empty/Loading States -->
-    <div class="flex-1 overflow-y-auto">
-      <div v-if="filteredProducts.length === 0" class="h-full min-h-[260px] flex flex-col items-center justify-center text-slate-400 py-12 px-4 text-center">
+    <div class="flex-1 min-h-0 overflow-y-auto pb-24 md:pb-4 custom-scrollbar">
+      <div v-if="filteredProducts.length === 0" class="h-full min-h-[220px] flex flex-col items-center justify-center text-slate-400 py-10 px-4 text-center">
         <div class="p-3 bg-slate-100 rounded-full mb-3">
           <Package class="h-8 w-8 text-slate-400 opacity-60" />
         </div>
@@ -307,7 +325,7 @@ function handleVariantSelect(variant: any, quantity: number) {
         </p>
       </div>
 
-      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
         <button
           v-for="product in filteredProducts"
           :key="product.id"

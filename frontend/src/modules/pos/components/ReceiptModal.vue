@@ -300,25 +300,25 @@ function handlePrint() {
 </script>
 
 <template>
-  <div v-if="modelValue" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border border-slate-200 animate-scale-up">
+  <div v-if="modelValue" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full max-h-[90dvh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-scale-up">
       
       <!-- Modal Header -->
-      <div class="bg-emerald-600 text-white p-4 text-center relative">
+      <div class="bg-emerald-600 text-white p-3.5 sm:p-4 text-center relative shrink-0">
         <button
           @click="handleClose"
-          class="absolute top-3 right-3 text-emerald-100 hover:text-white p-1 rounded-lg hover:bg-emerald-700 transition-colors"
+          class="absolute top-3 right-3 text-emerald-100 hover:text-white p-1 rounded-lg hover:bg-emerald-700 transition-colors cursor-pointer"
         >
           <X class="w-4 h-4" />
         </button>
 
-        <CheckCircle2 class="w-10 h-10 mx-auto mb-1 text-emerald-200" />
+        <CheckCircle2 class="w-9 h-9 sm:w-10 sm:h-10 mx-auto mb-1 text-emerald-200" />
         <h3 class="font-extrabold text-base tracking-tight">Payment Successful</h3>
         <p class="text-xs text-emerald-100">Transaction Completed</p>
       </div>
 
       <!-- Receipt On-Screen Preview -->
-      <div class="p-5 text-slate-800 text-xs space-y-4 font-mono">
+      <div class="p-4 sm:p-5 text-slate-800 text-xs space-y-4 font-mono flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         <!-- Receipt Header -->
         <div class="text-center border-b border-dashed border-slate-300 pb-3">
           <h4 class="font-extrabold text-sm text-slate-900 font-sans uppercase tracking-wider mb-0.5">
@@ -404,10 +404,10 @@ function handlePrint() {
       </div>
 
       <!-- Action Buttons -->
-      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+      <div class="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0">
         <button
           @click="handlePrint"
-          class="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+          class="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
         >
           <Printer class="w-4 h-4" />
           Print Receipt
@@ -415,7 +415,7 @@ function handlePrint() {
 
         <button
           @click="handleClose"
-          class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-98"
+          class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-98 cursor-pointer"
         >
           New Sale
         </button>

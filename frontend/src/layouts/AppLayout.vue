@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -11,19 +13,38 @@ import UiToast from '@/components/ui/UiToast.vue'
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+const route = useRoute()
+
+const isPosRoute = computed(() => {
+  return route.name === 'pos' || route.path.startsWith('/pos') || !!route.meta?.fullHeight
+})
 </script>
 
 <template>
-  <div class="h-screen bg-slate-50 flex overflow-hidden">
+  <div class="h-screen h-[100dvh] bg-slate-50 flex overflow-hidden">
     <AppSidebar />
 
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       <!-- Global Offline / Sync Network Banner -->
       <OfflineBanner />
 
       <AppHeader />
 
-      <main class="flex-1 overflow-auto p-4 lg:p-6 custom-scrollbar">
+      <!-- Dedicated full-height container for POS view (zero extra scrollbars) -->
+      <main
+        v-if="isPosRoute"
+        class="flex-1 min-h-0 flex flex-col overflow-hidden p-1 sm:p-2 lg:p-2.5"
+      >
+        <div class="w-full h-full flex-1 min-h-0 flex flex-col">
+          <router-view />
+        </div>
+      </main>
+
+      <!-- Standard scrolling container for all other ERP modules -->
+      <main
+        v-else
+        class="flex-1 overflow-auto p-4 lg:p-6 custom-scrollbar"
+      >
         <div class="max-w-7xl mx-auto">
           <router-view />
         </div>

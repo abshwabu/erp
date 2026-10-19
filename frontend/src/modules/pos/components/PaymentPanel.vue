@@ -159,12 +159,12 @@ function handleReceiptClose() {
 </script>
 
 <template>
-  <div class="h-full bg-white flex flex-col justify-between overflow-hidden">
+  <div class="h-full min-h-0 bg-white flex flex-col overflow-hidden">
     <!-- Payment Header -->
-    <div class="p-4 border-b border-slate-200/80 flex items-center justify-between shrink-0 bg-slate-50/50">
+    <div class="px-3.5 py-3 sm:p-4 border-b border-slate-200/80 flex items-center justify-between shrink-0 bg-slate-50/50">
       <button
         @click="emit('back')"
-        class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+        class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
       >
         <ArrowLeft class="w-4 h-4" />
         Back to Order
@@ -174,7 +174,7 @@ function handleReceiptClose() {
     </div>
 
     <!-- Payment Body -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-5">
+    <div class="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 sm:space-y-4 custom-scrollbar">
       <div
         v-if="paymentError"
         class="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
@@ -183,13 +183,13 @@ function handleReceiptClose() {
       </div>
 
       <!-- Total Banner -->
-      <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-lg shadow-blue-600/15 text-center">
-        <span class="text-xs font-medium text-blue-200 uppercase tracking-wider block mb-1">Total Amount Due</span>
-        <span class="text-3xl font-extrabold font-mono">${{ grandTotal.toFixed(2) }}</span>
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-600/15 text-center">
+        <span class="text-[11px] sm:text-xs font-medium text-blue-200 uppercase tracking-wider block mb-0.5 sm:mb-1">Total Amount Due</span>
+        <span class="text-2xl sm:text-3xl font-extrabold font-mono">${{ grandTotal.toFixed(2) }}</span>
       </div>
 
       <!-- Customer Details (Optional) -->
-      <div class="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3.5 space-y-3">
+      <div class="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 sm:p-3.5 space-y-2.5 sm:space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
             <User class="w-4 h-4 text-slate-500" />
@@ -333,11 +333,11 @@ function handleReceiptClose() {
     </div>
 
     <!-- Complete Payment Footer Button -->
-    <div class="border-t border-slate-200/80 p-4 bg-slate-50/80 shrink-0">
+    <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/90 shrink-0">
       <button
         @click="processPayment"
         :disabled="!isValid || isProcessing"
-        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-98"
+        class="w-full py-2.5 sm:py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
       >
         <CheckCircle2 class="w-4 h-4" />
         <span v-if="isProcessing">Processing...</span>

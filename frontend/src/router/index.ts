@@ -88,7 +88,7 @@ const router = createRouter({
           path: 'pos',
           name: 'pos',
           component: () => import('@/modules/pos/layout/POSLayout.vue'),
-          meta: { title: 'Point of Sale', permission: 'pos.sessions.open' }
+          meta: { title: 'Point of Sale', permission: 'pos.sessions.open', fullHeight: true }
         },
         // Inventory Module
         {

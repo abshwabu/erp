@@ -66,7 +66,7 @@ function handlePaymentComplete() {
 </script>
 
 <template>
-  <div class="h-[calc(100vh-5rem)] w-full flex flex-col md:flex-row overflow-hidden bg-slate-100 rounded-xl border border-slate-200/80 shadow-sm relative">
+  <div class="h-full w-full flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden bg-slate-100 rounded-xl border border-slate-200/80 shadow-sm relative">
     <div
       v-if="selectingShop"
       class="absolute inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4"
@@ -99,9 +99,21 @@ function handlePaymentComplete() {
       {{ sessionError }}
     </div>
 
-    <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 shrink-0 z-20">
+    <!-- Mobile Top Navigation Bar -->
+    <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-3.5 py-2.5 shrink-0 z-20">
       <div class="flex items-center gap-2">
-        <span class="font-bold text-sm tracking-tight">{{ shopName || 'POS Terminal' }}</span>
+        <button
+          v-if="posStore.availableShops.length > 1"
+          type="button"
+          @click="selectingShop = true; posStore.needsShopSelection = true"
+          class="font-bold text-sm tracking-tight flex items-center gap-1.5 hover:text-blue-300 transition-colors"
+          title="Tap to switch shop"
+        >
+          <span>{{ shopName || 'POS Terminal' }}</span>
+          <span class="text-[10px] text-blue-400 font-normal underline decoration-dotted">Change</span>
+        </button>
+        <span v-else class="font-bold text-sm tracking-tight">{{ shopName || 'POS Terminal' }}</span>
+
         <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
           {{ posStore.session ? 'Session Open' : 'Starting…' }}
         </span>
@@ -110,7 +122,7 @@ function handlePaymentComplete() {
       <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
         <button
           @click="activeTab = 'catalog'"
-          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all"
+          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer"
           :class="[activeTab === 'catalog' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
         >
           <Grid class="w-3.5 h-3.5" />
@@ -119,7 +131,7 @@ function handlePaymentComplete() {
 
         <button
           @click="activeTab = 'cart'"
-          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all relative"
+          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all relative cursor-pointer"
           :class="[activeTab === 'cart' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
         >
           <ShoppingCart class="w-3.5 h-3.5" />
@@ -134,35 +146,17 @@ function handlePaymentComplete() {
       </div>
     </div>
 
+    <!-- Product Catalog Column -->
     <div
-      class="hidden md:flex absolute top-3 left-3 z-30 items-center gap-2"
-    >
-      <span
-        v-if="shopName"
-        class="text-xs font-semibold bg-white/90 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full shadow-sm"
-      >
-        {{ shopName }}
-      </span>
-      <UiButton
-        v-if="posStore.availableShops.length > 1"
-        size="sm"
-        variant="outline"
-        class="text-xs"
-        @click="selectingShop = true; posStore.needsShopSelection = true"
-      >
-        Switch shop
-      </UiButton>
-    </div>
-
-    <div
-      class="flex-1 h-full overflow-hidden border-r border-slate-200/80 bg-slate-50 transition-all duration-200"
+      class="flex-1 h-full min-h-0 overflow-hidden border-r border-slate-200/80 bg-slate-50 transition-all duration-200 flex flex-col"
       :class="[activeTab === 'catalog' ? 'flex' : 'hidden md:flex']"
     >
-      <ProductGrid />
+      <ProductGrid @switch-shop="selectingShop = true; posStore.needsShopSelection = true" />
     </div>
 
+    <!-- Order Cart & Payment Column -->
     <div
-      class="w-full md:w-[380px] lg:w-[420px] xl:w-[460px] h-full bg-white border-l border-slate-200/80 shrink-0 flex flex-col transition-all duration-200"
+      class="w-full md:w-[360px] lg:w-[400px] xl:w-[440px] h-full min-h-0 bg-white border-l border-slate-200/80 shrink-0 flex flex-col transition-all duration-200"
       :class="[activeTab === 'cart' ? 'flex' : 'hidden md:flex']"
     >
       <PaymentPanel

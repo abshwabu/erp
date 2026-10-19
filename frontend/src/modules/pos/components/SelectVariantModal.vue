@@ -61,14 +61,14 @@ function handleConfirm() {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
     @click.self="emit('close')"
   >
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-scale-up flex flex-col max-h-[90vh]">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-scale-up flex flex-col max-h-[90dvh]">
       <!-- Modal Header -->
-      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+      <div class="p-3.5 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+          <div class="h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
             <img
               v-if="resolveImageUrl(product?.image)"
               :src="resolveImageUrl(product.image)!"
@@ -85,14 +85,14 @@ function handleConfirm() {
 
         <button
           @click="emit('close')"
-          class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors"
+          class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
         >
           <X class="h-5 w-5" />
         </button>
       </div>
 
       <!-- Modal Body / Variants List -->
-      <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+      <div class="p-3.5 sm:p-5 overflow-y-auto space-y-4 flex-1 min-h-0 custom-scrollbar">
         <div>
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
             Select Variant / Option
