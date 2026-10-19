@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
@@ -38,6 +38,13 @@ const grandTotal = computed(() => {
 })
 
 const amountTendered = ref<number | null>(null)
+
+// Auto-fill exact cash tendered so checkout button is immediately clickable
+watch(grandTotal, (val) => {
+  if (amountTendered.value === null || amountTendered.value <= 0) {
+    amountTendered.value = val
+  }
+}, { immediate: true })
 
 const quickAmounts = computed(() => {
   const total = grandTotal.value
@@ -333,11 +340,11 @@ function handleReceiptClose() {
     </div>
 
     <!-- Complete Payment Footer Button -->
-    <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/90 shrink-0">
+    <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/95 shrink-0 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
       <button
         @click="processPayment"
         :disabled="!isValid || isProcessing"
-        class="w-full py-2.5 sm:py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
       >
         <CheckCircle2 class="w-4 h-4" />
         <span v-if="isProcessing">Processing...</span>

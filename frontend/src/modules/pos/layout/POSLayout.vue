@@ -156,7 +156,7 @@ function handlePaymentComplete() {
 
     <!-- Order Cart & Payment Column -->
     <div
-      class="w-full md:w-[360px] lg:w-[400px] xl:w-[440px] h-full min-h-0 bg-white border-l border-slate-200/80 shrink-0 flex flex-col transition-all duration-200"
+      class="flex-1 md:flex-initial w-full md:w-[360px] lg:w-[400px] xl:w-[440px] h-full min-h-0 bg-white border-l border-slate-200/80 md:shrink-0 flex flex-col transition-all duration-200"
       :class="[activeTab === 'cart' ? 'flex' : 'hidden md:flex']"
     >
       <PaymentPanel

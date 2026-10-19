@@ -210,11 +210,18 @@ const totalItems = computed(() => {
         </div>
         <p class="text-xs sm:text-sm font-semibold text-slate-700">Order Cart is Empty</p>
         <p class="text-xs text-slate-400 max-w-[200px] mt-1">Tap products from the catalog to add items to this checkout order.</p>
+        <button
+          type="button"
+          @click="emit('switch-to-catalog')"
+          class="mt-3 px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+        >
+          Browse Catalog
+        </button>
       </div>
     </div>
 
     <!-- Order Summary & Checkout Footer -->
-    <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/90 shrink-0 space-y-2 sm:space-y-3">
+    <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/95 shrink-0 space-y-2 sm:space-y-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
       <div class="space-y-1 sm:space-y-1.5 text-xs text-slate-600">
         <div class="flex justify-between">
           <span>Subtotal</span>
@@ -231,12 +238,23 @@ const totalItems = computed(() => {
       </div>
 
       <button
+        v-if="posStore.cart.length > 0"
+        type="button"
         @click="emit('checkout')"
-        :disabled="posStore.cart.length === 0"
-        class="w-full py-2.5 sm:py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+        class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
       >
         <CreditCard class="w-4 h-4" />
-        Charge Order (${{ grandTotal.toFixed(2) }})
+        <span>Charge Order (${{ grandTotal.toFixed(2) }})</span>
+      </button>
+
+      <button
+        v-else
+        type="button"
+        @click="emit('switch-to-catalog')"
+        class="w-full py-2.5 sm:py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
+      >
+        <ShoppingCart class="w-4 h-4 text-slate-500" />
+        <span>Cart is Empty — Browse Catalog</span>
       </button>
     </div>
   </div>

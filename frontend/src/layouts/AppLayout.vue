@@ -16,7 +16,12 @@ const notificationStore = useNotificationStore()
 const route = useRoute()
 
 const isPosRoute = computed(() => {
-  return route.name === 'pos' || route.path.startsWith('/pos') || !!route.meta?.fullHeight
+  const path = route.path || ''
+  const name = String(route.name || '')
+  return name === 'pos' ||
+         path.includes('pos') ||
+         route.matched?.some(r => r.name === 'pos' || String(r.path).includes('pos')) ||
+         !!route.meta?.fullHeight
 })
 </script>
 
@@ -30,22 +35,17 @@ const isPosRoute = computed(() => {
 
       <AppHeader />
 
-      <!-- Dedicated full-height container for POS view (zero extra scrollbars) -->
+      <!-- Main container (auto-adapts for POS without duplicate router-views) -->
       <main
-        v-if="isPosRoute"
-        class="flex-1 min-h-0 flex flex-col overflow-hidden p-1 sm:p-2 lg:p-2.5"
+        class="flex-1 min-h-0 flex flex-col"
+        :class="isPosRoute
+          ? 'overflow-hidden p-1 sm:p-2 lg:p-2.5'
+          : 'overflow-auto p-4 lg:p-6 custom-scrollbar'"
       >
-        <div class="w-full h-full flex-1 min-h-0 flex flex-col">
-          <router-view />
-        </div>
-      </main>
-
-      <!-- Standard scrolling container for all other ERP modules -->
-      <main
-        v-else
-        class="flex-1 overflow-auto p-4 lg:p-6 custom-scrollbar"
-      >
-        <div class="max-w-7xl mx-auto">
+        <div
+          class="flex-1 min-h-0 flex flex-col w-full"
+          :class="isPosRoute ? 'h-full' : 'max-w-7xl mx-auto'"
+        >
           <router-view />
         </div>
       </main>
