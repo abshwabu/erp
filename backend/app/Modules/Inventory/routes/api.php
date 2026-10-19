@@ -36,6 +36,9 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
     Route::post('products/import', [ProductController::class, 'import'])
         ->middleware('permission:inventory.products.create');
 
+    Route::match(['get', 'post'], 'products/export', [ProductController::class, 'export'])
+        ->middleware('permission:inventory.products.view');
+
     Route::get('products', [ProductController::class, 'index'])
         ->middleware('permission:inventory.products.view');
 
@@ -72,6 +75,9 @@ Route::prefix('api/inventory')->middleware('auth:api,sanctum')->group(function (
 
     Route::post('stock/import', [ProductController::class, 'import'])
         ->middleware('permission:inventory.stock.adjust');
+
+    Route::match(['get', 'post'], 'stock/export', [ProductController::class, 'export'])
+        ->middleware('permission:inventory.stock.view');
 
     Route::get('stock', [StockController::class, 'index'])
         ->middleware('permission:inventory.stock.view');

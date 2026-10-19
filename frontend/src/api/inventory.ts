@@ -167,6 +167,21 @@ export const inventoryApi = {
     })
   },
 
+  exportProducts(payload: {
+    format: 'xlsx' | 'csv' | 'pdf'
+    columns: string[]
+    ids?: string[]
+    search?: string
+    category_id?: string
+    status?: string
+    type?: string
+    inline?: boolean
+  }) {
+    return apiClient.post('/inventory/products/export', payload, {
+      responseType: 'blob',
+    })
+  },
+
   getCategories() {
     return apiClient.get<{ data: ProductCategory[] }>('/inventory/categories').then((res) => {
       const data = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])

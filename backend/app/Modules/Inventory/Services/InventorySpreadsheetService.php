@@ -42,6 +42,36 @@ class InventorySpreadsheetService
     ];
 
     /**
+     * Complete catalogue of exportable fields and their human-readable labels.
+     */
+    public const EXPORTABLE_COLUMNS = [
+        'name'               => 'Product Name',
+        'sku'                => 'SKU',
+        'category'           => 'Category',
+        'selling_price'      => 'Selling Price',
+        'cost_price'         => 'Cost Price',
+        'quantity_on_hand'   => 'Total Stock',
+        'available_quantity' => 'Available Stock',
+        'type'               => 'Type',
+        'status'             => 'Status',
+        'barcode'            => 'Barcode',
+        'description'        => 'Description',
+        'created_at'         => 'Created At',
+    ];
+
+    /**
+     * Default columns selected if user does not customize.
+     */
+    public const DEFAULT_EXPORT_COLUMNS = [
+        'name',
+        'sku',
+        'category',
+        'selling_price',
+        'quantity_on_hand',
+        'status',
+    ];
+
+    /**
      * Realistic sample rows for template download.
      */
     public const SAMPLE_ROWS = [
@@ -131,7 +161,7 @@ class InventorySpreadsheetService
         fwrite($output, "\xEF\xBB\xBF");
 
         // Write header row
-        fputcsv($output, $headers);
+        fputcsv($output, $headers, ',', '"', '\\');
 
         // Write sample rows
         foreach (self::SAMPLE_ROWS as $row) {
@@ -139,7 +169,7 @@ class InventorySpreadsheetService
             foreach ($headers as $col) {
                 $line[] = $row[$col] ?? '';
             }
-            fputcsv($output, $line);
+            fputcsv($output, $line, ',', '"', '\\');
         }
 
         rewind($output);
@@ -281,6 +311,373 @@ class InventorySpreadsheetService
             'filename' => 'inventory_import_template.xlsx',
             'content'  => (string) $content,
             'mime'     => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    }
+
+    /**
+     * Export products based on user-selected columns, filters, and output format.
+     *
+     * @param string[] $columns User-specified column keys to include (e.g. ['name', 'selling_price', 'description'])
+     * @param array<string, mixed> $filters
+     * @param string[]|int[]|null $productIds
+     * @param string $format 'xlsx' | 'csv' | 'pdf'
+     * @return array{filename: string, content: string, mime: string}
+     */
+    public function exportProducts(
+        array $columns = [],
+        array $filters = [],
+        ?array $productIds = null,
+        string $format = 'xlsx'
+    ): array {
+        // 1. Resolve selected columns
+        $selectedColumns = [];
+        if (!empty($columns)) {
+            foreach ($columns as $col) {
+                $colKey = trim((string) $col);
+                if (isset(self::EXPORTABLE_COLUMNS[$colKey])) {
+                    $selectedColumns[$colKey] = self::EXPORTABLE_COLUMNS[$colKey];
+                }
+            }
+        }
+
+        if (empty($selectedColumns)) {
+            foreach (self::DEFAULT_EXPORT_COLUMNS as $colKey) {
+                if (isset(self::EXPORTABLE_COLUMNS[$colKey])) {
+                    $selectedColumns[$colKey] = self::EXPORTABLE_COLUMNS[$colKey];
+                }
+            }
+        }
+
+        // 2. Query products with eager relationships
+        $query = Product::query()
+            ->with(['category', 'barcodes', 'stockLevels']);
+
+        if (!empty($productIds)) {
+            $query->whereIn('id', $productIds);
+        } else {
+            if (!empty($filters['search'])) {
+                $search = trim((string) $filters['search']);
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('sku', 'ilike', "%{$search}%")
+                        ->orWhere('description', 'ilike', "%{$search}%")
+                        ->orWhereHas('barcodes', function ($bq) use ($search) {
+                            $bq->where('barcode', 'ilike', "%{$search}%");
+                        })
+                        ->orWhereHas('category', function ($cq) use ($search) {
+                            $cq->where('name', 'ilike', "%{$search}%");
+                        });
+                });
+            }
+
+            if (!empty($filters['category_id'])) {
+                $query->where('category_id', $filters['category_id']);
+            }
+
+            if (!empty($filters['status'])) {
+                $query->where('status', $filters['status']);
+            }
+
+            if (!empty($filters['type'])) {
+                $query->where('type', $filters['type']);
+            }
+        }
+
+        $query->orderBy('name');
+        $products = $query->get();
+
+        // 3. Transform to rows
+        $columnKeys = array_keys($selectedColumns);
+        $rows = [];
+        foreach ($products as $product) {
+            $rows[] = $this->formatProductRow($product, $columnKeys);
+        }
+
+        // 4. Generate in requested format
+        $format = strtolower(trim($format));
+        return match ($format) {
+            'csv' => $this->generateCsvExport($selectedColumns, $rows, 'Products Catalog', 'products_export'),
+            'pdf' => $this->generatePdfExport($selectedColumns, $rows, 'Products Catalog Export', 'products_export'),
+            default => $this->generateXlsxExport($selectedColumns, $rows, 'Products Catalog', 'products_export'),
+        };
+    }
+
+    /**
+     * Format a single Product model into an associative array for export.
+     *
+     * @param string[] $columnKeys
+     * @return array<string, string>
+     */
+    public function formatProductRow(Product $product, array $columnKeys): array
+    {
+        $row = [];
+        foreach ($columnKeys as $col) {
+            $row[$col] = match ($col) {
+                'name' => (string) ($product->name ?? ''),
+                'sku' => (string) ($product->sku ?? ''),
+                'category' => (string) ($product->category?->name ?? 'Uncategorized'),
+                'type' => (string) (is_object($product->type) ? $product->type->value : ($product->type ?? 'stockable')),
+                'status' => (string) (is_object($product->status) ? $product->status->value : ($product->status ?? 'active')),
+                'selling_price' => number_format(((int) ($product->selling_price ?? 0)) / 100, 2, '.', ''),
+                'cost_price' => number_format(((int) ($product->cost_price ?? 0)) / 100, 2, '.', ''),
+                'quantity_on_hand' => (string) ($product->relationLoaded('stockLevels')
+                    ? ($product->has_variants && $product->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                        ? $product->stockLevels->whereNotNull('variant_id')->sum('quantity_on_hand')
+                        : $product->stockLevels->sum('quantity_on_hand'))
+                    : 0),
+                'available_quantity' => (string) ($product->relationLoaded('stockLevels')
+                    ? ($product->has_variants && $product->stockLevels->whereNotNull('variant_id')->isNotEmpty()
+                        ? ($product->stockLevels->whereNotNull('variant_id')->sum('quantity_on_hand') - $product->stockLevels->whereNotNull('variant_id')->sum('quantity_committed'))
+                        : ($product->stockLevels->sum('quantity_on_hand') - $product->stockLevels->sum('quantity_committed')))
+                    : 0),
+                'barcode' => (string) ($product->barcodes->firstWhere('is_primary', true)?->barcode
+                    ?? $product->barcodes->first()?->barcode
+                    ?? ''),
+                'description' => (string) ($product->description ?? ''),
+                'created_at' => $product->created_at ? $product->created_at->format('Y-m-d H:i') : '',
+                default => '',
+            };
+        }
+
+        return $row;
+    }
+
+    /**
+     * Generate CSV export with UTF-8 BOM.
+     *
+     * @param array<string, string> $headers Key => Label
+     * @param array<int, array<string, mixed>> $rows
+     */
+    public function generateCsvExport(
+        array $headers,
+        array $rows,
+        string $title = 'Products Catalog',
+        string $filenamePrefix = 'products_export'
+    ): array {
+        $output = fopen('php://memory', 'r+');
+
+        // Write UTF-8 BOM
+        fwrite($output, "\xEF\xBB\xBF");
+
+        // Write header row
+        fputcsv($output, array_values($headers), ',', '"', '\\');
+
+        // Write data rows
+        $keys = array_keys($headers);
+        foreach ($rows as $row) {
+            $line = [];
+            foreach ($keys as $k) {
+                $line[] = $row[$k] ?? '';
+            }
+            fputcsv($output, $line, ',', '"', '\\');
+        }
+
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
+
+        $timestamp = date('Ymd_His');
+        return [
+            'filename' => "{$filenamePrefix}_{$timestamp}.csv",
+            'content'  => (string) $content,
+            'mime'     => 'text/csv; charset=UTF-8',
+        ];
+    }
+
+    /**
+     * Generate OpenXML XLSX export using ZipArchive without external libraries.
+     *
+     * @param array<string, string> $headers Key => Label
+     * @param array<int, array<string, mixed>> $rows
+     */
+    public function generateXlsxExport(
+        array $headers,
+        array $rows,
+        string $title = 'Products Catalog',
+        string $filenamePrefix = 'products_export'
+    ): array {
+        $tempFile = tempnam(sys_get_temp_dir(), 'exp_') . '.xlsx';
+        $zip = new ZipArchive();
+
+        if ($zip->open($tempFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return $this->generateCsvExport($headers, $rows, $title, $filenamePrefix);
+        }
+
+        $keys = array_keys($headers);
+        $labels = array_values($headers);
+
+        // 1. [Content_Types].xml
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            . '</Types>';
+        $zip->addFromString('[Content_Types].xml', $contentTypes);
+
+        // 2. _rels/.rels
+        $rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '</Relationships>';
+        $zip->addFromString('_rels/.rels', $rootRels);
+
+        // 3. xl/_rels/workbook.xml.rels
+        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            . '</Relationships>';
+        $zip->addFromString('xl/_rels/workbook.xml.rels', $wbRels);
+
+        // 4. xl/workbook.xml
+        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheets>'
+            . '<sheet name="Products" sheetId="1" r:id="rId1"/>'
+            . '</sheets>'
+            . '</workbook>';
+        $zip->addFromString('xl/workbook.xml', $workbook);
+
+        // 5. xl/styles.xml (Professional Navy & Clean Zebra styling)
+        $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<fonts count="3">'
+            . '<font><name val="Calibri"/><sz val="10"/><color rgb="FF0F172A"/></font>'
+            . '<font><b/><name val="Calibri"/><sz val="10"/><color rgb="FFFFFFFF"/></font>'
+            . '<font><name val="Calibri"/><sz val="9"/><color rgb="FF64748B"/></font>'
+            . '</fonts>'
+            . '<fills count="4">'
+            . '<fill><patternFill patternType="none"/></fill>'
+            . '<fill><patternFill patternType="gray125"/></fill>'
+            . '<fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/><bgColor indexed="64"/></patternFill></fill>'
+            . '<fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/><bgColor indexed="64"/></patternFill></fill>'
+            . '</fills>'
+            . '<borders count="2">'
+            . '<border><left/><right/><top/><bottom/><diagonal/></border>'
+            . '<border><left style="thin"><color rgb="FFE2E8F0"/></left><right style="thin"><color rgb="FFE2E8F0"/></right><top style="thin"><color rgb="FFE2E8F0"/></top><bottom style="thin"><color rgb="FFE2E8F0"/></bottom></border>'
+            . '</borders>'
+            . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            . '<cellXfs count="5">'
+            // 0: Normal text
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>'
+            // 1: Header
+            . '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+            // 2: Zebra row
+            . '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>'
+            // 3: Numeric right-aligned
+            . '<xf numFmtId="2" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>'
+            // 4: Numeric zebra right-aligned
+            . '<xf numFmtId="2" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>'
+            . '</cellXfs>'
+            . '</styleSheet>';
+        $zip->addFromString('xl/styles.xml', $styles);
+
+        // 6. Dynamic Column Widths
+        $colWidths = [];
+        foreach ($keys as $idx => $k) {
+            $label = $headers[$k] ?? $k;
+            $maxLen = mb_strlen($label);
+            foreach ($rows as $r) {
+                $valLen = mb_strlen((string) ($r[$k] ?? ''));
+                if ($valLen > $maxLen) {
+                    $maxLen = $valLen;
+                }
+            }
+            $width = min(55, max(14, $maxLen + 3));
+            $colWidths[$idx] = $width;
+        }
+
+        $colsXml = '<cols>';
+        foreach ($colWidths as $idx => $w) {
+            $colNum = $idx + 1;
+            $colsXml .= sprintf('<col min="%d" max="%d" width="%d" customWidth="1"/>', $colNum, $colNum, $w);
+        }
+        $colsXml .= '</cols>';
+
+        $sheetDataXml = '<sheetData>';
+
+        // Row 1: Headers
+        $sheetDataXml .= '<row r="1" ht="26" customHeight="1">';
+        foreach ($labels as $colIdx => $colLabel) {
+            $cellRef = self::numToCol($colIdx) . '1';
+            $val = htmlspecialchars($colLabel, ENT_XML1, 'UTF-8');
+            $sheetDataXml .= sprintf('<c r="%s" t="inlineStr" s="1"><is><t>%s</t></is></c>', $cellRef, $val);
+        }
+        $sheetDataXml .= '</row>';
+
+        // Rows 2+: Data
+        $numericKeys = ['selling_price', 'cost_price', 'quantity_on_hand', 'available_quantity'];
+        $rowNum = 2;
+        foreach ($rows as $dataRow) {
+            $isZebra = ($rowNum % 2 === 1);
+            $sheetDataXml .= sprintf('<row r="%d" ht="20" customHeight="1">', $rowNum);
+
+            foreach ($keys as $colIdx => $k) {
+                $cellRef = self::numToCol($colIdx) . $rowNum;
+                $rawVal = (string) ($dataRow[$k] ?? '');
+                $isNum = in_array($k, $numericKeys, true) && is_numeric($rawVal);
+
+                if ($isNum) {
+                    $styleId = $isZebra ? 4 : 3;
+                    $sheetDataXml .= sprintf('<c r="%s" t="n" s="%d"><v>%s</v></c>', $cellRef, $styleId, $rawVal);
+                } else {
+                    $styleId = $isZebra ? 2 : 0;
+                    $val = htmlspecialchars($rawVal, ENT_XML1, 'UTF-8');
+                    $sheetDataXml .= sprintf('<c r="%s" t="inlineStr" s="%d"><is><t>%s</t></is></c>', $cellRef, $styleId, $val);
+                }
+            }
+
+            $sheetDataXml .= '</row>';
+            $rowNum++;
+        }
+
+        $sheetDataXml .= '</sheetData>';
+
+        $worksheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n"
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>'
+            . '<sheetFormatPr defaultRowHeight="18"/>'
+            . $colsXml
+            . $sheetDataXml
+            . '</worksheet>';
+        $zip->addFromString('xl/worksheets/sheet1.xml', $worksheet);
+
+        $zip->close();
+
+        $content = file_get_contents($tempFile);
+        @unlink($tempFile);
+
+        $timestamp = date('Ymd_His');
+        return [
+            'filename' => "{$filenamePrefix}_{$timestamp}.xlsx",
+            'content'  => (string) $content,
+            'mime'     => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    }
+
+    /**
+     * Generate standalone PDF export without external dependencies.
+     *
+     * @param array<string, string> $headers Key => Label
+     * @param array<int, array<string, mixed>> $rows
+     */
+    public function generatePdfExport(
+        array $headers,
+        array $rows,
+        string $title = 'Products Catalog Export',
+        string $filenamePrefix = 'products_export'
+    ): array {
+        $pdfGen = new PurePdfReport(null, count($headers));
+        $pdfContent = $pdfGen->build($title, $headers, $rows);
+
+        $timestamp = date('Ymd_His');
+        return [
+            'filename' => "{$filenamePrefix}_{$timestamp}.pdf",
+            'content'  => $pdfContent,
+            'mime'     => 'application/pdf',
         ];
     }
 

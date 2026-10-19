@@ -24,6 +24,7 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
+  Download,
 } from '@lucide/vue'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -36,6 +37,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import CreateEditProductModal from '../components/CreateEditProductModal.vue'
 import CreateCategoryModal from '../components/CreateCategoryModal.vue'
 import ImportModal from '../components/ImportModal.vue'
+import ExportModal from '../components/ExportModal.vue'
 import { formatCurrency, resolveImageUrl } from '@/utils/format'
 import { useToast } from '@/composables/useToast'
 import type { Product, ProductCategory, ProductFilters, ProductStatus } from '@/types/inventory'
@@ -135,6 +137,7 @@ const categoryFilterOptions = computed(() => {
 
 const isCreateModalOpen = ref(false)
 const isImportModalOpen = ref(false)
+const isExportModalOpen = ref(false)
 const isCreateCategoryModalOpen = ref(false)
 const selectedProduct = ref<Product | null>(null)
 
@@ -282,6 +285,15 @@ const hasActiveFilters = computed(() => {
         >
           <FileSpreadsheet class="h-4 w-4 text-emerald-600" />
           <span>Import Excel / CSV</span>
+        </button>
+
+        <button
+          type="button"
+          @click="isExportModalOpen = true"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all"
+        >
+          <Download class="h-4 w-4 text-blue-600" />
+          <span>Export</span>
         </button>
 
         <button
@@ -637,6 +649,17 @@ const hasActiveFilters = computed(() => {
     <ImportModal
       v-model="isImportModalOpen"
       @imported="refetch"
+    />
+
+    <ExportModal
+      v-model="isExportModalOpen"
+      :filters="{
+        search: debouncedSearch,
+        category_id: filters.category_id,
+        status: filters.status,
+        type: filters.type,
+      }"
+      :total-count="totalProductsCount"
     />
 
     <!-- Custom Delete Confirmation Modal -->

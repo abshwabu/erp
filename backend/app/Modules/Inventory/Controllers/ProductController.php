@@ -527,7 +527,51 @@ class ProductController extends BaseController
         ]);
     }
 
-    // ── Template & Import ─────────────────────────────────────────────────────
+    // ── Template, Export & Import ────────────────────────────────────────────
+
+    /**
+     * GET/POST /api/inventory/products/export
+     * Export products to XLSX, CSV, or PDF with user-selected columns and optional filters or ID list.
+     */
+    public function export(Request $request, InventorySpreadsheetService $spreadsheetService): SymfonyResponse
+    {
+        $format = strtolower((string) $request->input('format', $request->query('format', 'xlsx')));
+        if (!in_array($format, ['xlsx', 'csv', 'pdf'], true)) {
+            $format = 'xlsx';
+        }
+
+        // Support array of column keys or comma-separated string
+        $columns = $request->input('columns', $request->query('columns', []));
+        if (is_string($columns)) {
+            $columns = array_filter(array_map('trim', explode(',', $columns)));
+        }
+
+        // Support array of product IDs or comma-separated string
+        $productIds = $request->input('ids', $request->input('product_ids', $request->query('ids', [])));
+        if (is_string($productIds)) {
+            $productIds = array_filter(array_map('trim', explode(',', $productIds)));
+        }
+
+        $filters = [
+            'search'      => $request->input('search', $request->query('search', $request->input('filter.search'))),
+            'category_id' => $request->input('category_id', $request->query('category_id', $request->input('filter.category_id'))),
+            'status'      => $request->input('status', $request->query('status', $request->input('filter.status'))),
+            'type'        => $request->input('type', $request->query('type', $request->input('filter.type'))),
+        ];
+
+        $export = $spreadsheetService->exportProducts($columns, $filters, $productIds, $format);
+
+        $isInline = ($request->boolean('inline') || $request->query('inline') === 'true' || $request->query('inline') === '1') && $format === 'pdf';
+        $disposition = $isInline ? 'inline' : 'attachment';
+
+        return response($export['content'], 200, [
+            'Content-Type'        => $export['mime'],
+            'Content-Disposition' => "{$disposition}; filename=\"{$export['filename']}\"",
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
+        ]);
+    }
 
     /**
      * GET /api/inventory/products/template

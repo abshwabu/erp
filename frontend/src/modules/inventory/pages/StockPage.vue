@@ -11,6 +11,7 @@ import {
   Layers,
   Settings2,
   FileSpreadsheet,
+  Download,
 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -21,6 +22,7 @@ import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import StockAdjustmentModal from '../components/StockAdjustmentModal.vue'
 import ImportModal from '../components/ImportModal.vue'
+import ExportModal from '../components/ExportModal.vue'
 import { formatCurrency } from '@/utils/format'
 import type { Product } from '@/types/inventory'
 
@@ -60,6 +62,7 @@ const { data: locations } = useQuery({
 
 const isAdjustmentModalOpen = ref(false)
 const isImportModalOpen = ref(false)
+const isExportModalOpen = ref(false)
 const selectedProductId = ref<string | undefined>(undefined)
 
 const openAdjustment = (productId?: string) => {
@@ -127,6 +130,9 @@ const stats = computed(() => {
       <div class="flex items-center gap-2">
         <UiButton variant="outline" size="sm" @click="isImportModalOpen = true">
           <FileSpreadsheet class="h-4 w-4 mr-1.5 text-emerald-600" /> Import Spreadsheet
+        </UiButton>
+        <UiButton variant="outline" size="sm" @click="isExportModalOpen = true">
+          <Download class="h-4 w-4 mr-1.5 text-blue-600" /> Export
         </UiButton>
         <UiButton size="sm" @click="openAdjustment()">
           <Plus class="h-4 w-4 mr-2" /> Adjust Stock
@@ -227,5 +233,10 @@ const stats = computed(() => {
 
     <StockAdjustmentModal v-model="isAdjustmentModalOpen" :product-id="selectedProductId" />
     <ImportModal v-model="isImportModalOpen" />
+    <ExportModal
+      v-model="isExportModalOpen"
+      :filters="{ search: filters.search }"
+      :total-count="data?.meta?.total"
+    />
   </div>
 </template>
