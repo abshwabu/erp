@@ -11,6 +11,7 @@ import UiStat from '@/components/ui/UiStat.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import EmployeeModal from '../components/EmployeeModal.vue'
 import { Plus, Search, Users, UserPlus, Calendar, Briefcase, Filter, Trash2, Eye } from '@lucide/vue'
+import { resolveImageUrl } from '@/utils/format'
 import type { Employee, Department } from '@/types/hr'
 
 const router = useRouter()
@@ -191,7 +192,7 @@ const typeOptions = [
       <template #cell(name)="{ item }">
         <div class="flex items-center gap-3 py-1">
           <div class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold overflow-hidden text-xs">
-            <img v-if="item.avatar_url" :src="item.avatar_url" class="h-full w-full object-cover" />
+            <img v-if="resolveImageUrl(item.avatar_url)" :src="resolveImageUrl(item.avatar_url)!" class="h-full w-full object-cover" />
             <span v-else>{{ item.first_name?.[0] }}{{ item.last_name?.[0] }}</span>
           </div>
           <div>

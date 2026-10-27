@@ -35,6 +35,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import CreateCategoryModal from './CreateCategoryModal.vue'
+import { resolveImageUrl } from '@/utils/format'
 import type { Product, ProductCategory, ProductType, ProductStatus } from '@/types/inventory'
 
 interface Props {
@@ -153,10 +154,10 @@ watch(
         ? rawProd.images.map((img: any) => ({
             id: img.id,
             path: img.path || img.url,
-            url: img.url || img.path,
+            url: resolveImageUrl(img.url || img.path) || img.url || img.path,
             is_primary: !!img.is_primary,
           }))
-        : (newProduct.primary_image_url ? [{ url: newProduct.primary_image_url, path: newProduct.primary_image_url, is_primary: true }] : [])
+        : (newProduct.primary_image_url ? [{ url: resolveImageUrl(newProduct.primary_image_url) || newProduct.primary_image_url, path: newProduct.primary_image_url, is_primary: true }] : [])
 
       Object.assign(form, {
         name: newProduct.name || '',
@@ -1025,7 +1026,7 @@ function handleCategoryCreated(newCat: any) {
                     >
                       <!-- Image Element -->
                       <img
-                        :src="img.url"
+                        :src="resolveImageUrl(img.url) || img.url"
                         alt="Product preview"
                         class="w-full h-full object-cover"
                       />

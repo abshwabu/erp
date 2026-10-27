@@ -9,6 +9,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
 import { useToast } from '@/composables/useToast'
+import { resolveImageUrl } from '@/utils/format'
 import {
   Users,
   Search,
@@ -174,7 +175,7 @@ const getStatusBadge = (status: string) => {
         >
           <div class="flex items-start gap-3">
             <div class="w-11 h-11 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center font-bold text-slate-700 text-sm shrink-0 border border-slate-200">
-              <img v-if="app.photo_url" :src="app.photo_url" class="w-full h-full object-cover" />
+              <img v-if="resolveImageUrl(app.photo_url)" :src="resolveImageUrl(app.photo_url)!" class="w-full h-full object-cover" />
               <span v-else>{{ app.applicant_name?.[0] }}</span>
             </div>
 
@@ -273,7 +274,7 @@ const getStatusBadge = (status: string) => {
         <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-2xl bg-white overflow-hidden flex items-center justify-center font-bold text-slate-700 border border-slate-200">
-              <img v-if="selectedApplication.photo_url" :src="selectedApplication.photo_url" class="w-full h-full object-cover" />
+              <img v-if="resolveImageUrl(selectedApplication.photo_url)" :src="resolveImageUrl(selectedApplication.photo_url)!" class="w-full h-full object-cover" />
               <span v-else>{{ selectedApplication.applicant_name?.[0] }}</span>
             </div>
             <div>

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { Employee, DocumentType, EmployeeDocument } from '@/types/hr'
 import { hrApi } from '@/api/hr'
+import { resolveImageUrl } from '@/utils/format'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -537,7 +538,7 @@ const formatSalary = (amount?: number | string, currency: string = 'USD') => {
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs">
       <div class="flex items-center gap-4">
         <div class="h-20 w-20 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-700 overflow-hidden shadow-xs">
-          <img v-if="employee.avatar_url" :src="employee.avatar_url" class="h-full w-full object-cover" />
+          <img v-if="resolveImageUrl(employee.avatar_url)" :src="resolveImageUrl(employee.avatar_url)!" class="h-full w-full object-cover" />
           <span v-else>{{ employee.first_name?.[0] }}{{ employee.last_name?.[0] }}</span>
         </div>
         <div>
