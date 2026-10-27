@@ -85,6 +85,7 @@ function handlePrint() {
   const tendered = (props.orderData?.tendered || 0).toFixed(2)
   const change = (props.orderData?.change || 0).toFixed(2)
   const method = props.orderData?.method || 'Cash'
+  const paymentRef = props.orderData?.reference || ''
 
   const itemsHtml = items.length > 0 ? items.map((item: any) => `
     <tr style="border-bottom: 1px border-dashed #eee;">
@@ -257,6 +258,12 @@ function handlePrint() {
           <span>Paid via ${method}:</span>
           <span>$${tendered}</span>
         </div>
+        ${paymentRef ? `
+        <div class="row" style="font-size: 10px; color: #555;">
+          <span>Payment Ref:</span>
+          <span style="font-family: monospace;">${paymentRef}</span>
+        </div>
+        ` : ''}
         <div class="row" style="font-weight: bold;">
           <span>Change Due:</span>
           <span>$${change}</span>
@@ -387,6 +394,10 @@ function handlePrint() {
           <div class="flex justify-between text-[10px] text-slate-500 pt-1">
             <span>Paid via {{ orderData?.method || 'Cash' }}:</span>
             <span class="font-mono">${{ (orderData?.tendered || 0).toFixed(2) }}</span>
+          </div>
+          <div v-if="orderData?.reference" class="flex justify-between text-[10px] text-slate-500 pt-0.5">
+            <span>Payment Ref:</span>
+            <span class="font-mono text-slate-700 truncate max-w-[200px]">{{ orderData.reference }}</span>
           </div>
           <div v-if="orderData?.change !== undefined" class="flex justify-between text-[11px] text-emerald-600 font-bold">
             <span>Change Due:</span>

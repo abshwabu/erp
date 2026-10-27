@@ -40,6 +40,7 @@ if [ -n "$FE_DIR" ]; then
     # 2. Copy built dist into public/
     echo "--> [2/4] Syncing compiled assets into public/ directory..."
     if [ -d "$FE_DIR/dist" ]; then
+        rm -rf "$PROJECT_DIR/public/assets"
         cp -r "$FE_DIR/dist/"* "$PROJECT_DIR/public/"
     fi
 fi

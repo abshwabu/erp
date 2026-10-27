@@ -34,7 +34,7 @@ class POSTransactionController extends BaseController
             'items.*.discount_cents' => ['nullable', 'integer', 'min:0'],
             'items.*.variant_id' => ['nullable', 'uuid'],
             'payments' => ['required', 'array', 'min:1'],
-            'payments.*.method' => ['required', 'string', 'in:cash,card,mobile'],
+            'payments.*.method' => ['required', 'string', 'in:cash,card,mobile,bank,wallet'],
             'payments.*.amount_cents' => ['required', 'integer', 'min:1'],
             'payments.*.reference' => ['nullable', 'string', 'max:100'],
             'payments.*.change_cents' => ['nullable', 'integer', 'min:0'],

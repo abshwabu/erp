@@ -423,3 +423,136 @@ it('handles customer TIN lookup and optional customer tin/name on POS checkout',
     $walkInResponse->assertJsonPath('data.customer_name', null);
 });
 
+it('supports bank and wallet payment methods with provider and reference', function (): void {
+    $tenant = Tenant::create([
+        'name'   => 'POS Bank Wallet Test Tenant',
+        'slug'   => 'posbw',
+        'status' => 'active',
+    ]);
+
+    $data = $tenant->run(function () use ($tenant) {
+        (new TenantRoleSeeder())->run();
+
+        $cashier = User::create([
+            'tenant_id' => $tenant->getKey(),
+            'name'      => 'Cashier BW',
+            'email'     => 'cashier@posbw.test',
+            'password'  => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $cashier->assignRole('Cashier');
+
+        $warehouse = Warehouse::create([
+            'name'      => 'Warehouse BW',
+            'code'      => 'WH-BW',
+            'type'      => 'own',
+            'is_active' => true,
+        ]);
+
+        $location = StockLocation::create([
+            'warehouse_id' => $warehouse->id,
+            'name'         => 'Storefront BW',
+            'code'         => 'STORE-BW',
+            'type'         => 'storage',
+            'is_active'    => true,
+        ]);
+
+        $terminal = POSTerminal::create([
+            'name'        => 'Register BW',
+            'location_id' => $location->id,
+            'is_active'   => true,
+        ]);
+
+        $product = Product::create([
+            'sku'           => 'ITEM-BW-1',
+            'name'          => 'Keyboard',
+            'type'          => 'stockable',
+            'status'        => 'active',
+            'cost_price'    => 200,
+            'selling_price' => 2000,
+        ]);
+
+        StockLevel::create([
+            'product_id'         => $product->id,
+            'location_id'        => $location->id,
+            'quantity_on_hand'   => 50,
+            'quantity_committed' => 0,
+            'quantity_on_order'  => 0,
+        ]);
+
+        return [
+            'terminal' => $terminal,
+            'product'  => $product,
+            'location' => $location,
+        ];
+    });
+
+    $loginResponse = $this->postJson('http://posbw.localhost/api/auth/login', [
+        'email'    => 'cashier@posbw.test',
+        'password' => 'password123',
+    ]);
+    $token = $loginResponse->json('access_token');
+    $headers = ['Authorization' => "Bearer {$token}"];
+
+    $openResponse = $this->withHeaders($headers)->postJson('http://posbw.localhost/api/pos/sessions/open', [
+        'terminal_id' => $data['terminal']->id,
+    ]);
+    $sessionId = $openResponse->json('data.id');
+
+    // 1. Checkout with Bank (Commercial Bank of Ethiopia)
+    $bankCheckout = $this->withHeaders($headers)->postJson('http://posbw.localhost/api/pos/checkout', [
+        'session_id'  => $sessionId,
+        'location_id' => $data['location']->id,
+        'items'       => [
+            [
+                'product_id'       => $data['product']->id,
+                'quantity'         => 1,
+                'unit_price_cents' => 2000,
+            ],
+        ],
+        'payments'    => [
+            [
+                'method'       => 'bank',
+                'amount_cents' => 2100, // $20.00 + 5% tax = $21.00
+                'reference'    => 'Commercial Bank of Ethiopia - FT260901',
+            ],
+        ],
+    ]);
+
+    $bankCheckout->assertStatus(201);
+    $bankReceipt = $bankCheckout->json('data.receipt_number');
+    $bankCheckout->assertJsonPath('data.payments.0.method', 'bank');
+    $bankCheckout->assertJsonPath('data.payments.0.reference', 'Commercial Bank of Ethiopia - FT260901');
+
+    // 2. Checkout with Wallet (Telebirr)
+    $walletCheckout = $this->withHeaders($headers)->postJson('http://posbw.localhost/api/pos/checkout', [
+        'session_id'  => $sessionId,
+        'location_id' => $data['location']->id,
+        'items'       => [
+            [
+                'product_id'       => $data['product']->id,
+                'quantity'         => 1,
+                'unit_price_cents' => 2000,
+            ],
+        ],
+        'payments'    => [
+            [
+                'method'       => 'wallet',
+                'amount_cents' => 2100,
+                'reference'    => 'Telebirr - TXN12345678',
+            ],
+        ],
+    ]);
+
+    $walletCheckout->assertStatus(201);
+    $walletReceipt = $walletCheckout->json('data.receipt_number');
+    $walletCheckout->assertJsonPath('data.payments.0.method', 'wallet');
+    $walletCheckout->assertJsonPath('data.payments.0.reference', 'Telebirr - TXN12345678');
+
+    // 3. Verify Receipts
+    $getReceipt = $this->withHeaders($headers)->getJson("http://posbw.localhost/api/pos/receipts/{$bankReceipt}");
+    $getReceipt->assertStatus(200);
+    $getReceipt->assertJsonPath('data.payments.0.method', 'bank');
+    $getReceipt->assertJsonPath('data.payments.0.reference', 'Commercial Bank of Ethiopia - FT260901');
+});
+

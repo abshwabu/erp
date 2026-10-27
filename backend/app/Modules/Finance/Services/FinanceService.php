@@ -178,8 +178,14 @@ class FinanceService
 
             $posTransaction->loadMissing(['payments', 'customer', 'session.terminal']);
             $firstPayment = $posTransaction->payments->first();
-            $paymentMethod = $firstPayment?->method ?? 'cash';
-            if (!in_array($paymentMethod, ['cash', 'bank_transfer', 'check', 'credit_card', 'mobile_money'], true)) {
+            $rawMethod = strtolower((string) ($firstPayment?->method ?? 'cash'));
+            if ($rawMethod === 'bank' || $rawMethod === 'card') {
+                $paymentMethod = 'bank_transfer';
+            } elseif ($rawMethod === 'wallet' || $rawMethod === 'mobile') {
+                $paymentMethod = 'mobile_money';
+            } elseif (in_array($rawMethod, ['cash', 'bank_transfer', 'check', 'credit_card', 'mobile_money'], true)) {
+                $paymentMethod = $rawMethod;
+            } else {
                 $paymentMethod = 'cash';
             }
 

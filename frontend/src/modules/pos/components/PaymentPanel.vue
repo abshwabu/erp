@@ -5,7 +5,7 @@ import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
 import { useToast } from '@/composables/useToast'
 import ReceiptModal from './ReceiptModal.vue'
-import { ArrowLeft, CheckCircle2, DollarSign, CreditCard, Smartphone, User, Search, Loader2, XCircle } from '@lucide/vue'
+import { ArrowLeft, CheckCircle2, DollarSign, Landmark, Wallet, User, Search, Loader2, XCircle, ChevronDown } from '@lucide/vue'
 
 const posStore = usePosStore()
 const queryClient = useQueryClient()
@@ -23,11 +23,55 @@ async function handleTinSearch() {
 
 const paymentMethods = [
   { id: 'cash', name: 'Cash', icon: DollarSign },
-  { id: 'card', name: 'Card', icon: CreditCard },
-  { id: 'mobile', name: 'Mobile Money', icon: Smartphone }
+  { id: 'bank', name: 'Bank', icon: Landmark },
+  { id: 'wallet', name: 'Wallet', icon: Wallet },
 ]
 
 const selectedMethod = ref('cash')
+
+const ethiopianBanks = [
+  'Commercial Bank of Ethiopia',
+  'Awash Bank',
+  'Bank of Abyssinia',
+  'Dashen Bank',
+  'Cooperative Bank of Oromia',
+  'Wegagen Bank',
+  'Hibret Bank',
+  'Nib International Bank',
+  'Lion International Bank',
+  'Zemen Bank',
+  'Oromia Bank',
+  'Bunna International Bank',
+  'Berhan Bank',
+  'Abay Bank',
+  'Addis International Bank',
+  'Enat Bank',
+  'Global Bank Ethiopia',
+  'Hijra Bank',
+  'ZamZam Bank',
+  'Siinqee Bank',
+  'Amhara Bank',
+  'Tsedey Bank',
+  'Gadaa Bank',
+  'Sidama Bank',
+  'Shabelle Bank',
+]
+
+const selectedBank = ref('Commercial Bank of Ethiopia')
+
+const ethiopianWallets = [
+  'Telebirr',
+  'M-Pesa',
+  'CBE Birr',
+  'Awash Birr',
+  'e-Birr',
+  'Coopay-Ebirr',
+  'HelloCash',
+]
+
+const selectedWallet = ref('Telebirr')
+
+const transactionReference = ref('')
 
 const subtotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -67,6 +111,12 @@ const isValid = computed(() => {
   if (selectedMethod.value === 'cash') {
     return (amountTendered.value || 0) >= grandTotal.value
   }
+  if (selectedMethod.value === 'bank') {
+    return !!selectedBank.value
+  }
+  if (selectedMethod.value === 'wallet') {
+    return !!selectedWallet.value
+  }
   return true
 })
 
@@ -90,6 +140,20 @@ async function processPayment() {
     const totalCents = Math.round(grandTotal.value * 100)
     const changeCents = Math.max(0, tenderedCents - totalCents)
 
+    const paymentMethod = selectedMethod.value
+    const refStr = transactionReference.value.trim()
+    const paymentRef = paymentMethod === 'bank'
+      ? (refStr ? `${selectedBank.value} - ${refStr}` : selectedBank.value)
+      : paymentMethod === 'wallet'
+        ? (refStr ? `${selectedWallet.value} - ${refStr}` : selectedWallet.value)
+        : (refStr || null)
+
+    const methodDisplay = paymentMethod === 'bank'
+      ? `Bank (${selectedBank.value})`
+      : paymentMethod === 'wallet'
+        ? `Wallet (${selectedWallet.value})`
+        : 'Cash'
+
     const response = await posApi.checkout({
       session_id: session.id,
       customer_id: posStore.customer.id || null,
@@ -105,9 +169,10 @@ async function processPayment() {
         unit_price_cents: Math.round((item.price || 0) * 100),
       })),
       payments: [{
-        method: selectedMethod.value,
-        amount_cents: selectedMethod.value === 'cash' ? tenderedCents : totalCents,
-        change_cents: selectedMethod.value === 'cash' ? changeCents : 0,
+        method: paymentMethod,
+        amount_cents: paymentMethod === 'cash' ? tenderedCents : totalCents,
+        change_cents: paymentMethod === 'cash' ? changeCents : 0,
+        reference: paymentRef,
       }],
     })
 
@@ -134,19 +199,21 @@ async function processPayment() {
       items: cartItems,
       subtotal: (transaction.subtotal_cents ?? Math.round(subtotal.value * 100)) / 100,
       total: (transaction.total_cents ?? totalCents) / 100,
-      method: selectedMethod.value,
-      tendered: (amountTendered.value || grandTotal.value),
-      change: changeDue.value,
+      method: methodDisplay,
+      tendered: paymentMethod === 'cash' ? (amountTendered.value || grandTotal.value) : grandTotal.value,
+      change: paymentMethod === 'cash' ? changeDue.value : 0,
       date: new Date().toLocaleString(),
       receiptNumber: transaction.receipt_number,
       company: transaction.company || null,
       customerTin: transaction.customer_tin || posStore.customer.tin || null,
       customerName: transaction.customer_name || posStore.customer.name || null,
+      reference: paymentRef || null,
     }
 
     showReceipt.value = true
     posStore.clearCart()
     posStore.clearCustomer()
+    transactionReference.value = ''
   } catch (err: any) {
     const message = err?.errors?.items?.[0]
       || err?.response?.data?.message
@@ -287,17 +354,108 @@ function handleReceiptClose() {
           <button
             v-for="method in paymentMethods"
             :key="method.id"
+            type="button"
             @click="selectedMethod = method.id"
-            class="p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 text-xs font-semibold transition-all"
+            class="p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 text-xs font-semibold transition-all cursor-pointer select-none"
             :class="[
               selectedMethod === method.id
-                ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
+                ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-500/20'
                 : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
             ]"
           >
             <component :is="method.icon" class="w-5 h-5" />
             {{ method.name }}
           </button>
+        </div>
+      </div>
+
+      <!-- Bank Selection Section -->
+      <div v-if="selectedMethod === 'bank'" class="space-y-3 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 sm:p-3.5 animate-in fade-in duration-150">
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-slate-700">
+              Select Bank
+            </label>
+            <span class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
+              Default: CBE
+            </span>
+          </div>
+
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+              <Landmark class="w-4 h-4 text-blue-600" />
+            </div>
+            <select
+              v-model="selectedBank"
+              class="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+            >
+              <option v-for="bank in ethiopianBanks" :key="bank" :value="bank">
+                {{ bank }}
+              </option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <ChevronDown class="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Transfer Reference -->
+        <div class="space-y-1 pt-2 border-t border-slate-200/70">
+          <label class="block text-[11px] font-medium text-slate-600">
+            Transfer Reference / Slip # (Optional)
+          </label>
+          <input
+            v-model="transactionReference"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. FT2609..., Check #, or Slip Ref"
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+          />
+        </div>
+      </div>
+
+      <!-- Wallet Selection Section -->
+      <div v-if="selectedMethod === 'wallet'" class="space-y-3 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 sm:p-3.5 animate-in fade-in duration-150">
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-slate-700">
+              Select Wallet Provider
+            </label>
+            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+              Default: Telebirr
+            </span>
+          </div>
+
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+              <Wallet class="w-4 h-4 text-emerald-600" />
+            </div>
+            <select
+              v-model="selectedWallet"
+              class="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+            >
+              <option v-for="wallet in ethiopianWallets" :key="wallet" :value="wallet">
+                {{ wallet }}
+              </option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <ChevronDown class="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Transaction ID -->
+        <div class="space-y-1 pt-2 border-t border-slate-200/70">
+          <label class="block text-[11px] font-medium text-slate-600">
+            Transaction ID / SMS Code (Optional)
+          </label>
+          <input
+            v-model="transactionReference"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. Telebirr Txn ID, M-Pesa Code"
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+          />
         </div>
       </div>
 
