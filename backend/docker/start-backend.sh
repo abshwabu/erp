@@ -13,9 +13,10 @@ if [ ! -L /var/www/html/public/storage ] || [ "$(readlink /var/www/html/public/s
   cd /var/www/html/public && ln -sf ../storage/app/public storage
 fi
 
-# Ensure central schema exists (fresh volumes otherwise break /api/auth/register)
+# Ensure central schema and tenant schemas exist (fresh volumes or new migrations)
 if [ -f /var/www/html/artisan ]; then
   php /var/www/html/artisan migrate --force --no-interaction >/proc/1/fd/1 2>/proc/1/fd/2 || true
+  php /var/www/html/artisan tenants:migrate --force --no-interaction >/proc/1/fd/1 2>/proc/1/fd/2 || true
 fi
 
 php-fpm -D
