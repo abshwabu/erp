@@ -405,15 +405,18 @@ const faqs = [
           </template>
         </div>
 
-        <!-- Mobile Menu Toggle -->
-        <button 
-          @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg"
-          aria-label="Toggle Menu"
-        >
-          <Menu v-if="!mobileMenuOpen" :size="20" />
-          <X v-else :size="20" />
-        </button>
+        <!-- Mobile Actions & Menu Toggle -->
+        <div class="flex items-center gap-2 sm:hidden">
+          <LanguageSwitcher variant="dark" :compact="true" />
+          <button 
+            @click="mobileMenuOpen = !mobileMenuOpen"
+            class="p-2 text-slate-400 hover:text-white rounded-lg focus:outline-none"
+            aria-label="Toggle Menu"
+          >
+            <Menu v-if="!mobileMenuOpen" :size="20" />
+            <X v-else :size="20" />
+          </button>
+        </div>
       </div>
 
       <!-- Mobile Dropdown -->
@@ -1507,7 +1510,10 @@ const faqs = [
       </div>
 
       <div class="max-w-7xl mx-auto pt-8 mt-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between text-slate-500 gap-4">
-        <div>© 2026 Bina ERP Platform. All rights reserved.</div>
+        <div class="flex items-center gap-3">
+          <span>© 2026 Bina ERP Platform. All rights reserved.</span>
+          <LanguageSwitcher variant="dark" :drop-up="true" />
+        </div>
         <div class="flex gap-6">
           <a href="#" class="hover:text-slate-400">Privacy Policy</a>
           <a href="#" class="hover:text-slate-400">Terms of Service</a>

@@ -59,11 +59,17 @@ const currentLocaleObj = computed(() => {
       :aria-expanded="isOpen"
     >
       <Globe class="w-4 h-4 shrink-0 text-blue-500" />
-      <span v-if="!compact" class="font-bold tracking-tight hidden sm:inline">{{ currentLocaleObj.name }}</span>
-      <span v-if="!compact" class="font-bold uppercase tracking-wider text-[11px] sm:hidden px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200/80">
-        {{ currentLocaleObj.flag }}
+      <span v-if="!compact" class="font-bold tracking-tight hidden sm:inline">
+        {{ currentLocaleObj.name }}
       </span>
-      <span v-else class="font-extrabold uppercase tracking-wider text-[11px] px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200/80">
+      <span
+        :class="[
+          'font-black uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded border leading-none',
+          variant === 'dark'
+            ? 'bg-blue-950/80 text-blue-300 border-blue-500/40'
+            : 'bg-blue-50 text-blue-700 border-blue-200'
+        ]"
+      >
         {{ currentLocaleObj.flag }}
       </span>
       <ChevronDown

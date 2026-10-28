@@ -42,4 +42,23 @@ const vueQueryOptions: VueQueryPluginOptions = {
 }
 app.use(VueQueryPlugin, vueQueryOptions)
 
+// Auto-activate new Service Worker updates and auto-refresh page
+if ('serviceWorker' in navigator) {
+  let refreshing = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true
+      window.location.reload()
+    }
+  })
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (reg) {
+        reg.update().catch(() => {})
+      }
+    }).catch(() => {})
+  })
+}
+
 app.mount('#app')

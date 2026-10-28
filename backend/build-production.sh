@@ -42,6 +42,24 @@ if [ -n "$FE_DIR" ]; then
     if [ -d "$FE_DIR/dist" ]; then
         rm -rf "$PROJECT_DIR/public/assets"
         cp -r "$FE_DIR/dist/"* "$PROJECT_DIR/public/"
+
+        # Ensure registerSW.js forces SW update and controller reload
+        cat << 'EOF' > "$PROJECT_DIR/public/registerSW.js"
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
+  });
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+}
+EOF
     fi
 fi
 
