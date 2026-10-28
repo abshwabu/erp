@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppLogo from '@/components/shared/AppLogo.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -377,7 +378,9 @@ const faqs = [
         </nav>
 
         <!-- Simple Right Actions -->
-        <div class="hidden sm:flex items-center gap-4">
+        <div class="hidden sm:flex items-center gap-3">
+          <LanguageSwitcher variant="dark" />
+
           <template v-if="authStore.isAuthenticated">
             <button 
               @click="navigateToDashboard"
@@ -422,6 +425,10 @@ const faqs = [
           <a @click="mobileMenuOpen = false" href="#faq" class="py-1 hover:text-white">FAQ</a>
         </nav>
         <div class="pt-3 border-t border-slate-800 flex flex-col gap-2">
+          <div class="flex items-center justify-between py-1">
+            <span class="text-xs text-slate-400 font-medium">Language / ቋንቋ</span>
+            <LanguageSwitcher variant="dark" />
+          </div>
           <template v-if="authStore.isAuthenticated">
             <button 
               @click="navigateToDashboard"

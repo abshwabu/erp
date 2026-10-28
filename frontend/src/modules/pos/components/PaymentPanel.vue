@@ -6,6 +6,7 @@ import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
 import { useToast } from '@/composables/useToast'
 import ReceiptModal from './ReceiptModal.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 import { ArrowLeft, CheckCircle2, DollarSign, Landmark, Wallet, User, Search, Loader2, XCircle, ChevronDown } from '@lucide/vue'
 
 const { t } = useI18n()
@@ -246,7 +247,10 @@ function handleReceiptClose() {
         {{ $t('common.back') }}
       </button>
 
-      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $t('pos.terminal') }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $t('pos.terminal') }}</span>
+        <LanguageSwitcher variant="light" :compact="true" />
+      </div>
     </div>
 
     <!-- Payment Body -->

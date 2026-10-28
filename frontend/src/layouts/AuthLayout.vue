@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import { CheckCircle2, ShieldCheck, Zap, BarChart3 } from '@lucide/vue'
 import AppLogo from '@/components/shared/AppLogo.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 
 const route = useRoute()
 
@@ -85,11 +86,17 @@ const highlights = [
 
     <!-- Right Form Section -->
     <div class="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 overflow-y-auto bg-slate-900/50">
-      <!-- Mobile Logo Header -->
-      <div class="lg:hidden flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
-        <router-link to="/" class="inline-flex items-center space-x-2.5">
-          <AppLogo size="md" light />
-        </router-link>
+      <!-- Top Bar with Language Switcher & Mobile Logo -->
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+        <div class="lg:hidden flex items-center">
+          <router-link to="/" class="inline-flex items-center space-x-2.5">
+            <AppLogo size="md" light />
+          </router-link>
+        </div>
+        <div class="hidden lg:block text-xs text-slate-400 font-medium">
+          {{ $t('common.language') }}
+        </div>
+        <LanguageSwitcher variant="dark" />
       </div>
 
       <!-- Auth Form Card Container -->

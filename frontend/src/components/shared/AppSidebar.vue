@@ -48,6 +48,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import AppLogo from '@/components/shared/AppLogo.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 
 const { t, te } = useI18n()
 const uiStore = useUIStore()
@@ -376,6 +377,14 @@ const filteredGroups = computed(() => {
         </div>
       </div>
     </nav>
+
+    <!-- Language Switcher at bottom of Sidebar -->
+    <div class="px-4 py-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+      <span v-if="uiStore.sidebarOpen" class="text-xs font-medium text-slate-400">
+        {{ $t('common.language') }}
+      </span>
+      <LanguageSwitcher variant="dark" :drop-up="true" :compact="!uiStore.sidebarOpen" />
+    </div>
 
     <!-- Logout at bottom -->
     <div class="p-4 border-t border-slate-800">

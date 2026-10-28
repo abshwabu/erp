@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePosStore } from '../stores/posStore'
 import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, RotateCcw, CreditCard, User, Search, Loader2 } from '@lucide/vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 
 const { t } = useI18n()
 const posStore = usePosStore()
@@ -63,15 +64,19 @@ const totalItems = computed(() => {
         </div>
       </div>
 
-      <button
-        v-if="posStore.cart.length > 0"
-        type="button"
-        @click="handleClearCart"
-        class="text-xs font-medium text-slate-400 hover:text-red-600 inline-flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
-      >
-        <RotateCcw class="w-3.5 h-3.5" />
-        {{ $t('common.clear') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <LanguageSwitcher variant="light" :compact="true" />
+
+        <button
+          v-if="posStore.cart.length > 0"
+          type="button"
+          @click="handleClearCart"
+          class="text-xs font-medium text-slate-400 hover:text-red-600 inline-flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
+        >
+          <RotateCcw class="w-3.5 h-3.5" />
+          {{ $t('common.clear') }}
+        </button>
+      </div>
     </div>
 
     <!-- Customer Bar / Inline Input (Optional) -->
