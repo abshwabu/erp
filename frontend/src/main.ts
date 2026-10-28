@@ -6,6 +6,7 @@ import { VueQueryPlugin, type VueQueryPluginOptions } from '@tanstack/vue-query'
 
 import App from './App.vue'
 import router from './router'
+import i18n from './i18n'
 import { offlineSyncService } from './services/offlineSync'
 
 const app = createApp(App)
@@ -15,6 +16,9 @@ offlineSyncService.init()
 
 // Pinia
 app.use(createPinia())
+
+// i18n Localization
+app.use(i18n)
 
 // Vue Router
 app.use(router)

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePosStore } from '../stores/posStore'
 import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, RotateCcw, CreditCard, User, Search, Loader2 } from '@lucide/vue'
 
+const { t } = useI18n()
 const posStore = usePosStore()
 const emit = defineEmits(['checkout', 'switch-to-catalog'])
 const showCustomerForm = ref(false)
@@ -13,11 +15,11 @@ async function handleTinSearch() {
 
 function handleClearCart() {
   posStore.showConfirm({
-    title: 'Clear Order Cart?',
-    message: 'Are you sure you want to remove all items from this order? This action cannot be undone.',
+    title: t('pos.clearCartTitle'),
+    message: t('pos.clearCartMessage'),
     type: 'warning',
-    confirmText: 'Clear Cart',
-    cancelText: 'Keep Items',
+    confirmText: t('pos.clearCart'),
+    cancelText: t('pos.keepItems'),
     onConfirm: () => posStore.clearCart(),
   })
 }
@@ -56,8 +58,8 @@ const totalItems = computed(() => {
           <ShoppingCart class="w-4 h-4" />
         </div>
         <div>
-          <h2 class="font-bold text-sm text-slate-900 leading-tight">Current Order</h2>
-          <p class="text-[11px] text-slate-500">{{ totalItems }} item(s) selected</p>
+          <h2 class="font-bold text-sm text-slate-900 leading-tight">{{ $t('pos.orderSummary') }}</h2>
+          <p class="text-[11px] text-slate-500">{{ $t('pos.itemsCount', { count: totalItems }) }}</p>
         </div>
       </div>
 
@@ -68,7 +70,7 @@ const totalItems = computed(() => {
         class="text-xs font-medium text-slate-400 hover:text-red-600 inline-flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
       >
         <RotateCcw class="w-3.5 h-3.5" />
-        Clear
+        {{ $t('common.clear') }}
       </button>
     </div>
 
@@ -78,7 +80,7 @@ const totalItems = computed(() => {
         <div class="flex items-center gap-1.5 min-w-0">
           <User class="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span class="font-semibold text-slate-800 truncate">
-            {{ posStore.customer.name || 'Customer' }}
+            {{ posStore.customer.name || $t('pos.customerName') }}
           </span>
           <span v-if="posStore.customer.tin" class="text-blue-700 font-mono text-[10px] bg-blue-100/70 px-1.5 py-0.5 rounded font-bold shrink-0">
             TIN: {{ posStore.customer.tin }}
@@ -90,14 +92,14 @@ const totalItems = computed(() => {
             @click="showCustomerForm = true"
             class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold"
           >
-            Edit
+            {{ $t('common.edit') }}
           </button>
           <button
             type="button"
             @click="posStore.clearCustomer"
             class="text-[11px] text-slate-400 hover:text-red-500"
           >
-            Clear
+            {{ $t('common.clear') }}
           </button>
         </div>
       </div>
@@ -109,20 +111,20 @@ const totalItems = computed(() => {
           class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
         >
           <User class="w-3.5 h-3.5 text-slate-400" />
-          <span>+ Add Customer / TIN <span class="text-[10px] text-slate-400 font-normal">(Optional)</span></span>
+          <span>+ {{ $t('pos.addCustomer') }} <span class="text-[10px] text-slate-400 font-normal">({{ $t('common.optional') }})</span></span>
         </button>
       </div>
 
       <!-- Expanded Customer Quick Entry Form -->
       <div v-else class="space-y-2 py-0.5">
         <div class="flex items-center justify-between text-[11px] font-semibold text-slate-700">
-          <span>Customer & TIN (Optional)</span>
+          <span>{{ $t('pos.customerInfo') }} ({{ $t('common.optional') }})</span>
           <button
             type="button"
             @click="showCustomerForm = false"
             class="text-blue-600 hover:text-blue-700 font-bold text-xs"
           >
-            Done
+            {{ $t('common.done') }}
           </button>
         </div>
 
@@ -132,7 +134,7 @@ const totalItems = computed(() => {
             @keydown.enter.prevent="handleTinSearch"
             type="text"
             maxlength="30"
-            placeholder="TIN (e.g. 0012345678)"
+            :placeholder="$t('pos.enterTin')"
             class="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400"
           />
           <button
@@ -144,7 +146,7 @@ const totalItems = computed(() => {
           >
             <Loader2 v-if="posStore.isLookingUpTin" class="w-3 h-3 animate-spin" />
             <Search v-else class="w-3 h-3" />
-            <span>Lookup</span>
+            <span>{{ $t('pos.lookupTin') }}</span>
           </button>
         </div>
 
@@ -152,7 +154,7 @@ const totalItems = computed(() => {
           v-model="posStore.customer.name"
           type="text"
           maxlength="255"
-          placeholder="Customer / Business name (optional)"
+          :placeholder="$t('pos.customerName') + ' (' + $t('common.optional') + ')'"
           class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-400"
         />
 
@@ -220,14 +222,14 @@ const totalItems = computed(() => {
         <div class="p-3.5 bg-slate-100 rounded-full mb-2.5 text-slate-300">
           <ShoppingCart class="w-8 h-8 sm:w-10 sm:h-10 stroke-[1.5]" />
         </div>
-        <p class="text-xs sm:text-sm font-semibold text-slate-700">Order Cart is Empty</p>
-        <p class="text-xs text-slate-400 max-w-[200px] mt-1">Tap products from the catalog to add items to this checkout order.</p>
+        <p class="text-xs sm:text-sm font-semibold text-slate-700">{{ $t('pos.cartEmpty') }}</p>
+        <p class="text-xs text-slate-400 max-w-[200px] mt-1">{{ $t('pos.cartEmptySubtitle') }}</p>
         <button
           type="button"
           @click="emit('switch-to-catalog')"
           class="mt-3 px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
         >
-          Browse Catalog
+          {{ $t('pos.browseCatalog') }}
         </button>
       </div>
     </div>
@@ -236,15 +238,15 @@ const totalItems = computed(() => {
     <div class="border-t border-slate-200/80 p-3 sm:p-4 bg-slate-50/95 shrink-0 space-y-2 sm:space-y-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
       <div class="space-y-1 sm:space-y-1.5 text-xs text-slate-600">
         <div class="flex justify-between">
-          <span>Subtotal</span>
+          <span>{{ $t('pos.subtotal') }}</span>
           <span class="font-mono text-slate-900">${{ subtotal.toFixed(2) }}</span>
         </div>
         <div class="flex justify-between">
-          <span>Estimated Tax (5%)</span>
+          <span>{{ $t('pos.tax') }}</span>
           <span class="font-mono text-slate-900">${{ taxAmount.toFixed(2) }}</span>
         </div>
         <div class="flex justify-between text-sm sm:text-base font-bold text-slate-900 pt-1.5 sm:pt-2 border-t border-slate-200">
-          <span>Total</span>
+          <span>{{ $t('pos.total') }}</span>
           <span class="font-mono text-blue-600">${{ grandTotal.toFixed(2) }}</span>
         </div>
       </div>
@@ -256,7 +258,7 @@ const totalItems = computed(() => {
         class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
       >
         <CreditCard class="w-4 h-4" />
-        <span>Charge Order (${{ grandTotal.toFixed(2) }})</span>
+        <span>{{ $t('pos.chargeAmount', { amount: '$' + grandTotal.toFixed(2) }) }}</span>
       </button>
 
       <button
@@ -266,7 +268,7 @@ const totalItems = computed(() => {
         class="w-full py-2.5 sm:py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
       >
         <ShoppingCart class="w-4 h-4 text-slate-500" />
-        <span>Cart is Empty — Browse Catalog</span>
+        <span>{{ $t('pos.cartEmpty') }} — {{ $t('pos.browseCatalog') }}</span>
       </button>
     </div>
   </div>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { resolveImageUrl } from '@/utils/format'
 import { X, Package, Check, ShoppingCart } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import { usePosStore } from '../stores/posStore'
 
+const { t } = useI18n()
 const posStore = usePosStore()
 
 const props = defineProps<{
@@ -103,7 +105,7 @@ function handleConfirm() {
       <div class="p-3.5 sm:p-5 overflow-y-auto space-y-4 flex-1 min-h-0 custom-scrollbar">
         <div>
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            Select Variant / Option
+            {{ $t('pos.selectVariant') }}
           </label>
           <div class="grid grid-cols-1 gap-2">
             <button
@@ -140,7 +142,7 @@ function handleConfirm() {
                   class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                   :class="(v.stock ?? v.available_quantity ?? 0) > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
                 >
-                  {{ (v.stock ?? v.available_quantity ?? 0) > 0 ? `${v.stock ?? v.available_quantity} in store` : 'Out of stock' }}
+                  {{ (v.stock ?? v.available_quantity ?? 0) > 0 ? $t('pos.inStock', { count: v.stock ?? v.available_quantity }) : $t('pos.outOfStock') }}
                 </span>
               </div>
             </button>
@@ -149,7 +151,7 @@ function handleConfirm() {
 
         <!-- Quantity Picker -->
         <div v-if="selectedVariant && (selectedVariant.stock ?? selectedVariant.available_quantity ?? 0) > 0" class="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-700">Quantity</span>
+          <span class="text-xs font-semibold text-slate-700">{{ $t('pos.quantity') }}</span>
           <div class="flex items-center gap-2">
             <button
               type="button"
@@ -177,7 +179,7 @@ function handleConfirm() {
           size="sm"
           @click="emit('close')"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </UiButton>
         <UiButton
           variant="primary"
@@ -187,7 +189,7 @@ function handleConfirm() {
           class="gap-1.5"
         >
           <ShoppingCart class="w-4 h-4" />
-          Add to Order
+          {{ $t('pos.viewOrder') }}
         </UiButton>
       </div>
     </div>

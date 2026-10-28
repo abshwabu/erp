@@ -7,6 +7,7 @@ import POSAlertModal from '../components/POSAlertModal.vue'
 import { usePosStore } from '../stores/posStore'
 import { ShoppingCart, Grid, Store } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 
 const posStore = usePosStore()
 const showPayment = ref(false)
@@ -75,9 +76,9 @@ function handlePaymentComplete() {
       <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
         <div class="flex items-center gap-2">
           <Store class="h-5 w-5 text-blue-600" />
-          <h2 class="text-lg font-bold text-slate-900">Choose a shop</h2>
+          <h2 class="text-lg font-bold text-slate-900">{{ $t('pos.chooseShop') }}</h2>
         </div>
-        <p class="text-sm text-slate-600">You have access to multiple shops. Select which shop to sell from.</p>
+        <p class="text-sm text-slate-600">{{ $t('pos.chooseShopSubtitle') }}</p>
         <div class="space-y-2">
           <button
             v-for="shop in posStore.availableShops"
@@ -87,7 +88,7 @@ function handlePaymentComplete() {
             @click="chooseShop(shop.id)"
           >
             <div class="font-semibold text-slate-900">{{ shop.name }}</div>
-            <div class="text-xs text-slate-500 font-mono">{{ shop.code }} · {{ shop.stock_location?.name || 'Stock location' }}</div>
+            <div class="text-xs text-slate-500 font-mono">{{ shop.code }} · {{ shop.stock_location?.name || $t('pos.stockLocation') }}</div>
           </button>
         </div>
       </div>
@@ -110,40 +111,44 @@ function handlePaymentComplete() {
           class="font-bold text-sm tracking-tight flex items-center gap-1.5 hover:text-blue-300 transition-colors"
           title="Tap to switch shop"
         >
-          <span>{{ shopName || 'POS Terminal' }}</span>
-          <span class="text-[10px] text-blue-400 font-normal underline decoration-dotted">Change</span>
+          <span>{{ shopName || $t('pos.terminal') }}</span>
+          <span class="text-[10px] text-blue-400 font-normal underline decoration-dotted">{{ $t('pos.changeShop') }}</span>
         </button>
-        <span v-else class="font-bold text-sm tracking-tight">{{ shopName || 'POS Terminal' }}</span>
+        <span v-else class="font-bold text-sm tracking-tight">{{ shopName || $t('pos.terminal') }}</span>
 
         <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
-          {{ posStore.session ? 'Session Open' : 'Starting…' }}
+          {{ posStore.session ? $t('pos.sessionOpen') : $t('pos.starting') }}
         </span>
       </div>
 
-      <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
-        <button
-          @click="activeTab = 'catalog'"
-          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer"
-          :class="[activeTab === 'catalog' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
-        >
-          <Grid class="w-3.5 h-3.5" />
-          Products
-        </button>
+      <div class="flex items-center gap-1.5">
+        <LanguageSwitcher variant="dark" :compact="true" />
 
-        <button
-          @click="activeTab = 'cart'"
-          class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all relative cursor-pointer"
-          :class="[activeTab === 'cart' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
-        >
-          <ShoppingCart class="w-3.5 h-3.5" />
-          Order
-          <span
-            v-if="totalCartItems > 0"
-            class="ml-1 bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]"
+        <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+          <button
+            @click="activeTab = 'catalog'"
+            class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer"
+            :class="[activeTab === 'catalog' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
           >
-            {{ totalCartItems }}
-          </span>
-        </button>
+            <Grid class="w-3.5 h-3.5" />
+            {{ $t('pos.productsTab') }}
+          </button>
+
+          <button
+            @click="activeTab = 'cart'"
+            class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all relative cursor-pointer"
+            :class="[activeTab === 'cart' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white']"
+          >
+            <ShoppingCart class="w-3.5 h-3.5" />
+            {{ $t('pos.orderTab') }}
+            <span
+              v-if="totalCartItems > 0"
+              class="ml-1 bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]"
+            >
+              {{ totalCartItems }}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -177,7 +182,7 @@ function handlePaymentComplete() {
       class="md:hidden absolute bottom-3 left-3 right-3 bg-slate-900 text-white p-3 rounded-2xl shadow-xl flex items-center justify-between z-30 border border-slate-700 animate-slide-up"
     >
       <div>
-        <span class="text-xs text-slate-400 block font-medium">Cart Total ({{ totalCartItems }} items)</span>
+        <span class="text-xs text-slate-400 block font-medium">{{ $t('pos.cartTotal') }} ({{ totalCartItems }})</span>
         <span class="text-lg font-bold text-emerald-400">${{ cartTotal.toFixed(2) }}</span>
       </div>
 
@@ -186,7 +191,7 @@ function handlePaymentComplete() {
         class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
       >
         <ShoppingCart class="w-4 h-4" />
-        View Order
+        {{ $t('pos.viewOrder') }}
       </button>
     </div>
 

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Printer, CheckCircle2, X } from '@lucide/vue'
 import { useTenantStore } from '@/stores/tenant'
 import { settingsApi, type TenantSettings } from '@/api/settings'
+
+const { t } = useI18n()
 
 const tenantStore = useTenantStore()
 const tenantSettings = ref<TenantSettings | null>(null)
@@ -320,8 +323,8 @@ function handlePrint() {
         </button>
 
         <CheckCircle2 class="w-9 h-9 sm:w-10 sm:h-10 mx-auto mb-1 text-emerald-200" />
-        <h3 class="font-extrabold text-base tracking-tight">Payment Successful</h3>
-        <p class="text-xs text-emerald-100">Transaction Completed</p>
+        <h3 class="font-extrabold text-base tracking-tight">{{ $t('pos.paymentSuccessful') }}</h3>
+        <p class="text-xs text-emerald-100">{{ $t('pos.transactionCompleted') }}</p>
       </div>
 
       <!-- Receipt On-Screen Preview -->
@@ -339,22 +342,22 @@ function handlePrint() {
             <span v-if="companyAddress && companyPhone"> · </span>
             <span v-if="companyPhone">Tel: {{ companyPhone }}</span>
           </div>
-          <p class="text-[10px] text-slate-400 font-sans uppercase tracking-wider mt-1.5">Official Sales Receipt / Tax Invoice</p>
+          <p class="text-[10px] text-slate-400 font-sans uppercase tracking-wider mt-1.5">{{ $t('pos.receiptTitle') }}</p>
           
           <div class="mt-2 text-[10px] text-slate-600 space-y-0.5 font-mono">
             <div class="flex justify-between">
-              <span class="text-slate-400">Receipt No:</span>
+              <span class="text-slate-400">{{ $t('pos.receiptNumber') }}:</span>
               <span class="font-bold text-slate-900">{{ orderData?.receiptNumber || 'REC-884920' }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400">Date:</span>
+              <span class="text-slate-400">{{ $t('pos.date') }}:</span>
               <span>{{ orderData?.date || new Date().toLocaleString() }}</span>
             </div>
           </div>
 
           <!-- Customer / Billed To Section if provided -->
           <div v-if="customerName || customerTin" class="mt-2.5 pt-2 border-t border-dashed border-slate-200 text-left font-sans space-y-0.5">
-            <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Customer / Billed To:</span>
+            <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">{{ $t('pos.customerInfo') }}:</span>
             <div v-if="customerName" class="font-bold text-slate-900 text-xs">{{ customerName }}</div>
             <div v-if="customerTin" class="text-slate-600 font-mono text-[11px]">TIN: {{ customerTin }}</div>
           </div>
@@ -363,9 +366,9 @@ function handlePrint() {
         <!-- Itemized List Table -->
         <div v-if="orderData?.items" class="space-y-2">
           <div class="flex justify-between font-bold text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
-            <span>Item</span>
-            <span>Qty x Price</span>
-            <span>Total</span>
+            <span>{{ $t('pos.productsTab') }}</span>
+            <span>{{ $t('pos.quantity') }} x {{ $t('pos.price') }}</span>
+            <span>{{ $t('pos.total') }}</span>
           </div>
 
           <div v-for="(item, idx) in orderData.items" :key="idx" class="flex justify-between items-start text-[11px] py-0.5">
@@ -384,30 +387,30 @@ function handlePrint() {
         <!-- Totals & Payment Summary -->
         <div class="border-t border-b border-dashed border-slate-300 py-2.5 space-y-1 text-[11px] text-slate-600">
           <div class="flex justify-between">
-            <span>Subtotal:</span>
+            <span>{{ $t('pos.subtotal') }}:</span>
             <span class="font-mono">${{ (orderData?.subtotal || 0).toFixed(2) }}</span>
           </div>
           <div class="flex justify-between font-bold text-slate-900 text-sm pt-1 border-t border-slate-100">
-            <span>TOTAL VALUE:</span>
+            <span>{{ $t('pos.total') }}:</span>
             <span class="font-mono text-blue-600">${{ (orderData?.total || 0).toFixed(2) }}</span>
           </div>
           <div class="flex justify-between text-[10px] text-slate-500 pt-1">
-            <span>Paid via {{ orderData?.method || 'Cash' }}:</span>
+            <span>{{ $t('pos.paidVia') }} {{ orderData?.method || $t('pos.cash') }}:</span>
             <span class="font-mono">${{ (orderData?.tendered || 0).toFixed(2) }}</span>
           </div>
           <div v-if="orderData?.reference" class="flex justify-between text-[10px] text-slate-500 pt-0.5">
-            <span>Payment Ref:</span>
+            <span>{{ $t('pos.paymentReference') }}:</span>
             <span class="font-mono text-slate-700 truncate max-w-[200px]">{{ orderData.reference }}</span>
           </div>
           <div v-if="orderData?.change !== undefined" class="flex justify-between text-[11px] text-emerald-600 font-bold">
-            <span>Change Due:</span>
+            <span>{{ $t('pos.change') }}:</span>
             <span class="font-mono">${{ (orderData?.change || 0).toFixed(2) }}</span>
           </div>
         </div>
 
         <!-- Footer / Branding Notice -->
         <div class="text-center pt-2 font-sans space-y-1">
-          <p class="text-[11px] font-semibold text-slate-700">Thank you for shopping with us!</p>
+          <p class="text-[11px] font-semibold text-slate-700">{{ $t('pos.thankYou') }}</p>
           <div class="border-t border-slate-200 pt-2 text-[10px] font-mono text-slate-500 font-bold">
             Powered by Bina ERP
           </div>
@@ -421,14 +424,14 @@ function handlePrint() {
           class="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
         >
           <Printer class="w-4 h-4" />
-          Print Receipt
+          {{ $t('pos.printReceipt') }}
         </button>
 
         <button
           @click="handleClose"
           class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-98 cursor-pointer"
         >
-          New Sale
+          {{ $t('pos.newOrder') }}
         </button>
       </div>
     </div>

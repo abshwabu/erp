@@ -19,6 +19,7 @@ import NavClockWidget from './NavClockWidget.vue'
 import OfflineStatusWidget from './OfflineStatusWidget.vue'
 import PlanSelectionModal from './PlanSelectionModal.vue'
 import OnboardingHelper from './OnboardingHelper.vue'
+import LanguageSwitcher from './LanguageSwitcher.vue'
 
 const uiStore = useUIStore()
 const authStore = useAuthStore()
@@ -101,6 +102,9 @@ const userMenuItems = [
 
       <!-- Quick Start / Onboarding Helper for new users -->
       <OnboardingHelper />
+
+      <!-- Language Switcher (Amharic / English) -->
+      <LanguageSwitcher />
 
       <!-- Notifications -->
       <UiDropdown align="right">

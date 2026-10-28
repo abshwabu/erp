@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { shopsApi } from '@/api/shops'
@@ -7,6 +8,9 @@ import { usePosStore } from '../stores/posStore'
 import { Search, Package, Check, Layers } from '@lucide/vue'
 import { resolveImageUrl } from '@/utils/format'
 import SelectVariantModal from './SelectVariantModal.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
+
+const { t } = useI18n()
 
 const posStore = usePosStore()
 const emit = defineEmits(['switch-shop'])
@@ -108,7 +112,7 @@ const isLoading = computed(() => isCategoriesLoading.value || isShopStockLoading
 // Safe Category List
 const categoryList = computed(() => {
   const list = Array.isArray(categories.value) ? categories.value : []
-  return [{ id: null, name: 'All Products' }, ...list]
+  return [{ id: null, name: t('pos.allCategories') }, ...list]
 })
 
 // Declarative & Non-Flickering Catalog Computed Property
@@ -235,10 +239,10 @@ function handleAddProduct(product: any) {
 
   if (product.stock <= 0) {
     posStore.showAlert({
-      title: 'Item Out of Stock',
+      title: t('pos.itemOutOfStock'),
       message: `"${product.name}" is currently out of stock at this store.`,
       type: 'warning',
-      confirmText: 'Got It',
+      confirmText: 'OK',
     })
     return
   }
@@ -248,10 +252,10 @@ function handleAddProduct(product: any) {
 
   if (currentInCart >= product.stock) {
     posStore.showAlert({
-      title: 'Stock Limit Reached',
+      title: t('pos.stockLimitReached'),
       message: `Cannot add more "${product.name}". Only ${product.stock} unit(s) are available in stock at this store!`,
       type: 'warning',
-      confirmText: 'Understood',
+      confirmText: 'OK',
     })
     return
   }
@@ -293,7 +297,7 @@ function handleVariantSelect(variant: any, quantity: number) {
           @click="emit('switch-shop')"
           class="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 px-2.5 py-2 rounded-xl transition-colors cursor-pointer"
         >
-          Switch shop
+          {{ $t('pos.switchShop') }}
         </button>
       </div>
 
@@ -302,9 +306,14 @@ function handleVariantSelect(variant: any, quantity: number) {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search products by name or SKU..."
+          :placeholder="$t('pos.searchPlaceholder')"
           class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
         />
+      </div>
+
+      <!-- Desktop Language Switcher -->
+      <div class="hidden md:flex items-center shrink-0">
+        <LanguageSwitcher variant="light" :compact="false" />
       </div>
     </div>
 
@@ -329,9 +338,9 @@ function handleVariantSelect(variant: any, quantity: number) {
         <div class="p-3 bg-slate-100 rounded-full mb-3">
           <Package class="h-8 w-8 text-slate-400 opacity-60" />
         </div>
-        <h4 class="text-sm font-semibold text-slate-700 mb-1">No products found</h4>
+        <h4 class="text-sm font-semibold text-slate-700 mb-1">{{ $t('pos.noProducts') }}</h4>
         <p class="text-xs text-slate-400 max-w-sm">
-          {{ searchQuery ? `No products match "${searchQuery}". Try a different keyword.` : 'Products will appear here once items are created in your inventory catalog.' }}
+          {{ searchQuery ? $t('pos.noProductsMatching') : 'Products will appear here once items are created in your inventory catalog.' }}
         </p>
       </div>
 
@@ -382,7 +391,7 @@ function handleVariantSelect(variant: any, quantity: number) {
               class="text-[11px] font-medium px-1.5 py-0.5 rounded"
               :class="product.stock > 0 ? 'text-slate-600 bg-slate-100' : 'text-amber-700 bg-amber-100 font-semibold'"
             >
-              {{ product.stock > 0 ? `${product.stock} in store` : 'Out of stock' }}
+              {{ product.stock > 0 ? $t('pos.inStock', { count: product.stock }) : $t('pos.outOfStock') }}
             </span>
           </div>
         </button>

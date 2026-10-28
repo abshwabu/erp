@@ -45,13 +45,85 @@ import {
 } from '@lucide/vue'
 import { ref, markRaw, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import AppLogo from '@/components/shared/AppLogo.vue'
 
+const { t, te } = useI18n()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const { hasPermission, hasModuleAccess } = usePermission()
+
+const navKeyMap: Record<string, string> = {
+  OPERATIONS: 'nav.operations',
+  'PEOPLE & CUSTOMERS': 'nav.peopleCustomers',
+  FINANCE: 'nav.finance',
+  SETTINGS: 'nav.settings',
+  Dashboard: 'nav.dashboard',
+  'Point of Sale': 'nav.pos',
+  Inventory: 'nav.inventory',
+  Products: 'nav.products',
+  'Stock Levels': 'nav.stockLevels',
+  Movements: 'nav.movements',
+  'Low Stock': 'nav.lowStock',
+  Warehouse: 'nav.warehouse',
+  Shops: 'nav.shops',
+  Procurement: 'nav.procurement',
+  Manufacturing: 'nav.manufacturing',
+  Documents: 'nav.documents',
+  'E-Commerce': 'nav.ecommerce',
+  'Sales & Invoicing': 'nav.salesInvoicing',
+  'Human Resources': 'nav.hr',
+  Employees: 'nav.employees',
+  Departments: 'nav.departments',
+  Attendance: 'nav.attendance',
+  'Leave Management': 'nav.leave',
+  'Org Chart': 'nav.orgChart',
+  'Job Opportunities': 'nav.jobs',
+  CRM: 'nav.crm',
+  Overview: 'nav.overview',
+  'Leads & Prospects': 'nav.leads',
+  'Deals & Pipeline': 'nav.deals',
+  'Contacts & Accounts': 'nav.contacts',
+  'Activities & Tasks': 'nav.activities',
+  'Lead Forms & Sources': 'nav.leadForms',
+  Payroll: 'nav.payroll',
+  Projects: 'nav.projects',
+  'Portfolio Overview': 'nav.portfolioOverview',
+  'Tasks & Kanban': 'nav.tasksKanban',
+  'Timesheets & Logs': 'nav.timesheets',
+  Milestones: 'nav.milestones',
+  Support: 'nav.support',
+  'Helpdesk Overview': 'nav.helpdeskOverview',
+  'Ticket Queue': 'nav.tickets',
+  'Knowledge Base': 'nav.knowledgeBase',
+  'Income & Expenses': 'nav.incomeExpenses',
+  Accounting: 'nav.accounting',
+  'Chart of Accounts': 'nav.chartOfAccounts',
+  Journals: 'nav.journals',
+  'Trial Balance': 'nav.trialBalance',
+  'Profit & Loss': 'nav.profitLoss',
+  'Balance Sheet': 'nav.balanceSheet',
+  'AR Aging': 'nav.arAging',
+  'AP Aging': 'nav.apAging',
+  Reporting: 'nav.reporting',
+  Assets: 'nav.assets',
+  Settings: 'nav.settings',
+  'Modules & Apps': 'nav.modulesApps',
+  'Users & Roles': 'nav.usersRoles',
+  Integrations: 'nav.integrations',
+  'Super Admin': 'nav.superAdmin',
+  Logout: 'common.logout'
+}
+
+function getNavLabel(key: string): string {
+  const i18nKey = navKeyMap[key]
+  if (i18nKey && te(i18nKey)) {
+    return t(i18nKey)
+  }
+  return key
+}
 
 const expandedItems = ref<Record<string, boolean>>({
   Inventory: true,
@@ -241,7 +313,7 @@ const filteredGroups = computed(() => {
     <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-8 custom-scrollbar">
       <div v-for="group in filteredGroups" :key="group.title">
         <h4 v-if="uiStore.sidebarOpen" class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-2">
-          {{ group.title }}
+          {{ getNavLabel(group.title) }}
         </h4>
         <div class="space-y-1">
           <template v-for="item in group.items" :key="item.name">
@@ -254,7 +326,7 @@ const filteredGroups = computed(() => {
               >
                 <div class="flex items-center">
                   <UiIcon v-if="item.icon" :icon="item.icon" :size="20" class="shrink-0" />
-                  <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
+                  <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ getNavLabel(item.name) }}</span>
                 </div>
                 <UiIcon
                   v-if="uiStore.sidebarOpen" 
@@ -266,7 +338,7 @@ const filteredGroups = computed(() => {
                 
                 <!-- Tooltip for collapsed mode -->
                 <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-slate-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
-                  {{ item.name }}
+                  {{ getNavLabel(item.name) }}
                 </div>
               </button>
               
@@ -280,7 +352,7 @@ const filteredGroups = computed(() => {
                   exact-active-class="bg-primary-600 text-white font-medium hover:bg-primary-700"
                 >
                   <UiIcon v-if="subItem.icon" :icon="subItem.icon" :size="16" class="shrink-0" />
-                  <span class="ml-3 truncate">{{ subItem.name }}</span>
+                  <span class="ml-3 truncate">{{ getNavLabel(subItem.name) }}</span>
                 </router-link>
               </div>
             </div>
@@ -293,11 +365,11 @@ const filteredGroups = computed(() => {
               exact-active-class="bg-primary-600 text-white hover:bg-primary-700"
             >
               <UiIcon v-if="item.icon" :icon="item.icon" :size="20" class="shrink-0" />
-              <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
+              <span v-if="uiStore.sidebarOpen" class="ml-3 truncate">{{ getNavLabel(item.name) }}</span>
               
               <!-- Tooltip for collapsed mode -->
               <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-slate-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
-                {{ item.name }}
+                {{ getNavLabel(item.name) }}
               </div>
             </router-link>
           </template>
@@ -313,11 +385,11 @@ const filteredGroups = computed(() => {
         :class="[!uiStore.sidebarOpen ? 'justify-center' : '']"
       >
         <UiIcon :icon="LogOut" :size="20" class="shrink-0" />
-        <span v-if="uiStore.sidebarOpen" class="ml-3 truncate font-medium">Logout</span>
+        <span v-if="uiStore.sidebarOpen" class="ml-3 truncate font-medium">{{ getNavLabel('Logout') }}</span>
         
         <!-- Tooltip for collapsed mode -->
         <div v-if="!uiStore.sidebarOpen" class="absolute left-14 bg-red-900 text-white px-2 py-1 rounded text-xs invisible group-hover:visible whitespace-nowrap z-50">
-          Logout
+          {{ getNavLabel('Logout') }}
         </div>
       </button>
     </div>

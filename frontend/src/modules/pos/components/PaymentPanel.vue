@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQueryClient } from '@tanstack/vue-query'
 import { posApi } from '@/api/pos'
 import { usePosStore } from '../stores/posStore'
@@ -7,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import ReceiptModal from './ReceiptModal.vue'
 import { ArrowLeft, CheckCircle2, DollarSign, Landmark, Wallet, User, Search, Loader2, XCircle, ChevronDown } from '@lucide/vue'
 
+const { t } = useI18n()
 const posStore = usePosStore()
 const queryClient = useQueryClient()
 const toast = useToast()
@@ -21,11 +23,11 @@ async function handleTinSearch() {
   await posStore.lookupCustomerByTin()
 }
 
-const paymentMethods = [
-  { id: 'cash', name: 'Cash', icon: DollarSign },
-  { id: 'bank', name: 'Bank', icon: Landmark },
-  { id: 'wallet', name: 'Wallet', icon: Wallet },
-]
+const paymentMethods = computed(() => [
+  { id: 'cash', name: t('pos.cash'), icon: DollarSign },
+  { id: 'bank', name: t('pos.bank'), icon: Landmark },
+  { id: 'wallet', name: t('pos.wallet'), icon: Wallet },
+])
 
 const selectedMethod = ref('cash')
 
@@ -241,10 +243,10 @@ function handleReceiptClose() {
         class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
       >
         <ArrowLeft class="w-4 h-4" />
-        Back to Order
+        {{ $t('common.back') }}
       </button>
 
-      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">POS Checkout</span>
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $t('pos.terminal') }}</span>
     </div>
 
     <!-- Payment Body -->
@@ -258,7 +260,7 @@ function handleReceiptClose() {
 
       <!-- Total Banner -->
       <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-600/15 text-center">
-        <span class="text-[11px] sm:text-xs font-medium text-blue-200 uppercase tracking-wider block mb-0.5 sm:mb-1">Total Amount Due</span>
+        <span class="text-[11px] sm:text-xs font-medium text-blue-200 uppercase tracking-wider block mb-0.5 sm:mb-1">{{ $t('pos.amountDue') }}</span>
         <span class="text-2xl sm:text-3xl font-extrabold font-mono">${{ grandTotal.toFixed(2) }}</span>
       </div>
 
@@ -267,9 +269,9 @@ function handleReceiptClose() {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
             <User class="w-4 h-4 text-slate-500" />
-            <span>Customer Details</span>
+            <span>{{ $t('pos.customerInfo') }}</span>
             <span class="text-[10px] font-normal text-slate-500 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-2xs">
-              Optional (Neither required)
+              {{ $t('common.optional') }}
             </span>
           </div>
 
@@ -280,14 +282,14 @@ function handleReceiptClose() {
             class="text-[11px] font-medium text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
           >
             <XCircle class="w-3.5 h-3.5" />
-            Clear
+            {{ $t('common.clear') }}
           </button>
         </div>
 
         <!-- Customer TIN with eTrade Lookup -->
         <div class="space-y-1">
           <label class="block text-[11px] font-medium text-slate-600">
-            Customer TIN (Tax ID)
+            {{ $t('pos.customerTin') }}
           </label>
           <div class="relative flex items-center">
             <input
@@ -295,7 +297,7 @@ function handleReceiptClose() {
               @keydown.enter.prevent="handleTinSearch"
               type="text"
               maxlength="30"
-              placeholder="e.g. 0012345678 (optional)"
+              :placeholder="$t('pos.enterTin')"
               class="w-full pl-3 pr-20 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <button
@@ -307,7 +309,7 @@ function handleReceiptClose() {
             >
               <Loader2 v-if="posStore.isLookingUpTin" class="w-3 h-3 animate-spin" />
               <Search v-else class="w-3 h-3" />
-              <span>Lookup</span>
+              <span>{{ $t('pos.lookupTin') }}</span>
             </button>
           </div>
 
@@ -331,7 +333,7 @@ function handleReceiptClose() {
         <div class="space-y-1">
           <div class="flex items-center justify-between text-[11px]">
             <label class="font-medium text-slate-600">
-              Customer / Business Name
+              {{ $t('pos.customerName') }}
             </label>
             <span v-if="posStore.customer.source === 'etrade_api'" class="text-[10px] text-emerald-600 font-semibold">
               via eTrade
@@ -341,7 +343,7 @@ function handleReceiptClose() {
             v-model="posStore.customer.name"
             type="text"
             maxlength="255"
-            placeholder="e.g. Abebe Kebede Trading (optional)"
+            :placeholder="$t('pos.customerName') + ' (' + $t('common.optional') + ')'"
             class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
           />
         </div>
@@ -349,7 +351,7 @@ function handleReceiptClose() {
 
       <!-- Payment Methods Grid -->
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Payment Method</label>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{{ $t('pos.paymentMethod') }}</label>
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="method in paymentMethods"
@@ -374,10 +376,10 @@ function handleReceiptClose() {
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="block text-xs font-semibold text-slate-700">
-              Select Bank
+              {{ $t('pos.selectBank') }}
             </label>
             <span class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
-              Default: CBE
+              {{ $t('pos.defaultCbe') }}
             </span>
           </div>
 
@@ -402,13 +404,13 @@ function handleReceiptClose() {
         <!-- Optional Transfer Reference -->
         <div class="space-y-1 pt-2 border-t border-slate-200/70">
           <label class="block text-[11px] font-medium text-slate-600">
-            Transfer Reference / Slip # (Optional)
+            {{ $t('pos.transferRef') }}
           </label>
           <input
             v-model="transactionReference"
             type="text"
             maxlength="100"
-            placeholder="e.g. FT2609..., Check #, or Slip Ref"
+            :placeholder="$t('pos.transferRefPlaceholder')"
             class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
           />
         </div>
@@ -419,10 +421,10 @@ function handleReceiptClose() {
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="block text-xs font-semibold text-slate-700">
-              Select Wallet Provider
+              {{ $t('pos.selectWallet') }}
             </label>
             <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
-              Default: Telebirr
+              {{ $t('pos.defaultTelebirr') }}
             </span>
           </div>
 
@@ -447,13 +449,13 @@ function handleReceiptClose() {
         <!-- Optional Transaction ID -->
         <div class="space-y-1 pt-2 border-t border-slate-200/70">
           <label class="block text-[11px] font-medium text-slate-600">
-            Transaction ID / SMS Code (Optional)
+            {{ $t('pos.walletTxnId') }}
           </label>
           <input
             v-model="transactionReference"
             type="text"
             maxlength="100"
-            placeholder="e.g. Telebirr Txn ID, M-Pesa Code"
+            :placeholder="$t('pos.walletTxnPlaceholder')"
             class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
           />
         </div>
@@ -461,7 +463,7 @@ function handleReceiptClose() {
 
       <!-- Cash Amount Tendered & Presets -->
       <div v-if="selectedMethod === 'cash'" class="space-y-3">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Amount Tendered ($)</label>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $t('pos.tenderedAmount') }} ($)</label>
         
         <!-- Preset Quick Cash Buttons -->
         <div class="flex flex-wrap gap-2">
@@ -480,13 +482,13 @@ function handleReceiptClose() {
           v-model.number="amountTendered"
           type="number"
           step="0.01"
-          placeholder="Enter tendered amount..."
+          placeholder="0.00"
           class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
         />
 
         <!-- Change Calculation Widget -->
         <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
-          <span class="text-slate-500 font-medium">Change Due:</span>
+          <span class="text-slate-500 font-medium">{{ $t('pos.change') }}:</span>
           <span
             class="font-mono font-bold text-sm"
             :class="[changeDue >= 0 ? 'text-emerald-600' : 'text-slate-400']"
@@ -505,8 +507,8 @@ function handleReceiptClose() {
         class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer select-none"
       >
         <CheckCircle2 class="w-4 h-4" />
-        <span v-if="isProcessing">Processing...</span>
-        <span v-else>Complete Payment (${{ grandTotal.toFixed(2) }})</span>
+        <span v-if="isProcessing">{{ $t('pos.completing') }}</span>
+        <span v-else>{{ $t('pos.completeOrder') }} (${{ grandTotal.toFixed(2) }})</span>
       </button>
     </div>
 
