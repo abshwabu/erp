@@ -5,7 +5,7 @@ import POSCart from '../components/POSCart.vue'
 import PaymentPanel from '../components/PaymentPanel.vue'
 import POSAlertModal from '../components/POSAlertModal.vue'
 import { usePosStore } from '../stores/posStore'
-import { ShoppingCart, Grid, Store } from '@lucide/vue'
+import { ShoppingCart, Grid, Store, Check, X, Loader2 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 
@@ -14,6 +14,8 @@ const showPayment = ref(false)
 const activeTab = ref<'catalog' | 'cart'>('catalog')
 const sessionError = ref('')
 const selectingShop = ref(false)
+const switchingShopId = ref<string | null>(null)
+const isSwitchingShop = computed(() => !!switchingShopId.value)
 
 const totalCartItems = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -23,7 +25,7 @@ const cartTotal = computed(() => {
   return posStore.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-const shopName = computed(() => posStore.selectedShop()?.name || '')
+const shopName = computed(() => posStore.selectedShop()?.name || posStore.session?.shop?.name || '')
 
 async function bootstrapSession() {
   sessionError.value = ''
@@ -40,13 +42,21 @@ async function bootstrapSession() {
 }
 
 async function chooseShop(shopId: string) {
-  selectingShop.value = false
+  if (posStore.selectedShopId === shopId && posStore.session?.status === 'open') {
+    selectingShop.value = false
+    return
+  }
+
   sessionError.value = ''
+  switchingShopId.value = shopId
   try {
     await posStore.selectShop(shopId)
+    selectingShop.value = false
   } catch (err: any) {
     sessionError.value = err?.message || 'Failed to open shop session'
     if (posStore.needsShopSelection) selectingShop.value = true
+  } finally {
+    switchingShopId.value = null
   }
 }
 
@@ -69,26 +79,68 @@ function handlePaymentComplete() {
 
 <template>
   <div class="h-full w-full flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden bg-slate-100 rounded-xl border border-slate-200/80 shadow-sm relative">
+    <!-- Shop Selection Modal -->
     <div
       v-if="selectingShop"
-      class="absolute inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4"
+      class="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
     >
-      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-        <div class="flex items-center gap-2">
-          <Store class="h-5 w-5 text-blue-600" />
-          <h2 class="text-lg font-bold text-slate-900">{{ $t('pos.chooseShop') }}</h2>
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Store class="h-5 w-5" />
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">{{ $t('pos.chooseShop') }}</h2>
+              <p class="text-xs text-slate-500">{{ $t('pos.chooseShopSubtitle') }}</p>
+            </div>
+          </div>
+          <button
+            v-if="!posStore.needsShopSelection"
+            type="button"
+            @click="selectingShop = false"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X class="w-5 h-5" />
+          </button>
         </div>
-        <p class="text-sm text-slate-600">{{ $t('pos.chooseShopSubtitle') }}</p>
-        <div class="space-y-2">
+
+        <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
           <button
             v-for="shop in posStore.availableShops"
             :key="shop.id"
             type="button"
-            class="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            :disabled="isSwitchingShop"
+            class="w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer disabled:opacity-60"
+            :class="[
+              posStore.selectedShopId === shop.id
+                ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-500/20'
+                : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+            ]"
             @click="chooseShop(shop.id)"
           >
-            <div class="font-semibold text-slate-900">{{ shop.name }}</div>
-            <div class="text-xs text-slate-500 font-mono">{{ shop.code }} · {{ shop.stock_location?.name || $t('pos.stockLocation') }}</div>
+            <div class="min-w-0 flex-1 pr-3">
+              <div class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <span class="truncate">{{ shop.name }}</span>
+                <span
+                  v-if="posStore.selectedShopId === shop.id"
+                  class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-600 text-white shrink-0"
+                >
+                  Active
+                </span>
+              </div>
+              <div class="text-xs text-slate-500 font-mono mt-0.5 truncate">
+                {{ shop.code }} · {{ shop.stock_location?.name || $t('pos.stockLocation') }}
+              </div>
+            </div>
+
+            <div v-if="switchingShopId === shop.id" class="shrink-0 text-blue-600">
+              <Loader2 class="w-5 h-5 animate-spin" />
+            </div>
+            <div v-else-if="posStore.selectedShopId === shop.id" class="shrink-0 text-blue-600">
+              <Check class="w-5 h-5" />
+            </div>
           </button>
         </div>
       </div>

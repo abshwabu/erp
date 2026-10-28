@@ -130,17 +130,25 @@ class POSSessionController extends BaseController
 
         $session = $query->latest('opened_at')->first();
 
-        // Fallback to any open session for this cashier if not found for specific shop
+        // If a specific shop was requested and no session was found for that shop,
+        // check only if there's an open session with NULL shop_id (legacy unassigned session) to bind to this shop.
+        // DO NOT fallback to an open session that belongs to a different shop!
         if (! $session && $shopId) {
-            $session = POSSession::with(['terminal', 'shop'])
+            $unassigned = POSSession::with(['terminal', 'shop'])
                 ->where('cashier_id', auth()->id())
                 ->where('status', 'open')
+                ->whereNull('shop_id')
                 ->latest('opened_at')
                 ->first();
+
+            if ($unassigned) {
+                $unassigned->update(['shop_id' => $shopId]);
+                $session = $unassigned->fresh()->load(['terminal', 'shop']);
+            }
         }
 
         if ($session && ! $session->shop_id && Schema::hasTable('shops')) {
-            $shop = Shop::query()->where('is_active', true)->first();
+            $shop = $shopId ? Shop::find($shopId) : Shop::query()->where('is_active', true)->first();
             if ($shop) {
                 $session->update(['shop_id' => $shop->id]);
                 $session->refresh()->load(['terminal', 'shop']);

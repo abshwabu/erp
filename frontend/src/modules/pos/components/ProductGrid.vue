@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { inventoryApi } from '@/api/inventory'
 import { shopsApi } from '@/api/shops'
 import { usePosStore } from '../stores/posStore'
-import { Search, Package, Check, Layers } from '@lucide/vue'
+import { Search, Package, Check, Layers, Store } from '@lucide/vue'
 import { resolveImageUrl } from '@/utils/format'
 import SelectVariantModal from './SelectVariantModal.vue'
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
@@ -21,7 +21,19 @@ const addedProductId = ref<string | null>(null)
 const variantModalOpen = ref(false)
 const activeModalProduct = ref<any>(null)
 
-const shopName = computed(() => posStore.selectedShop()?.name || '')
+const shopName = computed(() => posStore.selectedShop()?.name || posStore.session?.shop?.name || '')
+
+// Force refresh stock and products when active shop changes
+watch(
+  () => posStore.selectedShopId,
+  (newShopId) => {
+    if (newShopId) {
+      queryClient.invalidateQueries({ queryKey: ['shops'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'products-pos'] })
+      refetchStock()
+    }
+  }
+)
 
 let posChannel: BroadcastChannel | null = null
 
@@ -287,9 +299,10 @@ function handleVariantSelect(variant: any, quantity: number) {
     <!-- Top Search & Filter Bar with Desktop Shop Indicator -->
     <div class="flex flex-col sm:flex-row gap-2.5 mb-3 shrink-0 items-stretch sm:items-center">
       <!-- Desktop Shop Info / Switcher -->
-      <div v-if="shopName" class="hidden md:flex items-center gap-1.5 shrink-0">
-        <span class="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl shadow-xs">
-          {{ shopName }}
+      <div class="hidden md:flex items-center gap-1.5 shrink-0">
+        <span class="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl shadow-xs flex items-center gap-1.5">
+          <Store class="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          <span class="max-w-[160px] lg:max-w-[220px] truncate">{{ shopName || $t('pos.terminal') }}</span>
         </span>
         <button
           v-if="posStore.availableShops.length > 1"

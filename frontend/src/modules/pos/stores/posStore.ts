@@ -327,7 +327,18 @@ export const usePosStore = defineStore('pos', () => {
     needsShopSelection.value = false
     session.value = null
     clearCart()
-    return ensureSession()
+    const activeSession = await ensureSession()
+
+    // Broadcast shop switch to sync queries across any components or tabs
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const ch = new BroadcastChannel('pos-sync-channel')
+        ch.postMessage({ type: 'shop-changed', shopId })
+        ch.close()
+      }
+    } catch {}
+
+    return activeSession
   }
 
   const ensureSession = async () => {
@@ -350,15 +361,18 @@ export const usePosStore = defineStore('pos', () => {
     try {
       const current = await posApi.getCurrentSession(currentShopId)
       if (current.data.data) {
-        session.value = current.data.data
-        if (session.value.shop_id) {
-          selectedShopId.value = session.value.shop_id
-        } else if (shops.length > 0 && shops[0]) {
-          selectedShopId.value = shops[0].id
-          session.value.shop_id = shops[0].id
+        // Only accept if session belongs to the requested shop (or if no specific shop requested)
+        if (!currentShopId || !current.data.data.shop_id || current.data.data.shop_id === currentShopId) {
+          session.value = current.data.data
+          if (session.value.shop_id) {
+            selectedShopId.value = session.value.shop_id
+          } else if (shops.length > 0 && shops[0]) {
+            selectedShopId.value = shops[0].id
+            session.value.shop_id = shops[0].id
+          }
+          needsShopSelection.value = false
+          return session.value
         }
-        needsShopSelection.value = false
-        return session.value
       }
 
       if (shops.length === 0) {

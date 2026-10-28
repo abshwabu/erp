@@ -556,3 +556,137 @@ it('supports bank and wallet payment methods with provider and reference', funct
     $getReceipt->assertJsonPath('data.payments.0.reference', 'Commercial Bank of Ethiopia - FT260901');
 });
 
+it('allows cashier to switch shops and open sessions per shop without falling back to previous shop', function (): void {
+    $tenant = Tenant::create([
+        'name'   => 'POS Multi-Shop Tenant',
+        'slug'   => 'posswitch',
+        'status' => 'active',
+    ]);
+
+    $data = $tenant->run(function () use ($tenant) {
+        (new TenantRoleSeeder())->run();
+
+        $admin = User::create([
+            'tenant_id' => $tenant->getKey(),
+            'name'      => 'Shop Switch Admin',
+            'email'     => 'admin@switch.test',
+            'password'  => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $admin->assignRole('Admin');
+
+        $warehouse = Warehouse::create([
+            'name'      => 'Multi WH',
+            'code'      => 'MWH-01',
+            'type'      => 'own',
+            'is_active' => true,
+        ]);
+
+        $locA = StockLocation::create([
+            'warehouse_id' => $warehouse->id,
+            'name'         => 'Store A Loc',
+            'code'         => 'LOC-A',
+            'type'         => 'storage',
+            'is_active'    => true,
+        ]);
+
+        $locB = StockLocation::create([
+            'warehouse_id' => $warehouse->id,
+            'name'         => 'Store B Loc',
+            'code'         => 'LOC-B',
+            'type'         => 'storage',
+            'is_active'    => true,
+        ]);
+
+        $shopA = \App\Modules\Shops\Models\Shop::create([
+            'name'              => 'Shop Alpha',
+            'code'              => 'SHOP-A',
+            'stock_mode'        => 'own',
+            'warehouse_id'      => $warehouse->id,
+            'stock_location_id' => $locA->id,
+            'is_active'         => true,
+        ]);
+
+        $shopB = \App\Modules\Shops\Models\Shop::create([
+            'name'              => 'Shop Beta',
+            'code'              => 'SHOP-B',
+            'stock_mode'        => 'own',
+            'warehouse_id'      => $warehouse->id,
+            'stock_location_id' => $locB->id,
+            'is_active'         => true,
+        ]);
+
+        $termA = POSTerminal::create([
+            'name'        => 'Alpha Register',
+            'location_id' => $locA->id,
+            'shop_id'     => $shopA->id,
+            'is_active'   => true,
+        ]);
+
+        $termB = POSTerminal::create([
+            'name'        => 'Beta Register',
+            'location_id' => $locB->id,
+            'shop_id'     => $shopB->id,
+            'is_active'   => true,
+        ]);
+
+        return [
+            'admin' => $admin,
+            'shopA' => $shopA,
+            'shopB' => $shopB,
+            'termA' => $termA,
+            'termB' => $termB,
+        ];
+    });
+
+    $loginResponse = $this->postJson('http://posswitch.localhost/api/auth/login', [
+        'email'    => 'admin@switch.test',
+        'password' => 'password123',
+    ]);
+    $token = $loginResponse->json('access_token');
+    $headers = ['Authorization' => "Bearer {$token}"];
+
+    // 1. Open session in Shop A
+    $openA = $this->withHeaders($headers)->postJson('http://posswitch.localhost/api/pos/sessions/open', [
+        'terminal_id'        => $data['termA']->id,
+        'shop_id'            => $data['shopA']->id,
+        'opening_cash_cents' => 5000,
+    ]);
+    $openA->assertStatus(201);
+    $sessionAId = $openA->json('data.id');
+    expect($openA->json('data.shop_id'))->toBe($data['shopA']->id);
+
+    // 2. Query current session for Shop A -> returns Session A
+    $currA = $this->withHeaders($headers)->getJson("http://posswitch.localhost/api/pos/sessions/current?shop_id={$data['shopA']->id}");
+    $currA->assertStatus(200);
+    expect($currA->json('data.id'))->toBe($sessionAId);
+    expect($currA->json('data.shop_id'))->toBe($data['shopA']->id);
+
+    // 3. Query current session for Shop B (which has no session yet) -> MUST return null, NOT Session A!
+    $currB = $this->withHeaders($headers)->getJson("http://posswitch.localhost/api/pos/sessions/current?shop_id={$data['shopB']->id}");
+    $currB->assertStatus(200);
+    expect($currB->json('data'))->toBeNull();
+
+    // 4. Open session in Shop B
+    $openB = $this->withHeaders($headers)->postJson('http://posswitch.localhost/api/pos/sessions/open', [
+        'terminal_id'        => $data['termB']->id,
+        'shop_id'            => $data['shopB']->id,
+        'opening_cash_cents' => 10000,
+    ]);
+    $openB->assertStatus(201);
+    $sessionBId = $openB->json('data.id');
+    expect($sessionBId)->not->toBe($sessionAId);
+    expect($openB->json('data.shop_id'))->toBe($data['shopB']->id);
+
+    // 5. Switching back: Query Shop A returns Session A, Query Shop B returns Session B
+    $checkA = $this->withHeaders($headers)->getJson("http://posswitch.localhost/api/pos/sessions/current?shop_id={$data['shopA']->id}");
+    $checkA->assertStatus(200);
+    expect($checkA->json('data.id'))->toBe($sessionAId);
+    expect($checkA->json('data.shop_id'))->toBe($data['shopA']->id);
+
+    $checkB = $this->withHeaders($headers)->getJson("http://posswitch.localhost/api/pos/sessions/current?shop_id={$data['shopB']->id}");
+    $checkB->assertStatus(200);
+    expect($checkB->json('data.id'))->toBe($sessionBId);
+    expect($checkB->json('data.shop_id'))->toBe($data['shopB']->id);
+});
+
