@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import { Plus, Folder, FileText, ChevronRight, ChevronDown, Edit2, Trash2 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -12,6 +13,7 @@ import type { ProductCategory } from '@/types/inventory'
 
 const queryClient = useQueryClient()
 const toast = useToast()
+const { t } = useI18n()
 
 const { data: categories, isLoading } = useQuery({
   queryKey: ['inventory', 'categories'],
@@ -43,7 +45,7 @@ const createMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
     isAdding.value = false
     newCategoryName.value = ''
-    toast.success('Category created')
+    toast.success(t('inventory.categoryCreatedSuccess'))
   },
   onError: (err: any) => {
     toast.error(err?.response?.data?.message || 'Failed to create category')
@@ -56,7 +58,7 @@ const deleteMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['inventory', 'categories'] })
     isDeleteModalOpen.value = false
     categoryToDelete.value = null
-    toast.success('Category deleted')
+    toast.success(t('inventory.categoryDeletedSuccess'))
   },
   onError: (err: any) => {
     toast.error(err?.response?.data?.message || 'Failed to delete category')
@@ -83,18 +85,18 @@ const confirmDelete = () => {
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-lg font-medium">Categories</h3>
+      <h3 class="text-lg font-medium">{{ $t('inventory.categories') }}</h3>
       <UiButton size="sm" @click="isAdding = true">
         <Plus class="h-4 w-4 mr-1" />
-        Add Category
+        {{ $t('inventory.createCategory') }}
       </UiButton>
     </div>
 
     <div v-if="isAdding" class="p-4 border rounded-lg bg-slate-50 space-y-3">
-      <UiInput v-model="newCategoryName" label="Category Name" placeholder="e.g. Electronics" />
+      <UiInput v-model="newCategoryName" :label="$t('inventory.categoryName')" :placeholder="$t('inventory.categoryNamePlaceholder')" />
       <div class="flex justify-end space-x-2">
-        <UiButton variant="ghost" size="sm" @click="isAdding = false">Cancel</UiButton>
-        <UiButton size="sm" @click="handleAdd" :loading="createMutation.isPending.value">Save Category</UiButton>
+        <UiButton variant="ghost" size="sm" @click="isAdding = false">{{ $t('inventory.cancel') }}</UiButton>
+        <UiButton size="sm" @click="handleAdd" :loading="createMutation.isPending.value">{{ $t('inventory.save') }}</UiButton>
       </div>
     </div>
 
@@ -129,7 +131,7 @@ const confirmDelete = () => {
                   type="button"
                   @click.stop="openDeleteConfirm(category)"
                   class="p-1 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                  title="Delete category"
+                  :title="$t('inventory.delete')"
                 >
                   <Trash2 class="h-3.5 w-3.5" />
                 </button>
@@ -152,27 +154,27 @@ const confirmDelete = () => {
       </div>
     </div>
     <div v-else class="text-center py-8 text-slate-500 border rounded-lg border-dashed">
-      No categories found.
+      {{ $t('inventory.noProductsFound') }}
     </div>
 
     <!-- Category Delete Confirmation Modal -->
-    <UiModal v-model="isDeleteModalOpen" title="Delete Category" size="sm">
+    <UiModal v-model="isDeleteModalOpen" :title="$t('inventory.deleteCategoryTitle')" size="sm">
       <div v-if="categoryToDelete" class="space-y-4">
         <div class="flex items-start gap-3.5 p-3.5 bg-red-50/80 border border-red-200 rounded-2xl">
           <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
             <Trash2 class="w-5 h-5" />
           </div>
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-red-950">Delete Category</h4>
+            <h4 class="text-sm font-bold text-red-950">{{ $t('inventory.deleteCategoryTitle') }}</h4>
             <p class="text-xs text-red-800 leading-relaxed">
-              Are you sure you want to delete category <strong>{{ categoryToDelete.name }}</strong>?
+              {{ $t('inventory.deleteCategoryMessage', { name: categoryToDelete.name }) }}
             </p>
           </div>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
           <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">
-            Cancel
+            {{ $t('inventory.cancel') }}
           </UiButton>
           <UiButton
             variant="danger"
@@ -181,7 +183,7 @@ const confirmDelete = () => {
             @click="confirmDelete"
           >
             <Trash2 class="w-3.5 h-3.5 mr-1" />
-            Delete
+            {{ $t('inventory.delete') }}
           </UiButton>
         </div>
       </div>

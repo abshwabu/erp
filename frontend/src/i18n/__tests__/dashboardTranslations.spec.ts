@@ -3,15 +3,30 @@ import enDashboard from '../locales/en/dashboard'
 import amDashboard from '../locales/am/dashboard'
 import enOnboarding from '../locales/en/onboarding'
 import amOnboarding from '../locales/am/onboarding'
+import enInventory from '../locales/en/inventory'
+import amInventory from '../locales/am/inventory'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard and onboarding in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, and inventory in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
     expect(am.onboarding).toBeDefined()
+    expect(en.inventory).toBeDefined()
+    expect(am.inventory).toBeDefined()
+  })
+
+  it('has identical keys for inventory in en and am', () => {
+    const enKeys = Object.keys(enInventory).sort()
+    const amKeys = Object.keys(amInventory).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    for (const key of enKeys) {
+      expect((enInventory as any)[key]).toBeTruthy()
+      expect((amInventory as any)[key]).toBeTruthy()
+    }
   })
 
   it('has identical keys for dashboard in en and am', () => {

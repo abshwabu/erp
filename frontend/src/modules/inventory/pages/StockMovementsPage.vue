@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import { Search, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Package, User as UserIcon } from '@lucide/vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -10,6 +11,7 @@ import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import type { MovementFilters } from '@/types/inventory'
 
+const { t, te, locale } = useI18n()
 const page = ref(1)
 const filters = reactive<MovementFilters>({
   search: '',
@@ -36,15 +38,29 @@ const { data: locations } = useQuery({
   queryFn: () => inventoryApi.getLocations().then((res) => res.data),
 })
 
-const columns = [
-  { key: 'created_at', label: 'Date & Time' },
-  { key: 'product_name', label: 'Product' },
-  { key: 'type', label: 'Movement Type' },
-  { key: 'location', label: 'Location' },
-  { key: 'quantity', label: 'Quantity', align: 'right' as const },
-  { key: 'reference', label: 'Reference' },
-  { key: 'user_name', label: 'User' },
-]
+const columns = computed(() => [
+  { key: 'created_at', label: t('inventory.dateTime') },
+  { key: 'product_name', label: t('inventory.products') },
+  { key: 'type', label: t('inventory.movementType') },
+  { key: 'location', label: t('inventory.warehouse') },
+  { key: 'quantity', label: t('inventory.quantity'), align: 'right' as const },
+  { key: 'reference', label: t('inventory.reference') },
+  { key: 'user_name', label: t('inventory.user') },
+])
+
+const typeFilterOptions = computed(() => [
+  { label: t('inventory.allTypes'), value: '' },
+  { label: t('inventory.movementTypes.opening'), value: 'opening' },
+  { label: t('inventory.movementTypes.receive'), value: 'receive' },
+  { label: t('inventory.movementTypes.sale'), value: 'sale' },
+  { label: t('inventory.movementTypes.adjustment'), value: 'adjustment' },
+  { label: t('inventory.movementTypes.transfer'), value: 'transfer' },
+])
+
+const locationFilterOptions = computed(() => [
+  { label: t('inventory.allLocations'), value: '' },
+  ...(Array.isArray(locations.value) ? locations.value.map((l: any) => ({ label: l.name, value: l.id })) : []),
+])
 
 const getMovementVariant = (type: string) => {
   if (['sale', 'issue', 'adjustment'].includes(type) && type !== 'receive') {
@@ -55,8 +71,11 @@ const getMovementVariant = (type: string) => {
   return 'default'
 }
 
-const formatType = (type: string) =>
-  type?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) || 'Movement'
+const formatType = (type: string) => {
+  const key = `inventory.movementTypes.${type}`
+  if (te(key)) return t(key)
+  return type?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) || t('inventory.stockMovements')
+}
 
 const locationLabel = (item: any) => {
   if (item.direction === 'transfer') {
@@ -70,13 +89,13 @@ const locationLabel = (item: any) => {
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900">Stock Movements</h1>
-      <p class="text-slate-500 text-sm">Audit trail of receipts, sales, transfers, and adjustments.</p>
+      <h1 class="text-2xl font-bold text-slate-900">{{ $t('inventory.stockMovements') }}</h1>
+      <p class="text-slate-500 text-sm">{{ $t('inventory.stockMovementsSubtitle') }}</p>
     </div>
 
     <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
       <div class="lg:col-span-2">
-        <UiInput v-model="filters.search" label="Search" placeholder="Product name or SKU">
+        <UiInput v-model="filters.search" :label="$t('common.search')" :placeholder="$t('inventory.searchMovementsPlaceholder')">
           <template #prefix>
             <Search class="h-4 w-4 text-slate-400" />
           </template>
@@ -85,32 +104,22 @@ const locationLabel = (item: any) => {
       <div>
         <UiSelect
           v-model="filters.type"
-          label="Type"
-          :options="[
-            { label: 'All Types', value: '' },
-            { label: 'Opening', value: 'opening' },
-            { label: 'Receive', value: 'receive' },
-            { label: 'Sale', value: 'sale' },
-            { label: 'Adjustment', value: 'adjustment' },
-            { label: 'Transfer', value: 'transfer' },
-          ]"
+          :label="$t('inventory.movementType')"
+          :options="typeFilterOptions"
         />
       </div>
       <div>
         <UiSelect
           v-model="filters.location_id"
-          label="Location"
-          :options="[
-            { label: 'All Locations', value: '' },
-            ...(Array.isArray(locations) ? locations.map((l) => ({ label: l.name, value: l.id })) : []),
-          ]"
+          :label="$t('inventory.warehouse')"
+          :options="locationFilterOptions"
         />
       </div>
       <div>
-        <UiInput v-model="filters.start_date" type="date" label="From" />
+        <UiInput v-model="filters.start_date" type="date" :label="$t('inventory.dateFrom')" />
       </div>
       <div>
-        <UiInput v-model="filters.end_date" type="date" label="To" />
+        <UiInput v-model="filters.end_date" type="date" :label="$t('inventory.dateTo')" />
       </div>
     </div>
 
@@ -118,12 +127,12 @@ const locationLabel = (item: any) => {
       :columns="columns"
       :data="data?.data || []"
       :loading="isLoading"
-      empty-title="No stock movements yet"
-      empty-description="Movements appear when you receive, sell, transfer, or adjust stock."
+      :empty-title="$t('inventory.noMovementsYet')"
+      :empty-description="$t('inventory.noMovementsDescription')"
     >
       <template #cell(created_at)="{ value }">
         <div class="text-xs text-slate-600 font-mono">
-          <div class="font-bold text-slate-800">{{ value ? new Date(value).toLocaleDateString() : '—' }}</div>
+          <div class="font-bold text-slate-800">{{ value ? new Date(value).toLocaleDateString(locale === 'am' ? 'am-ET' : undefined) : '—' }}</div>
           <div class="text-slate-400">
             {{ value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '' }}
           </div>
@@ -190,14 +199,14 @@ const locationLabel = (item: any) => {
       <template #cell(user_name)="{ value }">
         <div class="flex items-center text-xs text-slate-600 font-medium">
           <UserIcon class="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-          {{ value || 'System' }}
+          {{ value || $t('inventory.system') }}
         </div>
       </template>
     </UiTable>
 
     <div v-if="data?.meta" class="flex justify-between items-center">
       <p class="text-sm text-slate-500">
-        Showing {{ data.meta.from ?? 0 }}–{{ data.meta.to ?? 0 }} of {{ data.meta.total }} movements
+        {{ $t('inventory.showingPagination', { from: data.meta.from ?? 0, to: data.meta.to ?? 0, total: data.meta.total, items: $t('inventory.stockMovements') }) }}
       </p>
       <UiPagination
         :current-page="page"

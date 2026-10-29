@@ -2,6 +2,7 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import {
   X,
@@ -56,6 +57,7 @@ interface ImageItem {
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'saved'])
 
+const { t, locale } = useI18n()
 const queryClient = useQueryClient()
 const isEdit = computed(() => !!props.product)
 const isCreateCategoryModalOpen = ref(false)
@@ -65,7 +67,7 @@ const isDragging = ref(false)
 const categoryOptions = computed(() => {
   const list = Array.isArray(props.categories) ? props.categories : []
   return [
-    { label: 'Uncategorized / General', value: '' },
+    { label: t('inventory.generalInfo.uncategorized'), value: '' },
     ...list.map((c) => ({ label: c.name, value: c.id })),
   ]
 })
@@ -438,12 +440,12 @@ const handleSubmit = () => {
   mutation.mutate()
 }
 
-const tabs = [
-  { id: 'general', label: 'General Info', icon: Package },
-  { id: 'pricing', label: 'Pricing & Margins', icon: DollarSign },
-  { id: 'variants', label: 'Variant Matrix', icon: Layers },
-  { id: 'media', label: 'Media Assets', icon: ImageIcon },
-]
+const tabs = computed(() => [
+  { id: 'general', label: t('inventory.tabs.general'), icon: Package },
+  { id: 'pricing', label: t('inventory.tabs.pricing'), icon: DollarSign },
+  { id: 'variants', label: t('inventory.tabs.variants'), icon: Layers },
+  { id: 'media', label: t('inventory.tabs.media'), icon: ImageIcon },
+])
 
 function handleCategoryCreated(newCat: any) {
   if (newCat?.id) {
@@ -456,7 +458,7 @@ function handleCategoryCreated(newCat: any) {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    :title="isEdit ? 'Edit Product' : 'Add New Product'"
+    :title="isEdit ? $t('inventory.editProductTitle') : $t('inventory.addProductTitle')"
     size="2xl"
   >
     <form id="productForm" @submit.prevent="handleSubmit" class="space-y-4">
@@ -738,21 +740,21 @@ function handleCategoryCreated(newCat: any) {
 
                   <div class="grid grid-cols-3 gap-3 text-center">
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
-                      <span class="text-[10px] text-slate-300 uppercase font-bold block">Profit / Unit</span>
+                      <span class="text-[10px] text-slate-300 uppercase font-bold block">{{ $t('inventory.pricingInfo.profitPerUnit') }}</span>
                       <span class="text-base sm:text-lg font-black text-emerald-400">
-                        ${{ profitPerUnit.toFixed(2) }}
+                        {{ locale === 'am' ? `${profitPerUnit.toFixed(2)} ብር` : `$${profitPerUnit.toFixed(2)}` }}
                       </span>
                     </div>
 
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
-                      <span class="text-[10px] text-slate-300 uppercase font-bold block">Profit Margin</span>
+                      <span class="text-[10px] text-slate-300 uppercase font-bold block">{{ $t('inventory.pricingInfo.grossMargin') }}</span>
                       <span :class="['text-base sm:text-lg font-black', marginPct >= 20 ? 'text-emerald-400' : 'text-amber-400']">
                         {{ marginPct }}%
                       </span>
                     </div>
 
                     <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">
-                      <span class="text-[10px] text-slate-300 uppercase font-bold block">Markup %</span>
+                      <span class="text-[10px] text-slate-300 uppercase font-bold block">{{ $t('inventory.pricingInfo.markup') }}</span>
                       <span class="text-base sm:text-lg font-black text-blue-300">
                         {{ markupPct }}%
                       </span>
@@ -1090,7 +1092,7 @@ function handleCategoryCreated(newCat: any) {
 
         <div class="flex items-center space-x-2">
           <UiButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
-            Cancel
+            {{ $t('inventory.cancel') }}
           </UiButton>
           <UiButton
             type="submit"
@@ -1100,7 +1102,7 @@ function handleCategoryCreated(newCat: any) {
             class="shadow-sm font-bold"
           >
             <Check class="w-4 h-4 mr-1.5" />
-            {{ isEdit ? 'Save Changes' : 'Create Product' }}
+            {{ isEdit ? $t('common.save') : $t('inventory.newProduct') }}
           </UiButton>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -13,6 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'created'])
 const queryClient = useQueryClient()
+const { t } = useI18n()
 
 const form = reactive({
   name: '',
@@ -64,7 +66,7 @@ function handleSubmit() {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Create Product Category"
+    :title="$t('inventory.createCategory')"
     size="md"
   >
     <form @submit.prevent="handleSubmit" class="space-y-5 py-1">
@@ -74,8 +76,8 @@ function handleSubmit() {
           <FolderPlus class="w-5 h-5" />
         </div>
         <div>
-          <h4 class="text-xs font-bold text-blue-950 uppercase tracking-wide">Category Classification</h4>
-          <p class="text-xs text-blue-700/80">Group products together for organized POS checkouts and ecommerce collections.</p>
+          <h4 class="text-xs font-bold text-blue-950 uppercase tracking-wide">{{ $t('inventory.categoryClassification') }}</h4>
+          <p class="text-xs text-blue-700/80">{{ $t('inventory.categoryHelp') }}</p>
         </div>
       </div>
 
@@ -89,23 +91,23 @@ function handleSubmit() {
       <div class="space-y-1.5">
         <UiInput
           v-model="form.name"
-          label="Category Name"
-          placeholder="e.g. Beverages, Footwear, Electronics, Fresh Produce"
+          :label="$t('inventory.categoryName')"
+          :placeholder="$t('inventory.categoryNamePlaceholder')"
           required
         />
         <div v-if="generatedSlug" class="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono pl-1">
-          <span>Slug Preview:</span>
+          <span>{{ $t('inventory.slugPreview') }}</span>
           <span class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{{ generatedSlug }}</span>
         </div>
       </div>
 
       <!-- Description Input -->
       <div class="space-y-1.5">
-        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Description (Optional)</label>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">{{ $t('inventory.generalInfo.descriptionLabel') }}</label>
         <textarea
           v-model="form.description"
           rows="3"
-          placeholder="Add short notes or description for this product group..."
+          :placeholder="$t('inventory.generalInfo.descriptionPlaceholder')"
           class="block w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors shadow-2xs"
         ></textarea>
       </div>
@@ -114,7 +116,7 @@ function handleSubmit() {
     <template #footer>
       <div class="flex items-center justify-end space-x-2 pt-2">
         <UiButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
-          Cancel
+          {{ $t('inventory.cancel') }}
         </UiButton>
         <UiButton
           type="button"
@@ -124,7 +126,7 @@ function handleSubmit() {
           class="shadow-sm"
         >
           <Tag class="w-3.5 h-3.5 mr-1.5" />
-          Create Category
+          {{ $t('inventory.createCategory') }}
         </UiButton>
       </div>
     </template>

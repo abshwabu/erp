@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -18,6 +19,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'saved'])
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const errorMsg = ref('')
 
@@ -121,13 +123,27 @@ const locationOptions = computed(() => {
         : null
       const qty = level ? (level.available_quantity ?? level.quantity_on_hand ?? 0) : 0
       return {
-        label: `${loc.name} (${qty} in stock)`,
+        label: `${loc.name} (${qty} ${t('inventory.inStock')})`,
         value: loc.id
       }
     })
   }
-  return [{ label: 'Main Warehouse (WH-MAIN)', value: '' }]
+  return [{ label: `${t('inventory.mainWarehouse')} (WH-MAIN)`, value: '' }]
 })
+
+const typeOptions = computed(() => [
+  { label: t('inventory.addStock'), value: 'add' },
+  { label: t('inventory.removeStock'), value: 'remove' }
+])
+
+const reasonOptions = computed(() => [
+  { label: t('inventory.reasons.stock_take'), value: 'stock_take' },
+  { label: t('inventory.reasons.damage'), value: 'damaged' },
+  { label: t('inventory.reasons.correction'), value: 'correction' },
+  { label: t('inventory.reasons.loss'), value: 'loss' },
+  { label: t('inventory.reasons.internal'), value: 'internal' },
+  { label: t('inventory.reasons.other'), value: 'other' }
+])
 
 watch([products, locations, productStockLevels, () => props.productId, () => props.locationId, () => props.variantId], () => {
   if (props.productId) {
@@ -209,7 +225,7 @@ const handleSubmit = () => {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Stock Adjustment"
+    :title="$t('inventory.adjustmentModalTitle')"
     size="md"
   >
     <form @submit.prevent="handleSubmit" class="space-y-4">
@@ -219,7 +235,7 @@ const handleSubmit = () => {
 
       <UiSelect
         v-model="form.productId"
-        label="Product"
+        :label="$t('inventory.products')"
         :options="Array.isArray(products) ? products.map((p: any) => ({ label: p.name, value: p.id })) : []"
         required
         :disabled="!!productId"
@@ -228,7 +244,7 @@ const handleSubmit = () => {
       <UiSelect
         v-if="hasVariants"
         v-model="form.variantId"
-        label="Variant"
+        :label="$t('inventory.variantInfo.variantName')"
         :options="variantOptions"
         required
       />
@@ -236,29 +252,26 @@ const handleSubmit = () => {
       <div class="space-y-1">
         <UiSelect
           v-model="form.locationId"
-          label="Location"
+          :label="$t('inventory.warehouse')"
           :options="locationOptions"
           required
         />
         <div v-if="form.locationId" class="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
           <Info class="w-3.5 h-3.5 text-blue-500 shrink-0" />
-          <span>Selected Location Stock: <strong class="text-slate-900 font-mono">{{ currentLocationStock }} units</strong> (Total across all locations: {{ totalStockAllLocations }} units)</span>
+          <span>{{ $t('inventory.currentStock', { count: currentLocationStock }) }} ({{ totalStockAllLocations }} {{ $t('inventory.inStock') }})</span>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <UiSelect
           v-model="form.type"
-          label="Adjustment Type"
-          :options="[
-            { label: 'Add Stock (+)', value: 'add' },
-            { label: 'Remove Stock (-)', value: 'remove' }
-          ]"
+          :label="$t('inventory.adjustmentType')"
+          :options="typeOptions"
         />
         <UiInput
           v-model.number="form.quantity"
           type="number"
-          label="Quantity"
+          :label="$t('inventory.quantity')"
           min="1"
           required
         />
@@ -266,31 +279,26 @@ const handleSubmit = () => {
 
       <UiSelect
         v-model="form.reason"
-        label="Reason"
-        :options="[
-          { label: 'Stock Take', value: 'stock_take' },
-          { label: 'Damaged', value: 'damaged' },
-          { label: 'Correction', value: 'correction' },
-          { label: 'Return', value: 'return' }
-        ]"
+        :label="$t('inventory.adjustmentReason')"
+        :options="reasonOptions"
         required
       />
 
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Notes</label>
+        <label class="block text-sm font-medium text-slate-700">{{ $t('inventory.reference') }}</label>
         <textarea
           v-model="form.notes"
           rows="3"
           class="block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          placeholder="Optional notes..."
+          :placeholder="$t('inventory.notesPlaceholder')"
         ></textarea>
       </div>
     </form>
 
     <template #footer>
-      <UiButton variant="ghost" @click="emit('update:modelValue', false)" class="mr-2">Cancel</UiButton>
+      <UiButton variant="ghost" @click="emit('update:modelValue', false)" class="mr-2">{{ $t('inventory.cancel') }}</UiButton>
       <UiButton :loading="mutation.isPending.value" @click="handleSubmit">
-        Apply Adjustment
+        {{ $t('inventory.adjustStock') }}
       </UiButton>
     </template>
   </UiModal>

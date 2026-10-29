@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api/inventory'
 import {
   Plus,
@@ -26,6 +27,7 @@ import ExportModal from '../components/ExportModal.vue'
 import { formatCurrency } from '@/utils/format'
 import type { Product } from '@/types/inventory'
 
+const { t, locale } = useI18n()
 const page = ref(1)
 const filters = reactive({
   search: '',
@@ -70,16 +72,29 @@ const openAdjustment = (productId?: string) => {
   isAdjustmentModalOpen.value = true
 }
 
-const columns = [
-  { key: 'product', label: 'Product' },
+const formatMoney = (cents: number) => {
+  const val = (cents || 0) / 100
+  if (locale.value === 'am') {
+    return (
+      new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(val) + ' ብር'
+    )
+  }
+  return formatCurrency(val)
+}
+
+const columns = computed(() => [
+  { key: 'product', label: t('inventory.products') },
   { key: 'sku', label: 'SKU' },
-  { key: 'quantity_on_hand', label: 'On Hand', align: 'center' as const },
-  { key: 'quantity_committed', label: 'Committed', align: 'center' as const },
-  { key: 'available_quantity', label: 'Available', align: 'center' as const },
-  { key: 'value', label: 'Stock Value', align: 'right' as const },
-  { key: 'status', label: 'Status', align: 'center' as const },
+  { key: 'quantity_on_hand', label: t('inventory.onHand'), align: 'center' as const },
+  { key: 'quantity_committed', label: t('inventory.committed'), align: 'center' as const },
+  { key: 'available_quantity', label: t('inventory.available'), align: 'center' as const },
+  { key: 'value', label: t('inventory.stockValue'), align: 'right' as const },
+  { key: 'status', label: t('inventory.generalInfo.statusLabel'), align: 'center' as const },
   { key: 'actions', label: '', align: 'right' as const },
-]
+])
 
 const rows = computed(() => {
   const list = data.value?.data
@@ -104,15 +119,15 @@ const stats = computed(() => {
   const outOfStockCount = list.filter((item) => item.isOut).length
 
   return [
-    { label: 'Products', value: totalProducts, icon: Package },
+    { label: t('inventory.products'), value: totalProducts, icon: Package },
     {
-      label: 'Page Stock Value',
-      value: formatCurrency(totalValCents / 100),
+      label: t('inventory.pageStockValue'),
+      value: formatMoney(totalValCents),
       icon: Layers,
     },
-    { label: 'Out of Stock (page)', value: outOfStockCount, icon: TrendingDown },
+    { label: t('inventory.outOfStock'), value: outOfStockCount, icon: TrendingDown },
     {
-      label: 'Locations',
+      label: t('inventory.warehouse'),
       value: Array.isArray(locations.value) ? locations.value.length : 0,
       icon: AlertTriangle,
     },
@@ -124,18 +139,18 @@ const stats = computed(() => {
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Stock Levels</h1>
-        <p class="text-slate-500 text-sm">Monitor quantity on hand across locations.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ $t('inventory.stockLevels') }}</h1>
+        <p class="text-slate-500 text-sm">{{ $t('inventory.stockLevelsSubtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton variant="outline" size="sm" @click="isImportModalOpen = true">
-          <FileSpreadsheet class="h-4 w-4 mr-1.5 text-emerald-600" /> Import Spreadsheet
+          <FileSpreadsheet class="h-4 w-4 mr-1.5 text-emerald-600" /> {{ $t('inventory.importSpreadsheet') }}
         </UiButton>
         <UiButton variant="outline" size="sm" @click="isExportModalOpen = true">
-          <Download class="h-4 w-4 mr-1.5 text-blue-600" /> Export
+          <Download class="h-4 w-4 mr-1.5 text-blue-600" /> {{ $t('inventory.exportData') }}
         </UiButton>
         <UiButton size="sm" @click="openAdjustment()">
-          <Plus class="h-4 w-4 mr-2" /> Adjust Stock
+          <Plus class="h-4 w-4 mr-2" /> {{ $t('inventory.adjustStock') }}
         </UiButton>
       </div>
     </div>
@@ -152,7 +167,7 @@ const stats = computed(() => {
 
     <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
       <div class="flex-1 min-w-[240px]">
-        <UiInput v-model="filters.search" placeholder="Search by name or SKU...">
+        <UiInput v-model="filters.search" :placeholder="$t('inventory.searchProductsPlaceholder')">
           <template #prefix>
             <Search class="h-4 w-4 text-slate-400" />
           </template>
@@ -162,7 +177,7 @@ const stats = computed(() => {
         <UiSelect
           v-model="filters.location_id"
           :options="[
-            { label: 'All Locations', value: '' },
+            { label: $t('inventory.allLocations'), value: '' },
             ...(Array.isArray(locations) ? locations.map((l) => ({ label: l.name, value: l.id })) : []),
           ]"
         />
@@ -173,7 +188,7 @@ const stats = computed(() => {
           v-model="filters.low_stock"
           class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
         />
-        <span>Below reorder only</span>
+        <span>{{ $t('inventory.belowReorderOnly') }}</span>
       </label>
     </div>
 
@@ -181,8 +196,8 @@ const stats = computed(() => {
       :columns="columns"
       :data="rows"
       :loading="isLoading"
-      empty-title="No stock records"
-      empty-description="Create products or receive stock to populate levels."
+      :empty-title="$t('inventory.noStockRecords')"
+      :empty-description="$t('inventory.noStockDescription')"
     >
       <template #cell(product)="{ item }">
         <div class="flex items-center">
@@ -198,12 +213,12 @@ const stats = computed(() => {
       </template>
 
       <template #cell(value)="{ item }">
-        <span class="text-slate-600 font-mono">{{ formatCurrency(item.valueCents / 100) }}</span>
+        <span class="text-slate-600 font-mono">{{ formatMoney(item.valueCents) }}</span>
       </template>
 
       <template #cell(status)="{ item }">
-        <UiBadge v-if="item.isOut" variant="danger">Out of Stock</UiBadge>
-        <UiBadge v-else variant="success">In Stock</UiBadge>
+        <UiBadge v-if="item.isOut" variant="danger">{{ $t('inventory.outOfStock') }}</UiBadge>
+        <UiBadge v-else variant="success">{{ $t('inventory.inStock') }}</UiBadge>
       </template>
 
       <template #cell(actions)="{ item }">
@@ -211,7 +226,7 @@ const stats = computed(() => {
           type="button"
           @click="openAdjustment(item.id)"
           class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-          title="Adjust Stock"
+          :title="$t('inventory.adjustStock')"
         >
           <Settings2 class="h-4 w-4" />
         </button>
@@ -220,7 +235,7 @@ const stats = computed(() => {
 
     <div v-if="data?.meta" class="flex justify-between items-center">
       <p class="text-sm text-slate-500">
-        Showing {{ data.meta.from ?? 0 }}–{{ data.meta.to ?? 0 }} of {{ data.meta.total }} products
+        {{ $t('inventory.showingPagination', { from: data.meta.from ?? 0, to: data.meta.to ?? 0, total: data.meta.total, items: $t('inventory.products') }) }}
       </p>
       <UiPagination
         :current-page="page"
