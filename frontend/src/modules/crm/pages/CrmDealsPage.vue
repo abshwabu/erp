@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import type { Deal, DealStage } from '@/types/crm'
@@ -33,6 +34,7 @@ import {
   ChevronLeft,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -63,13 +65,13 @@ const { data: contacts } = useQuery({
   queryFn: () => crmApi.getContacts().then((r) => r.data.data),
 })
 
-const stages: Array<{ key: DealStage; label: string; color: string; border: string }> = [
-  { key: 'qualification', label: 'Qualification', color: 'bg-blue-50 text-blue-800', border: 'border-blue-200' },
-  { key: 'proposal', label: 'Proposal Sent', color: 'bg-indigo-50 text-indigo-800', border: 'border-indigo-200' },
-  { key: 'negotiation', label: 'Negotiation', color: 'bg-amber-50 text-amber-800', border: 'border-amber-200' },
-  { key: 'won', label: 'Closed Won 🎉', color: 'bg-emerald-50 text-emerald-800', border: 'border-emerald-200' },
-  { key: 'lost', label: 'Closed Lost ❌', color: 'bg-red-50 text-red-800', border: 'border-red-200' },
-]
+const stages = computed<Array<{ key: DealStage; label: string; color: string; border: string }>>(() => [
+  { key: 'qualification', label: t('crm.deals.stages.qualification'), color: 'bg-blue-50 text-blue-800', border: 'border-blue-200' },
+  { key: 'proposal', label: t('crm.deals.stages.proposal'), color: 'bg-indigo-50 text-indigo-800', border: 'border-indigo-200' },
+  { key: 'negotiation', label: t('crm.deals.stages.negotiation'), color: 'bg-amber-50 text-amber-800', border: 'border-amber-200' },
+  { key: 'won', label: t('crm.deals.stages.won'), color: 'bg-emerald-50 text-emerald-800', border: 'border-emerald-200' },
+  { key: 'lost', label: t('crm.deals.stages.lost'), color: 'bg-red-50 text-red-800', border: 'border-red-200' },
+])
 
 const filteredDeals = computed(() => {
   let list = deals.value || []
@@ -127,22 +129,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Active Opportunities',
+      label: t('crm.deals.kpis.activeOpportunities'),
       value: active.length,
       icon: markRaw(Layers),
     },
     {
-      label: 'Active Pipeline Value',
+      label: t('crm.deals.kpis.activePipelineValue'),
       value: `$${totalActiveVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(DollarSign),
     },
     {
-      label: 'Closed Won Deals',
+      label: t('crm.deals.kpis.closedWonDeals'),
       value: won.length,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Total Won Revenue',
+      label: t('crm.deals.kpis.totalWonRevenue'),
       value: `$${totalWonVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(TrendingUp),
     },
@@ -160,10 +162,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
     isModalOpen.value = false
-    toast.success(editingDeal.value ? 'Deal updated' : 'Deal added to pipeline')
+    toast.success(editingDeal.value ? t('crm.deals.messages.updated') : t('crm.deals.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save deal')
+    toast.error(err?.response?.data?.message || t('crm.deals.messages.failedSave'))
   },
 })
 
@@ -172,7 +174,7 @@ const stageMutation = useMutation({
     crmApi.updateDealStage(id, { stage }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
-    toast.success('Deal stage updated')
+    toast.success(t('crm.deals.messages.stageUpdated'))
   },
 })
 
@@ -180,7 +182,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => crmApi.deleteDeal(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
-    toast.success('Deal removed')
+    toast.success(t('crm.deals.messages.deleted'))
   },
 })
 
@@ -216,7 +218,7 @@ const openEditModal = (deal: Deal) => {
 
 const handleSave = () => {
   if (!dealForm.value.title) {
-    toast.error('Please enter a deal title')
+    toast.error(t('crm.deals.messages.titleRequired'))
     return
   }
   saveMutation.mutate({
@@ -250,8 +252,8 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Deals & Sales Pipeline</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Track and advance high-value commercial opportunities from qualification to close.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.deals.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('crm.deals.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <div class="flex items-center bg-slate-100 p-1 rounded-xl">
@@ -261,7 +263,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
             class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
             :class="viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
           >
-            <LayoutGrid class="w-3.5 h-3.5" /> Kanban
+            <LayoutGrid class="w-3.5 h-3.5" /> {{ t('crm.deals.viewKanban') }}
           </button>
           <button
             type="button"
@@ -269,11 +271,11 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
             class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
             :class="viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
           >
-            <List class="w-3.5 h-3.5" /> Table
+            <List class="w-3.5 h-3.5" /> {{ t('crm.deals.viewTable') }}
           </button>
         </div>
         <UiButton @click="openCreateModal">
-          <Plus class="w-4 h-4 mr-1.5" /> New Deal
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('crm.deals.newDeal') }}
         </UiButton>
       </div>
     </div>
@@ -293,7 +295,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
     <div class="flex items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter deals by title, company, customer..."
+        :placeholder="t('crm.deals.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-80"
       >
@@ -301,7 +303,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
       </UiInput>
 
       <span class="text-xs font-bold text-slate-500">
-        {{ filteredDeals.length }} Opportunities
+        {{ filteredDeals.length }} {{ t('crm.deals.opportunitiesCount') }}
       </span>
     </div>
 
@@ -347,7 +349,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                   type="button"
                   @click="openEditModal(deal)"
                   class="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
-                  title="Edit Deal"
+                  :title="t('crm.deals.modal.editTitle')"
                 >
                   <Edit class="w-3 h-3" />
                 </button>
@@ -355,7 +357,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                   type="button"
                   @click="deleteMutation.mutate(deal.id)"
                   class="text-slate-400 hover:text-red-600 p-0.5 cursor-pointer"
-                  title="Delete Deal"
+                  :title="t('crm.common.delete')"
                 >
                   <Trash2 class="w-3 h-3" />
                 </button>
@@ -371,7 +373,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
               <span class="font-mono font-black text-slate-900">
                 ${{ Number(deal.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
               </span>
-              <span class="text-[10px] font-bold text-slate-400">{{ deal.probability }}% prob</span>
+              <span class="text-[10px] font-bold text-slate-400">{{ deal.probability }}% {{ t('crm.deals.kanban.winProb') }}</span>
             </div>
 
             <!-- Quick Stage Transition Buttons -->
@@ -381,9 +383,9 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                 type="button"
                 @click="moveToStage(deal, getPrevStage(deal.stage)!)"
                 class="text-slate-400 hover:text-slate-700 font-bold inline-flex items-center cursor-pointer"
-                title="Move Back"
+                :title="t('crm.deals.kanban.back')"
               >
-                <ChevronLeft class="w-3 h-3" /> Back
+                <ChevronLeft class="w-3 h-3" /> {{ t('crm.deals.kanban.back') }}
               </button>
               <div v-else></div>
 
@@ -394,7 +396,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                   @click="moveToStage(deal, 'lost')"
                   class="text-red-500 hover:text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-red-50 cursor-pointer"
                 >
-                  Lost
+                  {{ t('crm.deals.kanban.lost') }}
                 </button>
                 <button
                   v-if="getNextStage(deal.stage)"
@@ -402,14 +404,14 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                   @click="moveToStage(deal, getNextStage(deal.stage)!)"
                   class="text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-primary-50 cursor-pointer"
                 >
-                  Advance <ChevronRight class="w-3 h-3" />
+                  {{ t('crm.deals.kanban.advance') }} <ChevronRight class="w-3 h-3" />
                 </button>
               </div>
             </div>
           </div>
 
           <div v-if="!dealsByStage[st.key]?.length" class="p-6 text-center text-slate-300 text-xs italic">
-            No deals in {{ st.label }}
+            {{ t('crm.deals.kanban.noDealsInStage') }} {{ st.label }}
           </div>
         </div>
       </div>
@@ -421,13 +423,13 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
         <table class="min-w-full divide-y divide-slate-100 text-xs">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
             <tr>
-              <th class="px-4 py-3 text-left">Deal Title</th>
-              <th class="px-4 py-3 text-left">Customer / Company</th>
-              <th class="px-4 py-3 text-left">Stage</th>
-              <th class="px-4 py-3 text-right">Deal Value</th>
-              <th class="px-4 py-3 text-right">Probability</th>
-              <th class="px-4 py-3 text-right">Expected Close</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.deals.table.dealTitle') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.deals.table.customerCompany') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.deals.table.stage') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.deals.table.dealValue') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.deals.table.probability') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.deals.table.expectedClose') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.deals.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -441,7 +443,7 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
                   :variant="deal.stage === 'won' ? 'success' : deal.stage === 'lost' ? 'danger' : 'info'"
                   class="capitalize text-[10px] font-bold"
                 >
-                  {{ deal.stage }}
+                  {{ t(`crm.deals.stages.${deal.stage}`, deal.stage) }}
                 </UiBadge>
               </td>
               <td class="px-4 py-3 text-right font-mono font-bold text-slate-900">
@@ -464,55 +466,55 @@ const getPrevStage = (curr: DealStage): DealStage | null => {
         </table>
       </div>
       <div v-else class="p-12 text-center text-slate-400 text-xs">
-        No deals found matching your search.
+        {{ t('crm.deals.table.emptySearch') }}
       </div>
     </div>
 
     <!-- Create / Edit Deal Modal -->
-    <UiModal v-model="isModalOpen" :title="editingDeal ? 'Edit Deal' : 'Add Deal to Pipeline'" size="md">
+    <UiModal v-model="isModalOpen" :title="editingDeal ? t('crm.deals.modal.editTitle') : t('crm.deals.modal.createTitle')" size="md">
       <div class="space-y-4">
-        <UiInput v-model="dealForm.title" label="Deal Title" placeholder="e.g. Enterprise License Expansion" required />
+        <UiInput v-model="dealForm.title" :label="t('crm.deals.modal.titleLabel')" :placeholder="t('crm.deals.modal.titlePlaceholder')" required />
 
         <UiSelect
           v-model="dealForm.customer_id"
-          label="Associated Customer / Company"
-          :options="[{ label: 'Select Customer (Optional)', value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
+          :label="t('crm.deals.modal.customerLabel')"
+          :options="[{ label: t('crm.deals.modal.selectCustomerOptional'), value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
         />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="dealForm.amount" label="Deal Amount ($)" type="number" placeholder="5000" required />
+          <UiInput v-model="dealForm.amount" :label="t('crm.deals.modal.amountLabel')" type="number" placeholder="5000" required />
           <UiSelect
             v-model="dealForm.stage"
-            label="Pipeline Stage"
+            :label="t('crm.deals.modal.stageLabel')"
             :options="[
-              { label: 'Qualification', value: 'qualification' },
-              { label: 'Proposal Sent', value: 'proposal' },
-              { label: 'Negotiation', value: 'negotiation' },
-              { label: 'Closed Won', value: 'won' },
-              { label: 'Closed Lost', value: 'lost' },
+              { label: t('crm.deals.stages.qualification'), value: 'qualification' },
+              { label: t('crm.deals.stages.proposal'), value: 'proposal' },
+              { label: t('crm.deals.stages.negotiation'), value: 'negotiation' },
+              { label: t('crm.deals.stages.won'), value: 'won' },
+              { label: t('crm.deals.stages.lost'), value: 'lost' },
             ]"
           />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="dealForm.probability" label="Win Probability (%)" type="number" min="0" max="100" />
-          <UiInput v-model="dealForm.expected_close_date" label="Expected Close Date" type="date" />
+          <UiInput v-model="dealForm.probability" :label="t('crm.deals.modal.probabilityLabel')" type="number" min="0" max="100" />
+          <UiInput v-model="dealForm.expected_close_date" :label="t('crm.deals.modal.expectedCloseLabel')" type="date" />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Deal Notes</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.deals.modal.notesLabel') }}</label>
           <textarea
             v-model="dealForm.notes"
             rows="3"
-            placeholder="Contract terms, stakeholder notes, timeline..."
+            :placeholder="t('crm.deals.modal.notesPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingDeal ? 'Save Changes' : 'Create Deal' }}
+            {{ editingDeal ? t('crm.deals.modal.saveBtn') : t('crm.deals.modal.createBtn') }}
           </UiButton>
         </div>
       </div>

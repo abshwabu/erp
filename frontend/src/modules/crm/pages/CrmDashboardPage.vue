@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import UiStat from '@/components/ui/UiStat.vue'
@@ -25,6 +26,7 @@ import {
   Layers,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const { data: statsData, isLoading } = useQuery({
@@ -38,35 +40,35 @@ const statCards = computed(() => {
   const s = stats.value
   return [
     {
-      label: 'Active Pipeline Value',
+      label: t('crm.dashboard.kpis.activePipelineValue'),
       value: `$${Number(s?.total_pipeline_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(DollarSign),
     },
     {
-      label: 'Closed Won Revenue',
+      label: t('crm.dashboard.kpis.closedWonRevenue'),
       value: `$${Number(s?.won_deals_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(TrendingUp),
     },
     {
-      label: 'Win Rate',
+      label: t('crm.dashboard.kpis.winRate'),
       value: `${s?.win_rate || 0}%`,
       icon: markRaw(Target),
     },
     {
-      label: 'Active Leads',
+      label: t('crm.dashboard.kpis.activeLeads'),
       value: s?.active_leads_count ?? 0,
       icon: markRaw(Users),
     },
   ]
 })
 
-const stages = [
-  { key: 'qualification', label: 'Qualification', color: 'bg-blue-500', text: 'text-blue-700' },
-  { key: 'proposal', label: 'Proposal Sent', color: 'bg-indigo-500', text: 'text-indigo-700' },
-  { key: 'negotiation', label: 'Negotiation', color: 'bg-amber-500', text: 'text-amber-700' },
-  { key: 'won', label: 'Closed Won', color: 'bg-emerald-500', text: 'text-emerald-700' },
-  { key: 'lost', label: 'Closed Lost', color: 'bg-red-500', text: 'text-red-700' },
-]
+const stages = computed(() => [
+  { key: 'qualification', label: t('crm.dashboard.stages.qualification'), color: 'bg-blue-500', text: 'text-blue-700' },
+  { key: 'proposal', label: t('crm.dashboard.stages.proposal'), color: 'bg-indigo-500', text: 'text-indigo-700' },
+  { key: 'negotiation', label: t('crm.dashboard.stages.negotiation'), color: 'bg-amber-500', text: 'text-amber-700' },
+  { key: 'won', label: t('crm.dashboard.stages.won'), color: 'bg-emerald-500', text: 'text-emerald-700' },
+  { key: 'lost', label: t('crm.dashboard.stages.lost'), color: 'bg-red-500', text: 'text-red-700' },
+])
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -83,17 +85,17 @@ const getActivityIcon = (type: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">CRM Overview & Pipeline</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.dashboard.title') }}</h1>
         <p class="text-xs sm:text-sm text-slate-500">
-          Track sales performance, lead conversions, deal pipelines, and client engagement.
+          {{ t('crm.dashboard.subtitle') }}
         </p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton variant="outline" size="sm" @click="router.push('/crm/leads')">
-          <Plus class="w-3.5 h-3.5 mr-1" /> New Lead
+          <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('crm.dashboard.buttons.newLead') }}
         </UiButton>
         <UiButton size="sm" @click="router.push('/crm/deals')">
-          <Plus class="w-3.5 h-3.5 mr-1" /> New Deal
+          <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('crm.dashboard.buttons.newDeal') }}
         </UiButton>
       </div>
     </div>
@@ -120,14 +122,14 @@ const getActivityIcon = (type: string) => {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <Layers class="w-4 h-4 text-primary-600" />
-            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Pipeline Stage Distribution</h2>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">{{ t('crm.dashboard.stageDistribution') }}</h2>
           </div>
           <button
             type="button"
             @click="router.push('/crm/deals')"
             class="text-xs text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-1 hover:underline cursor-pointer"
           >
-            Open Kanban Board <ArrowRight class="w-3.5 h-3.5" />
+            {{ t('crm.dashboard.openKanban') }} <ArrowRight class="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -146,7 +148,7 @@ const getActivityIcon = (type: string) => {
               ${{ Number(stats?.deals_by_stage?.[st.key]?.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
             </p>
             <p class="text-[11px] text-slate-500 font-semibold">
-              {{ stats?.deals_by_stage?.[st.key]?.count || 0 }} Opportunities
+              {{ stats?.deals_by_stage?.[st.key]?.count || 0 }} {{ t('crm.dashboard.opportunities') }}
             </p>
           </div>
         </div>
@@ -157,13 +159,13 @@ const getActivityIcon = (type: string) => {
         <!-- Top Active Deals -->
         <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Top Pipeline Opportunities</h3>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">{{ t('crm.dashboard.topDeals') }}</h3>
             <button
               type="button"
               @click="router.push('/crm/deals')"
               class="text-xs text-primary-600 hover:text-primary-700 font-bold hover:underline cursor-pointer"
             >
-              View All Deals →
+              {{ t('crm.dashboard.viewAllDeals') }}
             </button>
           </div>
 
@@ -176,8 +178,8 @@ const getActivityIcon = (type: string) => {
               <div class="space-y-1">
                 <h4 class="font-bold text-slate-900 text-sm">{{ deal.title }}</h4>
                 <p class="text-xs text-slate-500">
-                  {{ deal.customer?.company || deal.customer?.name || 'Prospect' }} •
-                  <span class="capitalize font-semibold text-slate-700">{{ deal.stage }}</span>
+                  {{ deal.customer?.company || deal.customer?.name || t('crm.leads.detailsModal.individualProspect') }} •
+                  <span class="capitalize font-semibold text-slate-700">{{ t(`crm.deals.stages.${deal.stage}`, deal.stage) }}</span>
                 </p>
               </div>
 
@@ -185,25 +187,25 @@ const getActivityIcon = (type: string) => {
                 <span class="font-mono font-black text-slate-900 text-sm">
                   ${{ Number(deal.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                 </span>
-                <p class="text-[10px] text-slate-400 font-semibold">{{ deal.probability }}% win probability</p>
+                <p class="text-[10px] text-slate-400 font-semibold">{{ deal.probability }}% {{ t('crm.dashboard.winProbability') }}</p>
               </div>
             </div>
           </div>
           <div v-else class="p-10 text-center text-xs text-slate-400">
-            No active deals in the pipeline yet.
+            {{ t('crm.dashboard.noDeals') }}
           </div>
         </div>
 
         <!-- Recent Activities -->
         <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Recent Interactions & Tasks</h3>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">{{ t('crm.dashboard.recentActivities') }}</h3>
             <button
               type="button"
               @click="router.push('/crm/activities')"
               class="text-xs text-primary-600 hover:text-primary-700 font-bold hover:underline cursor-pointer"
             >
-              View All →
+              {{ t('crm.dashboard.viewAllActivities') }}
             </button>
           </div>
 
@@ -220,17 +222,17 @@ const getActivityIcon = (type: string) => {
                 <div class="flex items-center justify-between gap-2">
                   <h5 class="text-xs font-bold text-slate-900 truncate">{{ act.title }}</h5>
                   <UiBadge :variant="act.status === 'completed' ? 'success' : 'warning'" class="text-[9px] font-bold capitalize">
-                    {{ act.status }}
+                    {{ t(`crm.activities.filters.${act.status}`, act.status) }}
                   </UiBadge>
                 </div>
                 <p class="text-[11px] text-slate-500 truncate">
-                  {{ act.customer?.name || act.lead?.name || act.deal?.title || 'Interaction' }}
+                  {{ act.customer?.name || act.lead?.name || act.deal?.title || t('crm.activities.types.note') }}
                 </p>
               </div>
             </div>
           </div>
           <div v-else class="p-10 text-center text-xs text-slate-400">
-            No activities logged yet.
+            {{ t('crm.dashboard.noActivities') }}
           </div>
         </div>
       </div>

@@ -19,11 +19,15 @@ import enSales from '../locales/en/sales'
 import amSales from '../locales/am/sales'
 import enHr from '../locales/en/hr'
 import amHr from '../locales/am/hr'
+import enCrm from '../locales/en/crm'
+import amCrm from '../locales/am/crm'
+import enPayroll from '../locales/en/payroll'
+import amPayroll from '../locales/am/payroll'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, and hr in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, and payroll in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -44,6 +48,86 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.sales).toBeDefined()
     expect(en.hr).toBeDefined()
     expect(am.hr).toBeDefined()
+    expect(en.crm).toBeDefined()
+    expect(am.crm).toBeDefined()
+    expect(en.payroll).toBeDefined()
+    expect(am.payroll).toBeDefined()
+  })
+
+  it('has identical keys for crm in en and am', () => {
+    const enKeys = Object.keys(enCrm).sort()
+    const amKeys = Object.keys(amCrm).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enCrm.common).sort()).toEqual(Object.keys(amCrm.common).sort())
+
+    expect(Object.keys(enCrm.dashboard).sort()).toEqual(Object.keys(amCrm.dashboard).sort())
+    expect(Object.keys(enCrm.dashboard.kpis).sort()).toEqual(Object.keys(amCrm.dashboard.kpis).sort())
+    expect(Object.keys(enCrm.dashboard.stages).sort()).toEqual(Object.keys(amCrm.dashboard.stages).sort())
+    expect(Object.keys(enCrm.dashboard.buttons).sort()).toEqual(Object.keys(amCrm.dashboard.buttons).sort())
+
+    expect(Object.keys(enCrm.leads).sort()).toEqual(Object.keys(amCrm.leads).sort())
+    expect(Object.keys(enCrm.leads.kpis).sort()).toEqual(Object.keys(amCrm.leads.kpis).sort())
+    expect(Object.keys(enCrm.leads.statusFilters).sort()).toEqual(Object.keys(amCrm.leads.statusFilters).sort())
+    expect(Object.keys(enCrm.leads.table).sort()).toEqual(Object.keys(amCrm.leads.table).sort())
+    expect(Object.keys(enCrm.leads.statuses).sort()).toEqual(Object.keys(amCrm.leads.statuses).sort())
+    expect(Object.keys(enCrm.leads.priorities).sort()).toEqual(Object.keys(amCrm.leads.priorities).sort())
+    expect(Object.keys(enCrm.leads.sources).sort()).toEqual(Object.keys(amCrm.leads.sources).sort())
+    expect(Object.keys(enCrm.leads.detailsModal).sort()).toEqual(Object.keys(amCrm.leads.detailsModal).sort())
+    expect(Object.keys(enCrm.leads.formModal).sort()).toEqual(Object.keys(amCrm.leads.formModal).sort())
+    expect(Object.keys(enCrm.leads.convertModal).sort()).toEqual(Object.keys(amCrm.leads.convertModal).sort())
+    expect(Object.keys(enCrm.leads.messages).sort()).toEqual(Object.keys(amCrm.leads.messages).sort())
+
+    expect(Object.keys(enCrm.deals).sort()).toEqual(Object.keys(amCrm.deals).sort())
+    expect(Object.keys(enCrm.deals.kpis).sort()).toEqual(Object.keys(amCrm.deals.kpis).sort())
+    expect(Object.keys(enCrm.deals.kanban).sort()).toEqual(Object.keys(amCrm.deals.kanban).sort())
+    expect(Object.keys(enCrm.deals.table).sort()).toEqual(Object.keys(amCrm.deals.table).sort())
+    expect(Object.keys(enCrm.deals.stages).sort()).toEqual(Object.keys(amCrm.deals.stages).sort())
+    expect(Object.keys(enCrm.deals.modal).sort()).toEqual(Object.keys(amCrm.deals.modal).sort())
+    expect(Object.keys(enCrm.deals.messages).sort()).toEqual(Object.keys(amCrm.deals.messages).sort())
+
+    expect(Object.keys(enCrm.contacts).sort()).toEqual(Object.keys(amCrm.contacts).sort())
+    expect(Object.keys(enCrm.contacts.kpis).sort()).toEqual(Object.keys(amCrm.contacts.kpis).sort())
+    expect(Object.keys(enCrm.contacts.statusFilters).sort()).toEqual(Object.keys(amCrm.contacts.statusFilters).sort())
+    expect(Object.keys(enCrm.contacts.table).sort()).toEqual(Object.keys(amCrm.contacts.table).sort())
+    expect(Object.keys(enCrm.contacts.statuses).sort()).toEqual(Object.keys(amCrm.contacts.statuses).sort())
+    expect(Object.keys(enCrm.contacts.modal).sort()).toEqual(Object.keys(amCrm.contacts.modal).sort())
+    expect(Object.keys(enCrm.contacts.profileModal).sort()).toEqual(Object.keys(amCrm.contacts.profileModal).sort())
+    expect(Object.keys(enCrm.contacts.messages).sort()).toEqual(Object.keys(amCrm.contacts.messages).sort())
+
+    expect(Object.keys(enCrm.activities).sort()).toEqual(Object.keys(amCrm.activities).sort())
+    expect(Object.keys(enCrm.activities.kpis).sort()).toEqual(Object.keys(amCrm.activities.kpis).sort())
+    expect(Object.keys(enCrm.activities.filters).sort()).toEqual(Object.keys(amCrm.activities.filters).sort())
+    expect(Object.keys(enCrm.activities.types).sort()).toEqual(Object.keys(amCrm.activities.types).sort())
+    expect(Object.keys(enCrm.activities.priorities).sort()).toEqual(Object.keys(amCrm.activities.priorities).sort())
+    expect(Object.keys(enCrm.activities.modal).sort()).toEqual(Object.keys(amCrm.activities.modal).sort())
+    expect(Object.keys(enCrm.activities.messages).sort()).toEqual(Object.keys(amCrm.activities.messages).sort())
+
+    expect(Object.keys(enCrm.leadForms).sort()).toEqual(Object.keys(amCrm.leadForms).sort())
+    expect(Object.keys(enCrm.leadForms.kpis).sort()).toEqual(Object.keys(amCrm.leadForms.kpis).sort())
+    expect(Object.keys(enCrm.leadForms.card).sort()).toEqual(Object.keys(amCrm.leadForms.card).sort())
+    expect(Object.keys(enCrm.leadForms.modal).sort()).toEqual(Object.keys(amCrm.leadForms.modal).sort())
+    expect(Object.keys(enCrm.leadForms.embedModal).sort()).toEqual(Object.keys(amCrm.leadForms.embedModal).sort())
+    expect(Object.keys(enCrm.leadForms.questionTypes).sort()).toEqual(Object.keys(amCrm.leadForms.questionTypes).sort())
+    expect(Object.keys(enCrm.leadForms.messages).sort()).toEqual(Object.keys(amCrm.leadForms.messages).sort())
+
+    expect(Object.keys(enCrm.publicLead).sort()).toEqual(Object.keys(amCrm.publicLead).sort())
+  })
+
+  it('has identical keys for payroll in en and am', () => {
+    const enKeys = Object.keys(enPayroll).sort()
+    const amKeys = Object.keys(amPayroll).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enPayroll.header).sort()).toEqual(Object.keys(amPayroll.header).sort())
+    expect(Object.keys(enPayroll.kpis).sort()).toEqual(Object.keys(amPayroll.kpis).sort())
+    expect(Object.keys(enPayroll.runs).sort()).toEqual(Object.keys(amPayroll.runs).sort())
+    expect(Object.keys(enPayroll.runs.filters).sort()).toEqual(Object.keys(amPayroll.runs.filters).sort())
+    expect(Object.keys(enPayroll.details).sort()).toEqual(Object.keys(amPayroll.details).sort())
+    expect(Object.keys(enPayroll.createModal).sort()).toEqual(Object.keys(amPayroll.createModal).sort())
+    expect(Object.keys(enPayroll.createModal.presets).sort()).toEqual(Object.keys(amPayroll.createModal.presets).sort())
+    expect(Object.keys(enPayroll.payslipModal).sort()).toEqual(Object.keys(amPayroll.payslipModal).sort())
+    expect(Object.keys(enPayroll.messages).sort()).toEqual(Object.keys(amPayroll.messages).sort())
   })
 
   it('has identical keys for hr in en and am', () => {

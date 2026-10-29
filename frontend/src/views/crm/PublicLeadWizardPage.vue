@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -20,6 +21,7 @@ import {
   Check,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const idOrSlug = (route.params.slug || route.params.id) as string
 
@@ -270,7 +272,7 @@ onUnmounted(() => {
 
           <div class="pt-4">
             <UiButton size="lg" @click="nextStep" class="px-8 py-3.5 text-base font-bold shadow-lg shadow-primary-500/20">
-              Get Started <ArrowRight class="w-5 h-5 ml-2" />
+              {{ t('crm.publicLead.getStarted') }} <ArrowRight class="w-5 h-5 ml-2" />
             </UiButton>
           </div>
         </div>
@@ -287,7 +289,7 @@ onUnmounted(() => {
 
           <div class="space-y-4">
             <div class="space-y-1">
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Your Full Name *</label>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('crm.publicLead.name') }} *</label>
               <input
                 v-model="name"
                 type="text"
@@ -298,7 +300,7 @@ onUnmounted(() => {
             </div>
 
             <div class="space-y-1">
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Company / Organization</label>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('crm.publicLead.company') }}</label>
               <input
                 v-model="company"
                 type="text"
@@ -321,7 +323,7 @@ onUnmounted(() => {
 
           <div class="space-y-4">
             <div class="space-y-1">
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Work Email Address *</label>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('crm.publicLead.email') }} *</label>
               <input
                 v-model="email"
                 type="email"
@@ -332,7 +334,7 @@ onUnmounted(() => {
             </div>
 
             <div class="space-y-1">
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Direct Phone Number</label>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('crm.publicLead.phone') }}</label>
               <input
                 v-model="phone"
                 type="tel"
@@ -459,7 +461,7 @@ onUnmounted(() => {
             @click="prevStep"
             class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
-            <ArrowLeft class="w-4 h-4" /> Back
+            <ArrowLeft class="w-4 h-4" /> {{ t('crm.publicLead.back') }}
           </button>
 
           <div class="flex items-center gap-3">
@@ -470,7 +472,7 @@ onUnmounted(() => {
               @click="nextStep"
               class="px-6 font-bold shadow-lg shadow-primary-500/20"
             >
-              {{ currentStepIndex === totalSteps - 1 ? 'Submit Inquiry' : 'Continue' }}
+              {{ currentStepIndex === totalSteps - 1 ? t('crm.publicLead.submit') : t('crm.publicLead.next') }}
               <ChevronRight class="w-4 h-4 ml-1" />
             </UiButton>
           </div>

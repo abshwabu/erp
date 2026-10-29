@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { payrollApi, type PayrollRun, type Payslip } from '@/api/payroll'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -30,6 +31,7 @@ import {
   RefreshCw,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -120,22 +122,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Processed Payout',
+      label: t('payroll.kpis.totalProcessed'),
       value: formatCurrency(totalProcessedNet, activeCurrency.value),
       icon: markRaw(DollarSign),
     },
     {
-      label: 'Latest Run Net Pay',
+      label: t('payroll.kpis.latestNet'),
       value: latestRun ? formatCurrency(latestNet, activeCurrency.value) : '—',
       icon: markRaw(Banknote),
     },
     {
-      label: 'Processed Payrolls',
+      label: t('payroll.kpis.processedPayrolls'),
       value: processedRuns.length,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Draft Runs Pending',
+      label: t('payroll.kpis.draftRunsPending'),
       value: draftCount,
       icon: markRaw(Clock),
     },
@@ -149,10 +151,10 @@ const createMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['payroll', 'runs'] })
     selectedRunId.value = res.data.data.id
     isCreateModalOpen.value = false
-    toast.success(form.value.auto_process ? 'Payroll created and processed successfully' : 'Draft payroll run created')
+    toast.success(form.value.auto_process ? t('payroll.messages.createdAndProcessed') : t('payroll.messages.draftCreated'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to create payroll run')
+    toast.error(err?.response?.data?.message || t('payroll.messages.failedCreate'))
   },
 })
 
@@ -160,10 +162,10 @@ const processMutation = useMutation({
   mutationFn: (id: string) => payrollApi.processRun(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['payroll'] })
-    toast.success('Payroll recalculated with current employee salaries')
+    toast.success(t('payroll.messages.recalculated'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to process payroll run')
+    toast.error(err?.response?.data?.message || t('payroll.messages.failedProcess'))
   },
 })
 
@@ -174,15 +176,15 @@ const deleteMutation = useMutation({
     if (selectedRunId.value) {
       selectedRunId.value = null
     }
-    toast.success('Payroll run deleted')
+    toast.success(t('payroll.messages.deleted'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to delete payroll run')
+    toast.error(err?.response?.data?.message || t('payroll.messages.failedDelete'))
   },
 })
 
 const handleDeleteRun = (run: PayrollRun) => {
-  if (confirm(`Are you sure you want to delete the payroll run for ${run.period_start} → ${run.period_end}?`)) {
+  if (confirm(`${t('payroll.runs.deleteConfirm')} ${run.period_start} → ${run.period_end}?`)) {
     deleteMutation.mutate(run.id)
   }
 }
@@ -233,11 +235,11 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Payroll & Compensation</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Run monthly payroll, generate itemized employee payslips, and review disbursement totals.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('payroll.header.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('payroll.header.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> New Payroll Run
+        <Plus class="w-4 h-4 mr-2" /> {{ t('payroll.header.newRunBtn') }}
       </UiButton>
     </div>
 
@@ -258,7 +260,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
       <div class="lg:col-span-5 space-y-4">
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Payroll Runs</h2>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">{{ t('payroll.runs.title') }}</h2>
             <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
               <button
                 type="button"
@@ -266,7 +268,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                 class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
-                All
+                {{ t('payroll.runs.filters.all') }}
               </button>
               <button
                 type="button"
@@ -274,7 +276,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                 class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'processed' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
-                Processed
+                {{ t('payroll.runs.filters.processed') }}
               </button>
               <button
                 type="button"
@@ -282,7 +284,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                 class="px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                 :class="runFilter === 'draft' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
               >
-                Draft
+                {{ t('payroll.runs.filters.draft') }}
               </button>
             </div>
           </div>
@@ -312,14 +314,14 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                   :variant="run.status === 'processed' ? 'success' : 'warning'"
                   class="capitalize text-[10px] font-bold"
                 >
-                  {{ run.status }}
+                  {{ t(`payroll.runs.filters.${run.status}`, run.status) }}
                 </UiBadge>
               </div>
 
               <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
                 <span class="flex items-center gap-1 font-medium">
                   <Users class="w-3.5 h-3.5 text-slate-400" />
-                  {{ run.payslips_count || (run.payslips?.length ?? 0) }} Employees
+                  {{ run.payslips_count || (run.payslips?.length ?? 0) }} {{ t('payroll.runs.employeesCount') }}
                 </span>
                 <span class="font-mono font-bold text-slate-900 text-sm">
                   {{ formatCurrency(run.payslips_sum_net_cents || 0, activeCurrency) }}
@@ -332,7 +334,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                   @click.stop="handleDeleteRun(run)"
                   class="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                 >
-                  Delete
+                  {{ t('payroll.runs.delete') }}
                 </button>
                 <UiButton
                   size="sm"
@@ -341,7 +343,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                   :loading="processMutation.isPending.value && selectedRunId === run.id"
                 >
                   <RefreshCw class="w-3 h-3 mr-1" />
-                  {{ run.status === 'processed' ? 'Recalculate' : 'Process Now' }}
+                  {{ run.status === 'processed' ? t('payroll.runs.recalculate') : t('payroll.runs.processNow') }}
                 </UiButton>
               </div>
             </div>
@@ -349,8 +351,8 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
 
           <div v-else class="p-12 text-center text-slate-400 space-y-3">
             <Banknote class="w-10 h-10 mx-auto text-slate-300" />
-            <p class="text-xs font-semibold">No payroll runs found.</p>
-            <UiButton size="sm" variant="outline" @click="openCreateModal">Create First Run</UiButton>
+            <p class="text-xs font-semibold">{{ t('payroll.runs.emptyTitle') }}</p>
+            <UiButton size="sm" variant="outline" @click="openCreateModal">{{ t('payroll.runs.createFirst') }}</UiButton>
           </div>
         </div>
       </div>
@@ -368,11 +370,11 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                   {{ new Date(activeRun.period_end).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) }}
                 </h2>
                 <UiBadge :variant="activeRun.status === 'processed' ? 'success' : 'warning'" class="capitalize font-bold">
-                  {{ activeRun.status }}
+                  {{ t(`payroll.runs.filters.${activeRun.status}`, activeRun.status) }}
                 </UiBadge>
               </div>
               <p v-if="activeRun.processed_at" class="text-xs text-slate-400 mt-0.5">
-                Processed on {{ new Date(activeRun.processed_at).toLocaleString() }}
+                {{ t('payroll.details.processedOn') }} {{ new Date(activeRun.processed_at).toLocaleString() }}
               </p>
             </div>
 
@@ -384,7 +386,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                 :loading="processMutation.isPending.value"
               >
                 <RefreshCw class="w-3.5 h-3.5 mr-1.5" />
-                {{ activeRun.status === 'processed' ? 'Recalculate Salaries' : 'Process Payroll Run' }}
+                {{ activeRun.status === 'processed' ? t('payroll.details.recalculateSalaries') : t('payroll.details.processPayrollRun') }}
               </UiButton>
             </div>
           </div>
@@ -392,21 +394,21 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
           <!-- Payout Metrics for Selected Run -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="p-4 bg-emerald-50/70 border border-emerald-100 rounded-xl">
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Total Net Disbursed</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">{{ t('payroll.details.totalNetDisbursed') }}</span>
               <p class="text-xl font-black font-mono text-emerald-950 mt-1">
                 {{ formatCurrency(activeRun.payslips_sum_net_cents || 0, activeCurrency) }}
               </p>
             </div>
 
             <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Total Gross Salary</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ t('payroll.details.totalGrossSalary') }}</span>
               <p class="text-xl font-black font-mono text-slate-900 mt-1">
                 {{ formatCurrency(activeRun.payslips_sum_gross_cents || 0, activeCurrency) }}
               </p>
             </div>
 
             <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Employees Paid</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ t('payroll.details.employeesPaid') }}</span>
               <p class="text-xl font-black font-mono text-slate-900 mt-1">
                 {{ activeRun.payslips?.length || activeRun.payslips_count || 0 }}
               </p>
@@ -417,11 +419,11 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
           <div class="space-y-3 pt-2">
             <div class="flex items-center justify-between gap-3">
               <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Itemized Employee Payslips ({{ filteredPayslips.length }})
+                {{ t('payroll.details.itemizedPayslips') }} ({{ filteredPayslips.length }})
               </h3>
               <UiInput
                 v-model="payslipSearch"
-                placeholder="Filter by employee name..."
+                :placeholder="t('payroll.details.searchPlaceholder')"
                 size="sm"
                 class="w-56"
               >
@@ -444,7 +446,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                       {{ slip.employee?.first_name }} {{ slip.employee?.last_name }}
                     </h4>
                     <p class="text-[11px] text-slate-500">
-                      {{ slip.employee?.position?.title || 'No Position' }} • {{ slip.employee?.department?.name || 'No Dept' }}
+                      {{ slip.employee?.position?.title || t('payroll.details.noPosition') }} • {{ slip.employee?.department?.name || t('payroll.details.noDept') }}
                     </p>
                   </div>
                 </div>
@@ -455,7 +457,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                       {{ formatCurrency(slip.net_cents, slip.employee?.salary_currency || activeCurrency) }}
                     </span>
                     <p class="text-[10px] text-slate-400 capitalize">
-                      {{ slip.employee?.payment_method?.replace('_', ' ') || 'Bank Transfer' }}
+                      {{ slip.employee?.payment_method?.replace('_', ' ') || t('payroll.details.bankTransfer') }}
                     </p>
                   </div>
 
@@ -463,7 +465,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
                     variant="ghost"
                     size="sm"
                     @click="viewPayslipDetails(slip)"
-                    title="View Payslip Receipt"
+                    :title="t('payroll.payslipModal.title')"
                   >
                     <FileText class="w-4 h-4 text-slate-600" />
                   </UiButton>
@@ -472,55 +474,55 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
             </div>
 
             <div v-else class="p-8 text-center bg-slate-50 rounded-xl text-xs text-slate-400">
-              No payslips generated for this run yet. Click "Process Payroll Run" to compute payslips.
+              {{ t('payroll.details.emptyPayslips') }}
             </div>
           </div>
         </div>
 
         <div v-else class="bg-white rounded-2xl border border-slate-200/90 p-12 text-center space-y-3">
           <Banknote class="w-12 h-12 mx-auto text-slate-300" />
-          <h3 class="font-bold text-slate-800 text-base">Select a Payroll Run</h3>
+          <h3 class="font-bold text-slate-800 text-base">{{ t('payroll.details.selectRunTitle') }}</h3>
           <p class="text-xs text-slate-500 max-w-sm mx-auto">
-            Choose a payroll period from the left list or create a new run to view payslips and disbursement details.
+            {{ t('payroll.details.selectRunSubtitle') }}
           </p>
         </div>
       </div>
     </div>
 
     <!-- Create Payroll Run Modal -->
-    <UiModal v-model="isCreateModalOpen" title="New Payroll Run" size="lg">
+    <UiModal v-model="isCreateModalOpen" :title="t('payroll.createModal.title')" size="lg">
       <div class="space-y-5">
         <!-- Date Presets -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Quick Period Preset</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('payroll.createModal.quickPresets') }}</label>
           <div class="flex items-center gap-2">
             <button
               type="button"
               @click="setPeriodPreset('this_month')"
               class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
             >
-              This Month
+              {{ t('payroll.createModal.presets.thisMonth') }}
             </button>
             <button
               type="button"
               @click="setPeriodPreset('last_month')"
               class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
             >
-              Last Month
+              {{ t('payroll.createModal.presets.lastMonth') }}
             </button>
             <button
               type="button"
               @click="setPeriodPreset('bi_weekly')"
               class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
             >
-              Last 14 Days
+              {{ t('payroll.createModal.presets.last14Days') }}
             </button>
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="form.period_start" type="date" label="Period Start Date" required />
-          <UiInput v-model="form.period_end" type="date" label="Period End Date" required />
+          <UiInput v-model="form.period_start" type="date" :label="t('payroll.createModal.periodStart')" required />
+          <UiInput v-model="form.period_end" type="date" :label="t('payroll.createModal.periodEnd')" required />
         </div>
 
         <!-- Live Eligible Workforce Preview -->
@@ -528,10 +530,10 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Sparkles class="w-4 h-4 text-primary-600" />
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900">Workforce & Payout Preview</h4>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900">{{ t('payroll.createModal.workforcePreview') }}</h4>
             </div>
             <span v-if="previewData" class="text-xs font-bold text-slate-700">
-              {{ previewData.employee_count }} Active Employees
+              {{ previewData.employee_count }} {{ t('payroll.createModal.activeEmployees') }}
             </span>
           </div>
 
@@ -541,13 +543,13 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
 
           <div v-else-if="previewData" class="space-y-2">
             <div class="flex items-center justify-between text-xs text-slate-600">
-              <span>Estimated Total Gross Salary:</span>
+              <span>{{ t('payroll.createModal.estGross') }}</span>
               <span class="font-mono font-bold text-slate-900">
                 {{ formatCurrency(previewData.total_gross_cents, previewData.currency) }}
               </span>
             </div>
             <div class="flex items-center justify-between text-xs text-slate-600">
-              <span>Estimated Net Disbursement:</span>
+              <span>{{ t('payroll.createModal.estNet') }}</span>
               <span class="font-mono font-bold text-emerald-700">
                 {{ formatCurrency(previewData.total_net_cents, previewData.currency) }}
               </span>
@@ -563,32 +565,32 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
             class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
           />
           <label for="auto_process" class="text-xs text-slate-700 font-semibold cursor-pointer">
-            Process immediately and generate payslips upon creation
+            {{ t('payroll.createModal.autoProcessCheckbox') }}
           </label>
         </div>
 
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">{{ t('payroll.createModal.cancel') }}</UiButton>
           <UiButton :loading="createMutation.isPending.value" @click="createMutation.mutate()">
-            {{ form.auto_process ? 'Create & Process' : 'Save Draft Run' }}
+            {{ form.auto_process ? t('payroll.createModal.createProcessBtn') : t('payroll.createModal.saveDraftBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Individual Payslip Receipt / Print Modal -->
-    <UiModal v-model="isPayslipModalOpen" title="Employee Payslip Details" size="lg">
+    <UiModal v-model="isPayslipModalOpen" :title="t('payroll.payslipModal.title')" size="lg">
       <div v-if="selectedPayslip" class="space-y-6">
         <!-- Printable Payslip Voucher -->
         <div class="p-6 bg-white border border-slate-200 rounded-2xl space-y-6 shadow-xs" id="printable-payslip">
           <!-- Header -->
           <div class="flex justify-between items-start border-b border-slate-100 pb-4">
             <div>
-              <h2 class="text-lg font-black text-slate-900">PAYSLIP VOUCHER</h2>
+              <h2 class="text-lg font-black text-slate-900">{{ t('payroll.payslipModal.voucherTitle') }}</h2>
               <p class="text-xs font-mono text-slate-400 mt-0.5">SLIP-{{ selectedPayslip.id.slice(0, 8).toUpperCase() }}</p>
             </div>
             <div class="text-right">
-              <UiBadge variant="success" class="font-bold">PAID</UiBadge>
+              <UiBadge variant="success" class="font-bold">{{ t('payroll.payslipModal.paidBadge') }}</UiBadge>
               <p class="text-xs text-slate-400 mt-1">
                 {{ new Date(selectedPayslip.created_at).toLocaleDateString() }}
               </p>
@@ -598,7 +600,7 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
           <!-- Employee & Pay Info Grid -->
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="font-bold uppercase tracking-wider text-slate-400">Employee</span>
+              <span class="font-bold uppercase tracking-wider text-slate-400">{{ t('payroll.payslipModal.employee') }}</span>
               <p class="font-black text-slate-900 text-sm mt-0.5">
                 {{ selectedPayslip.employee?.first_name }} {{ selectedPayslip.employee?.last_name }}
               </p>
@@ -607,12 +609,12 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
             </div>
 
             <div>
-              <span class="font-bold uppercase tracking-wider text-slate-400">Department & Role</span>
+              <span class="font-bold uppercase tracking-wider text-slate-400">{{ t('payroll.payslipModal.deptRole') }}</span>
               <p class="font-bold text-slate-900 text-sm mt-0.5">
-                {{ selectedPayslip.employee?.position?.title || 'Position' }}
+                {{ selectedPayslip.employee?.position?.title || t('payroll.details.noPosition') }}
               </p>
-              <p class="text-slate-500">{{ selectedPayslip.employee?.department?.name || 'Department' }}</p>
-              <p class="text-slate-500 capitalize">Type: {{ selectedPayslip.employee?.employment_type?.replace('-', ' ') }}</p>
+              <p class="text-slate-500">{{ selectedPayslip.employee?.department?.name || t('payroll.details.noDept') }}</p>
+              <p class="text-slate-500 capitalize">{{ t('payroll.payslipModal.type') }}: {{ selectedPayslip.employee?.employment_type?.replace('-', ' ') }}</p>
             </div>
           </div>
 
@@ -621,25 +623,25 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
             <table class="min-w-full divide-y divide-slate-100 text-xs">
               <thead class="bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
                 <tr>
-                  <th class="px-4 py-2.5 text-left">Earnings & Deductions Description</th>
-                  <th class="px-4 py-2.5 text-right">Amount</th>
+                  <th class="px-4 py-2.5 text-left">{{ t('payroll.payslipModal.description') }}</th>
+                  <th class="px-4 py-2.5 text-right">{{ t('payroll.payslipModal.amount') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr>
-                  <td class="px-4 py-2.5 text-slate-800 font-medium">Base Salary</td>
+                  <td class="px-4 py-2.5 text-slate-800 font-medium">{{ t('payroll.payslipModal.baseSalary') }}</td>
                   <td class="px-4 py-2.5 text-right font-mono font-bold text-slate-900">
                     {{ formatCurrency(selectedPayslip.gross_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
                 </tr>
                 <tr>
-                  <td class="px-4 py-2.5 text-slate-500">Statutory Deductions & Taxes</td>
+                  <td class="px-4 py-2.5 text-slate-500">{{ t('payroll.payslipModal.statutoryDeductions') }}</td>
                   <td class="px-4 py-2.5 text-right font-mono text-slate-500">
                     {{ formatCurrency(selectedPayslip.deductions_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
                 </tr>
                 <tr class="bg-emerald-50/50 font-bold">
-                  <td class="px-4 py-3 text-emerald-950 font-bold">Net Payout</td>
+                  <td class="px-4 py-3 text-emerald-950 font-bold">{{ t('payroll.payslipModal.netPayout') }}</td>
                   <td class="px-4 py-3 text-right font-mono font-black text-emerald-950 text-sm">
                     {{ formatCurrency(selectedPayslip.net_cents, selectedPayslip.employee?.salary_currency || activeCurrency) }}
                   </td>
@@ -651,21 +653,21 @@ const formatCurrency = (cents: number | string, currency: string = 'USD') => {
           <!-- Banking & Payment Info -->
           <div class="p-3.5 bg-slate-50 rounded-xl text-xs flex justify-between items-center text-slate-600">
             <div>
-              <span class="font-bold text-slate-800">Payment Method: </span>
-              <span class="capitalize">{{ selectedPayslip.employee?.payment_method?.replace('_', ' ') || 'Direct Bank Transfer' }}</span>
+              <span class="font-bold text-slate-800">{{ t('payroll.payslipModal.paymentMethod') }} </span>
+              <span class="capitalize">{{ selectedPayslip.employee?.payment_method?.replace('_', ' ') || t('payroll.payslipModal.directBankTransfer') }}</span>
               <span v-if="selectedPayslip.employee?.bank_name"> ({{ selectedPayslip.employee.bank_name }})</span>
             </div>
             <div v-if="selectedPayslip.employee?.bank_account_number" class="font-mono">
-              Account: {{ selectedPayslip.employee.bank_account_number }}
+              {{ t('payroll.payslipModal.account') }} {{ selectedPayslip.employee.bank_account_number }}
             </div>
           </div>
         </div>
 
         <div class="flex justify-between items-center pt-2">
           <UiButton variant="outline" size="sm" @click="printPayslip">
-            <Printer class="w-4 h-4 mr-2" /> Print Payslip
+            <Printer class="w-4 h-4 mr-2" /> {{ t('payroll.payslipModal.printPayslip') }}
           </UiButton>
-          <UiButton size="sm" @click="isPayslipModalOpen = false">Close</UiButton>
+          <UiButton size="sm" @click="isPayslipModalOpen = false">{{ t('payroll.payslipModal.close') }}</UiButton>
         </div>
       </div>
     </UiModal>

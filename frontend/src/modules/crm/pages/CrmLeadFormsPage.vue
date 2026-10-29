@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import type { LeadForm, LeadFormType, LeadFormQuestion } from '@/types/crm'
@@ -36,6 +37,7 @@ import {
   Tv,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -127,22 +129,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Active Lead Forms',
+      label: t('crm.leadForms.kpis.activeForms'),
       value: list.filter((f) => f.is_active).length,
       icon: markRaw(Layers),
     },
     {
-      label: 'Total Inbound Submissions',
+      label: t('crm.leadForms.kpis.totalSubmissions'),
       value: totalSubmissions,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Total Page Views',
+      label: t('crm.leadForms.kpis.totalViews'),
       value: totalViews,
       icon: markRaw(Eye),
     },
     {
-      label: 'Overall Conversion Rate',
+      label: t('crm.leadForms.kpis.overallConversion'),
       value: `${avgConversion}%`,
       icon: markRaw(TrendingUp),
     },
@@ -154,15 +156,15 @@ function roundNumber(num: number, dec: number) {
 }
 
 // Question types palette
-const questionTypes = [
-  { label: 'Short Text', value: 'text', icon: FileText },
-  { label: 'Long Paragraph', value: 'textarea', icon: FileText },
-  { label: 'Numeric Value', value: 'number', icon: FileText },
-  { label: 'Dropdown Select', value: 'select', icon: List },
-  { label: 'Single Choice (Radio)', value: 'radio', icon: CircleDot },
-  { label: 'Multi-Select (Checkbox)', value: 'checkbox', icon: CheckSquare },
-  { label: 'Date', value: 'date', icon: Calendar },
-]
+const questionTypes = computed(() => [
+  { label: t('crm.leadForms.questionTypes.text'), value: 'text', icon: FileText },
+  { label: t('crm.leadForms.questionTypes.textarea'), value: 'textarea', icon: FileText },
+  { label: t('crm.leadForms.questionTypes.number'), value: 'number', icon: FileText },
+  { label: t('crm.leadForms.questionTypes.select'), value: 'select', icon: List },
+  { label: t('crm.leadForms.questionTypes.radio'), value: 'radio', icon: CircleDot },
+  { label: t('crm.leadForms.questionTypes.checkbox'), value: 'checkbox', icon: CheckSquare },
+  { label: t('crm.leadForms.questionTypes.date'), value: 'date', icon: Calendar },
+])
 
 const addQuestion = (type: string = 'text') => {
   const count = formState.value.custom_questions.length + 1
@@ -203,10 +205,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm', 'lead-forms'] })
     isModalOpen.value = false
-    toast.success(editingForm.value ? 'Lead form updated' : 'New lead capture form created')
+    toast.success(editingForm.value ? t('crm.leadForms.messages.updated') : t('crm.leadForms.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save lead form')
+    toast.error(err?.response?.data?.message || t('crm.leadForms.messages.failedSave'))
   },
 })
 
@@ -214,7 +216,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => crmApi.deleteLeadForm(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm', 'lead-forms'] })
-    toast.success('Lead form deleted')
+    toast.success(t('crm.leadForms.messages.deleted'))
   },
 })
 
@@ -260,7 +262,7 @@ const openEditModal = (form: LeadForm) => {
 
 const handleSave = () => {
   if (!formState.value.title) {
-    toast.error('Please provide a form title')
+    toast.error(t('crm.leadForms.messages.titleRequired'))
     activeTab.value = 'details'
     return
   }
@@ -274,7 +276,7 @@ const copyPublicLink = (form: LeadForm) => {
   const path = form.form_type === 'wizard' ? `/leads/wizard/${form.slug || form.id}` : `/leads/form/${form.slug || form.id}`
   const url = `${window.location.origin}${path}`
   navigator.clipboard.writeText(url)
-  toast.success('Public lead form link copied to clipboard!')
+  toast.success(t('crm.leadForms.messages.linkCopied'))
 }
 
 const openEmbedModal = (form: LeadForm) => {
@@ -290,18 +292,18 @@ const getEmbedCode = (form: LeadForm) => {
 const copyEmbedCode = () => {
   if (embedTargetForm.value) {
     navigator.clipboard.writeText(getEmbedCode(embedTargetForm.value))
-    toast.success('HTML embed snippet copied to clipboard!')
+    toast.success(t('crm.leadForms.messages.embedCopied'))
   }
 }
 
 const getSourceBadge = (source: string) => {
   switch (source) {
-    case 'agency': return { label: 'Agency Partner', variant: 'purple' as const }
-    case 'social_media': return { label: 'Social Media Campaign', variant: 'info' as const }
-    case 'google_ads': return { label: 'Google / Paid Ads', variant: 'warning' as const }
-    case 'website': return { label: 'Website Inbound', variant: 'success' as const }
-    case 'event': return { label: 'Event / Trade Show', variant: 'default' as const }
-    default: return { label: source.replace('_', ' '), variant: 'default' as const }
+    case 'agency': return { label: t('crm.leads.sources.agency'), variant: 'purple' as const }
+    case 'social_media': return { label: t('crm.leads.sources.social_media'), variant: 'info' as const }
+    case 'google_ads': return { label: t('crm.leads.sources.google_ads'), variant: 'warning' as const }
+    case 'website': return { label: t('crm.leads.sources.website'), variant: 'success' as const }
+    case 'event': return { label: t('crm.leads.sources.event'), variant: 'default' as const }
+    default: return { label: t(`crm.leads.sources.${source}`, source.replace('_', ' ')), variant: 'default' as const }
   }
 }
 </script>
@@ -311,13 +313,13 @@ const getSourceBadge = (source: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Lead Forms & Inbound Channels</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.leadForms.title') }}</h1>
         <p class="text-xs sm:text-sm text-slate-500">
-          Build interactive step-by-step lead wizards (for Agency & Social campaigns) and embeddable forms for websites.
+          {{ t('crm.leadForms.subtitle') }}
         </p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Create Lead Form
+        <Plus class="w-4 h-4 mr-2" /> {{ t('crm.leadForms.createForm') }}
       </UiButton>
     </div>
 
@@ -343,13 +345,13 @@ const getSourceBadge = (source: string) => {
           class="px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
           :class="selectedSource === sc ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          {{ sc === 'all' ? `All Channels (${leadForms?.length || 0})` : sc.replace('_', ' ') }}
+          {{ sc === 'all' ? `${t('crm.leadForms.filterChannels')} (${leadForms?.length || 0})` : t(`crm.leads.sources.${sc}`, sc.replace('_', ' ')) }}
         </button>
       </div>
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter forms..."
+        :placeholder="t('crm.leadForms.filterPlaceholder')"
         size="sm"
         class="w-full sm:w-60"
       >
@@ -381,7 +383,7 @@ const getSourceBadge = (source: string) => {
                   class="text-[10px] font-bold uppercase"
                 >
                   <Sparkles v-if="form.form_type === 'wizard'" class="w-2.5 h-2.5 mr-1" />
-                  {{ form.form_type === 'wizard' ? 'Step-by-Step Wizard' : 'Embed Form' }}
+                  {{ form.form_type === 'wizard' ? t('crm.leadForms.card.wizardType') : t('crm.leadForms.card.embedType') }}
                 </UiBadge>
               </div>
 
@@ -404,15 +406,15 @@ const getSourceBadge = (source: string) => {
           <!-- Performance Metrics -->
           <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl text-center border border-slate-100 text-xs">
             <div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Views</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leadForms.card.views') }}</span>
               <p class="font-mono font-bold text-slate-900 mt-0.5">{{ form.views_count }}</p>
             </div>
             <div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Submissions</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leadForms.card.submissions') }}</span>
               <p class="font-mono font-bold text-primary-700 mt-0.5">{{ form.submissions_count }}</p>
             </div>
             <div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Conversion</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leadForms.card.conversion') }}</span>
               <p class="font-mono font-bold text-emerald-700 mt-0.5">{{ form.conversion_rate }}%</p>
             </div>
           </div>
@@ -426,7 +428,7 @@ const getSourceBadge = (source: string) => {
               @click="copyPublicLink(form)"
               class="text-xs font-bold text-slate-700 hover:text-slate-900 inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
             >
-              <Copy class="w-3.5 h-3.5" /> Share Form Link
+              <Copy class="w-3.5 h-3.5" /> {{ t('crm.leadForms.card.shareLink') }}
             </button>
 
             <button
@@ -434,7 +436,7 @@ const getSourceBadge = (source: string) => {
               @click="openEmbedModal(form)"
               class="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
             >
-              <Code class="w-3.5 h-3.5" /> Embed Code
+              <Code class="w-3.5 h-3.5" /> {{ t('crm.leadForms.card.embedCode') }}
             </button>
           </div>
 
@@ -444,11 +446,11 @@ const getSourceBadge = (source: string) => {
               target="_blank"
               class="text-slate-500 hover:text-blue-600 font-semibold inline-flex items-center gap-1 transition-colors"
             >
-              <ExternalLink class="w-3.5 h-3.5" /> Test Live Form
+              <ExternalLink class="w-3.5 h-3.5" /> {{ t('crm.leadForms.card.testLive') }}
             </a>
 
             <div class="flex items-center gap-1">
-              <UiButton variant="ghost" size="sm" @click="openEditModal(form)" title="Edit Form">
+              <UiButton variant="ghost" size="sm" @click="openEditModal(form)" :title="t('crm.leadForms.modal.editTitle')">
                 <Edit class="w-3.5 h-3.5 text-slate-600" />
               </UiButton>
               <UiButton
@@ -456,7 +458,7 @@ const getSourceBadge = (source: string) => {
                 size="sm"
                 class="text-red-500 hover:text-red-700 hover:bg-red-50"
                 @click="deleteMutation.mutate(form.id)"
-                title="Delete Form"
+                :title="t('crm.common.delete')"
               >
                 <Trash2 class="w-3.5 h-3.5" />
               </UiButton>
@@ -470,18 +472,18 @@ const getSourceBadge = (source: string) => {
     <div v-else class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-4">
       <Sparkles class="w-12 h-12 mx-auto text-slate-300" />
       <div>
-        <h3 class="font-bold text-slate-900 text-base">No lead intake forms found</h3>
+        <h3 class="font-bold text-slate-900 text-base">{{ t('crm.leadForms.emptyTitle') }}</h3>
         <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-          Create customized step-by-step lead wizards or website embed forms to automate prospect capture across multiple channels.
+          {{ t('crm.leadForms.emptyText') }}
         </p>
       </div>
       <UiButton size="sm" @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-1.5" /> Create First Lead Form
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('crm.leadForms.createFirst') }}
       </UiButton>
     </div>
 
     <!-- Create / Edit Form Modal -->
-    <UiModal v-model="isModalOpen" :title="editingForm ? 'Edit Lead Intake Form' : 'Create Lead Capture Form'" size="xl">
+    <UiModal v-model="isModalOpen" :title="editingForm ? t('crm.leadForms.modal.editTitle') : t('crm.leadForms.modal.createTitle')" size="xl">
       <div class="space-y-5">
         <!-- Tabs -->
         <div class="flex items-center gap-2 border-b border-slate-200">
@@ -491,7 +493,7 @@ const getSourceBadge = (source: string) => {
             class="px-4 py-2.5 text-xs font-bold border-b-2 -mb-px transition-colors flex items-center gap-1.5 cursor-pointer"
             :class="activeTab === 'details' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
           >
-            <span>1. Channel & Form Format</span>
+            <span>{{ t('crm.leadForms.modal.tab1') }}</span>
           </button>
           <button
             type="button"
@@ -499,7 +501,7 @@ const getSourceBadge = (source: string) => {
             class="px-4 py-2.5 text-xs font-bold border-b-2 -mb-px transition-colors flex items-center gap-1.5 cursor-pointer"
             :class="activeTab === 'questions' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
           >
-            <span>2. Dynamic Questions ({{ formState.custom_questions.length }})</span>
+            <span>{{ t('crm.leadForms.modal.tab2') }} ({{ formState.custom_questions.length }})</span>
           </button>
           <button
             type="button"
@@ -507,31 +509,31 @@ const getSourceBadge = (source: string) => {
             class="px-4 py-2.5 text-xs font-bold border-b-2 -mb-px transition-colors flex items-center gap-1.5 cursor-pointer"
             :class="activeTab === 'completion' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
           >
-            <span>3. Thank You & Next Steps</span>
+            <span>{{ t('crm.leadForms.modal.tab3') }}</span>
           </button>
         </div>
 
         <!-- Tab 1: Format & Source Setup -->
         <div v-show="activeTab === 'details'" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UiInput v-model="formState.title" label="Internal Form Title" placeholder="e.g. Instagram Ad Campaign Intake" required />
+            <UiInput v-model="formState.title" :label="t('crm.leadForms.modal.internalTitle')" :placeholder="t('crm.leadForms.modal.internalPlaceholder')" required />
             <UiSelect
               v-model="formState.source"
-              label="Lead Channel / Source"
+              :label="t('crm.leadForms.modal.channelSource')"
               :options="[
-                { label: 'Agency Partner Referral', value: 'agency' },
-                { label: 'Social Media Campaign (IG, TikTok, FB)', value: 'social_media' },
-                { label: 'Google / Paid Ads', value: 'google_ads' },
-                { label: 'Website Inbound / Landing Page', value: 'website' },
-                { label: 'Event / Trade Show', value: 'event' },
-                { label: 'Other', value: 'other' },
+                { label: t('crm.leads.sources.agency'), value: 'agency' },
+                { label: t('crm.leads.sources.social_media'), value: 'social_media' },
+                { label: t('crm.leads.sources.google_ads'), value: 'google_ads' },
+                { label: t('crm.leads.sources.website'), value: 'website' },
+                { label: t('crm.leads.sources.event'), value: 'event' },
+                { label: t('crm.leads.sources.other'), value: 'other' },
               ]"
             />
           </div>
 
           <!-- Form Type Picker -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Form Experience Type</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.leadForms.modal.formType') }}</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 @click="formState.form_type = 'wizard'"
@@ -541,12 +543,12 @@ const getSourceBadge = (source: string) => {
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                     <Sparkles class="w-4 h-4 text-primary-600" />
-                    Interactive Step-by-Step Wizard
+                    {{ t('crm.leadForms.modal.wizardTitle') }}
                   </span>
                   <input type="radio" :checked="formState.form_type === 'wizard'" class="text-primary-600" />
                 </div>
                 <p class="text-[11px] text-slate-500 leading-relaxed">
-                  Engaging full-screen experience. Questions appear one-by-one with animated progress. Ideal for social media & agencies.
+                  {{ t('crm.leadForms.modal.wizardDesc') }}
                 </p>
               </div>
 
@@ -558,28 +560,28 @@ const getSourceBadge = (source: string) => {
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                     <Code class="w-4 h-4 text-indigo-600" />
-                    Standard / Embeddable Form
+                    {{ t('crm.leadForms.modal.embedTitle') }}
                   </span>
                   <input type="radio" :checked="formState.form_type === 'classic_embed'" class="text-indigo-600" />
                 </div>
                 <p class="text-[11px] text-slate-500 leading-relaxed">
-                  Classic structured form with copyable iframe embed code. Can be placed directly into external websites & landing pages.
+                  {{ t('crm.leadForms.modal.embedDesc') }}
                 </p>
               </div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UiInput v-model="formState.headline" label="Candidate Heading / Title" placeholder="Tell us about your project" />
-            <UiInput v-model="formState.default_estimated_value" label="Default Est. Value ($)" type="number" placeholder="Optional" />
+            <UiInput v-model="formState.headline" :label="t('crm.leadForms.modal.candidateHeading')" :placeholder="t('crm.leadForms.modal.headingPlaceholder')" />
+            <UiInput v-model="formState.default_estimated_value" :label="t('crm.leadForms.modal.defaultEstValue')" type="number" placeholder="Optional" />
           </div>
 
           <div class="space-y-1">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Introductory Subtitle / Instructions</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.leadForms.modal.introSubtitle') }}</label>
             <textarea
               v-model="formState.description"
               rows="2"
-              placeholder="Provide a brief welcome message or instructions..."
+              :placeholder="t('crm.leadForms.modal.introPlaceholder')"
               class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
             ></textarea>
           </div>
@@ -589,13 +591,13 @@ const getSourceBadge = (source: string) => {
         <div v-show="activeTab === 'questions'" class="space-y-4">
           <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
             <p class="text-xs text-slate-600">
-              Basic contact fields (<strong>Full Name, Email, Phone, Company</strong>) are captured automatically. Add customized questions below.
+              {{ t('crm.leadForms.modal.basicFieldsNote') }}
             </p>
           </div>
 
           <!-- Add Question Palette -->
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">Add Question:</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">{{ t('crm.leadForms.modal.addQuestionLabel') }}</span>
             <button
               v-for="qt in questionTypes"
               :key="qt.value"
@@ -621,7 +623,7 @@ const getSourceBadge = (source: string) => {
                     {{ idx + 1 }}
                   </span>
                   <UiBadge variant="default" class="text-[10px] uppercase font-bold">
-                    {{ q.type }}
+                    {{ t(`crm.leadForms.questionTypes.${q.type}`, q.type) }}
                   </UiBadge>
                 </div>
 
@@ -632,7 +634,7 @@ const getSourceBadge = (source: string) => {
                       v-model="q.required"
                       class="h-3.5 w-3.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span>Required</span>
+                    <span>{{ t('crm.leadForms.modal.requiredCheckbox') }}</span>
                   </label>
                   <button
                     type="button"
@@ -645,20 +647,20 @@ const getSourceBadge = (source: string) => {
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <UiInput v-model="q.label" label="Question Prompt" placeholder="e.g. What is your estimated timeline?" size="sm" required />
-                <UiInput v-model="q.placeholder" label="Placeholder / Hint" placeholder="Optional" size="sm" />
+                <UiInput v-model="q.label" :label="t('crm.leadForms.modal.questionPrompt')" :placeholder="t('crm.leadForms.modal.promptPlaceholder')" size="sm" required />
+                <UiInput v-model="q.placeholder" :label="t('crm.leadForms.modal.hintPlaceholder')" placeholder="Optional" size="sm" />
               </div>
 
               <!-- Options List for Select/Radio/Checkbox -->
               <div v-if="['select', 'radio', 'checkbox'].includes(q.type)" class="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
                 <div class="flex items-center justify-between">
-                  <label class="text-xs font-bold uppercase tracking-wider text-slate-600">Choice Options</label>
+                  <label class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ t('crm.leadForms.modal.choiceOptions') }}</label>
                   <button
                     type="button"
                     @click="addOption(q)"
                     class="text-xs text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-1 hover:underline cursor-pointer"
                   >
-                    <Plus class="w-3 h-3" /> Add Option
+                    <Plus class="w-3 h-3" /> {{ t('crm.leadForms.modal.addOption') }}
                   </button>
                 </div>
 
@@ -688,17 +690,17 @@ const getSourceBadge = (source: string) => {
             </div>
 
             <div v-if="!formState.custom_questions.length" class="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs">
-              No custom questions added yet.
+              {{ t('crm.leadForms.modal.noCustomQuestions') }}
             </div>
           </div>
         </div>
 
         <!-- Tab 3: Thank You & Completion Settings -->
         <div v-show="activeTab === 'completion'" class="space-y-4">
-          <UiInput v-model="formState.thank_you_title" label="Thank You Title" placeholder="Thank You for Reaching Out!" />
+          <UiInput v-model="formState.thank_you_title" :label="t('crm.leadForms.modal.thankYouTitle')" placeholder="Thank You for Reaching Out!" />
 
           <div class="space-y-1">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Thank You Message</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.leadForms.modal.thankYouMessage') }}</label>
             <textarea
               v-model="formState.thank_you_message"
               rows="3"
@@ -707,7 +709,7 @@ const getSourceBadge = (source: string) => {
             ></textarea>
           </div>
 
-          <UiInput v-model="formState.redirect_url" label="Auto-Redirect URL (Optional)" placeholder="https://yourwebsite.com/thank-you" />
+          <UiInput v-model="formState.redirect_url" :label="t('crm.leadForms.modal.redirectUrl')" placeholder="https://yourwebsite.com/thank-you" />
 
           <div class="flex items-center gap-2 pt-2">
             <input
@@ -717,7 +719,7 @@ const getSourceBadge = (source: string) => {
               class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
             />
             <label for="form_is_active" class="text-xs text-slate-700 font-semibold cursor-pointer">
-              Form is active and accepting new lead submissions
+              {{ t('crm.leadForms.modal.activeCheckbox') }}
             </label>
           </div>
         </div>
@@ -732,7 +734,7 @@ const getSourceBadge = (source: string) => {
               type="button"
               @click="activeTab = activeTab === 'completion' ? 'questions' : 'details'"
             >
-              ← Previous
+              {{ t('crm.leadForms.modal.prevBtn') }}
             </UiButton>
             <UiButton
               v-if="activeTab !== 'completion'"
@@ -741,14 +743,14 @@ const getSourceBadge = (source: string) => {
               type="button"
               @click="activeTab = activeTab === 'details' ? 'questions' : 'completion'"
             >
-              Next Step →
+              {{ t('crm.leadForms.modal.nextBtn') }}
             </UiButton>
           </div>
 
           <div class="flex items-center gap-2">
-            <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+            <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
             <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-              {{ editingForm ? 'Save Changes' : 'Publish Lead Form' }}
+              {{ editingForm ? t('crm.leadForms.modal.saveBtn') : t('crm.leadForms.modal.publishBtn') }}
             </UiButton>
           </div>
         </div>
@@ -756,10 +758,10 @@ const getSourceBadge = (source: string) => {
     </UiModal>
 
     <!-- Embed Snippet Modal -->
-    <UiModal v-model="isEmbedModalOpen" title="Website Embed Code" size="md">
+    <UiModal v-model="isEmbedModalOpen" :title="t('crm.leadForms.embedModal.title')" size="md">
       <div v-if="embedTargetForm" class="space-y-4">
         <p class="text-xs text-slate-600">
-          Paste the following HTML code snippet into your external website or landing page to embed this lead capture form seamlessly.
+          {{ t('crm.leadForms.embedModal.text') }}
         </p>
 
         <div class="p-3.5 bg-slate-900 rounded-xl text-slate-100 font-mono text-xs overflow-x-auto select-all">
@@ -767,9 +769,9 @@ const getSourceBadge = (source: string) => {
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="outline" size="sm" @click="isEmbedModalOpen = false">Close</UiButton>
+          <UiButton variant="outline" size="sm" @click="isEmbedModalOpen = false">{{ t('crm.leadForms.embedModal.close') }}</UiButton>
           <UiButton size="sm" @click="copyEmbedCode">
-            <Copy class="w-3.5 h-3.5 mr-1.5" /> Copy HTML Snippet
+            <Copy class="w-3.5 h-3.5 mr-1.5" /> {{ t('crm.leadForms.embedModal.copyBtn') }}
           </UiButton>
         </div>
       </div>

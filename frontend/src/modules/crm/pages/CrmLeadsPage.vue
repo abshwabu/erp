@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import type { Lead, LeadStatus, LeadPriority } from '@/types/crm'
@@ -33,6 +34,7 @@ import {
   Layers,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -98,22 +100,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Inbound Leads',
+      label: t('crm.leads.kpis.totalInbound'),
       value: list.length,
       icon: markRaw(Users),
     },
     {
-      label: 'Qualified Prospects',
+      label: t('crm.leads.kpis.qualified'),
       value: qualified,
       icon: markRaw(Sparkles),
     },
     {
-      label: 'Converted to Pipeline',
+      label: t('crm.leads.kpis.converted'),
       value: converted,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Total Inbound Est. Value',
+      label: t('crm.leads.kpis.estValue'),
       value: `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(DollarSign),
     },
@@ -131,10 +133,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
     isCreateModalOpen.value = false
-    toast.success(editingLead.value ? 'Lead updated successfully' : 'New lead captured')
+    toast.success(editingLead.value ? t('crm.leads.messages.updated') : t('crm.leads.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save lead')
+    toast.error(err?.response?.data?.message || t('crm.leads.messages.failedSave'))
   },
 })
 
@@ -149,10 +151,10 @@ const convertMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
     isConvertModalOpen.value = false
-    toast.success('Lead converted to Customer and Deal in pipeline! 🎉')
+    toast.success(t('crm.leads.messages.converted'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to convert lead')
+    toast.error(err?.response?.data?.message || t('crm.leads.messages.failedConvert'))
   },
 })
 
@@ -160,7 +162,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => crmApi.deleteLead(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
-    toast.success('Lead deleted')
+    toast.success(t('crm.leads.messages.deleted'))
   },
 })
 
@@ -217,7 +219,7 @@ const openLeadDetail = (lead: Lead) => {
 
 const handleSave = () => {
   if (!leadForm.value.name) {
-    toast.error('Please enter the lead name')
+    toast.error(t('crm.leads.messages.nameRequired'))
     return
   }
   saveMutation.mutate({
@@ -228,21 +230,21 @@ const handleSave = () => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'new': return { label: 'New Lead', variant: 'info' as const }
-    case 'contacted': return { label: 'Contacted', variant: 'warning' as const }
-    case 'qualified': return { label: 'Qualified', variant: 'purple' as const }
-    case 'unqualified': return { label: 'Unqualified', variant: 'danger' as const }
-    case 'converted': return { label: 'Converted 🎉', variant: 'success' as const }
+    case 'new': return { label: t('crm.leads.statuses.new'), variant: 'info' as const }
+    case 'contacted': return { label: t('crm.leads.statuses.contacted'), variant: 'warning' as const }
+    case 'qualified': return { label: t('crm.leads.statuses.qualified'), variant: 'purple' as const }
+    case 'unqualified': return { label: t('crm.leads.statuses.unqualified'), variant: 'danger' as const }
+    case 'converted': return { label: t('crm.leads.statuses.converted'), variant: 'success' as const }
     default: return { label: status, variant: 'default' as const }
   }
 }
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
-    case 'urgent': return { label: 'Urgent', variant: 'danger' as const }
-    case 'high': return { label: 'High', variant: 'warning' as const }
-    case 'medium': return { label: 'Medium', variant: 'default' as const }
-    default: return { label: 'Low', variant: 'default' as const }
+    case 'urgent': return { label: t('crm.leads.priorities.urgent'), variant: 'danger' as const }
+    case 'high': return { label: t('crm.leads.priorities.high'), variant: 'warning' as const }
+    case 'medium': return { label: t('crm.leads.priorities.medium'), variant: 'default' as const }
+    default: return { label: t('crm.leads.priorities.low'), variant: 'default' as const }
   }
 }
 </script>
@@ -252,11 +254,11 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Leads & Inbound Inquiries</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Capture inbound leads, qualify opportunities, review form responses, and convert to sales pipeline.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.leads.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('crm.leads.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Capture New Lead
+        <Plus class="w-4 h-4 mr-2" /> {{ t('crm.leads.captureNewLead') }}
       </UiButton>
     </div>
 
@@ -283,13 +285,13 @@ const getPriorityBadge = (priority: string) => {
             class="px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
             :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            {{ st === 'all' ? `All (${leads?.length || 0})` : st }}
+            {{ st === 'all' ? `${t('crm.leads.statusFilters.all')} (${leads?.length || 0})` : t(`crm.leads.statusFilters.${st}`, st) }}
           </button>
         </div>
 
         <UiInput
           v-model="searchQuery"
-          placeholder="Search name, company, email..."
+          :placeholder="t('crm.deals.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-64"
         >
@@ -307,12 +309,12 @@ const getPriorityBadge = (priority: string) => {
         <table class="min-w-full divide-y divide-slate-100 text-xs">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
             <tr>
-              <th class="px-4 py-3 text-left">Lead Contact & Company</th>
-              <th class="px-4 py-3 text-left">Status</th>
-              <th class="px-4 py-3 text-left">Priority</th>
-              <th class="px-4 py-3 text-left">Channel / Source</th>
-              <th class="px-4 py-3 text-right">Est. Value (Budget)</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.leads.table.contactCompany') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.leads.table.status') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.leads.table.priority') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.leads.table.channel') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.leads.table.estValue') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.leads.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -328,15 +330,15 @@ const getPriorityBadge = (priority: string) => {
                   <span
                     v-if="lead.custom_form_responses && Object.keys(lead.custom_form_responses).length"
                     class="px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 font-semibold text-[10px] border border-primary-100"
-                    title="Submitted via Lead Form"
+                    :title="t('crm.leads.table.formResponsesBadge')"
                   >
-                    Form Responses
+                    {{ t('crm.leads.table.formResponsesBadge') }}
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                   <span v-if="lead.company" class="font-semibold text-slate-700">{{ lead.company }}</span>
                   <span v-if="lead.company && (lead.email || lead.phone)">•</span>
-                  <span>{{ lead.email || lead.phone || 'No contact info' }}</span>
+                  <span>{{ lead.email || lead.phone || t('crm.leads.table.noContactInfo') }}</span>
                 </div>
               </td>
 
@@ -353,7 +355,7 @@ const getPriorityBadge = (priority: string) => {
               </td>
 
               <td class="px-4 py-3 capitalize text-slate-600 font-medium">
-                {{ lead.source.replace('_', ' ') }}
+                {{ t(`crm.leads.sources.${lead.source}`, lead.source.replace('_', ' ')) }}
               </td>
 
               <!-- Est. Value (Budget extracted from form answers or default) -->
@@ -370,16 +372,16 @@ const getPriorityBadge = (priority: string) => {
                   size="sm"
                   variant="outline"
                   @click="openConvertModal(lead)"
-                  title="Convert Lead to Customer & Deal"
+                  :title="t('crm.leads.detailsModal.convertToDeal')"
                 >
-                  <Sparkles class="w-3.5 h-3.5 mr-1 text-primary-600" /> Convert
+                  <Sparkles class="w-3.5 h-3.5 mr-1 text-primary-600" /> {{ t('crm.leads.table.convert') }}
                 </UiButton>
 
-                <UiButton variant="ghost" size="sm" @click="openLeadDetail(lead)" title="View Form Responses">
+                <UiButton variant="ghost" size="sm" @click="openLeadDetail(lead)" :title="t('crm.leads.detailsModal.title')">
                   <Eye class="w-3.5 h-3.5 text-slate-600" />
                 </UiButton>
 
-                <UiButton variant="ghost" size="sm" @click="openEditModal(lead)" title="Edit Lead">
+                <UiButton variant="ghost" size="sm" @click="openEditModal(lead)" :title="t('crm.leads.formModal.editTitle')">
                   <Edit class="w-3.5 h-3.5 text-slate-600" />
                 </UiButton>
 
@@ -388,7 +390,7 @@ const getPriorityBadge = (priority: string) => {
                   size="sm"
                   class="text-red-500 hover:text-red-700 hover:bg-red-50"
                   @click="deleteMutation.mutate(lead.id)"
-                  title="Delete Lead"
+                  :title="t('crm.common.delete')"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
                 </UiButton>
@@ -401,16 +403,16 @@ const getPriorityBadge = (priority: string) => {
       <!-- Empty State -->
       <div v-else class="p-12 text-center text-slate-400 space-y-3">
         <Users class="w-10 h-10 mx-auto text-slate-300" />
-        <h4 class="font-bold text-slate-700 text-sm">No leads found</h4>
+        <h4 class="font-bold text-slate-700 text-sm">{{ t('crm.leads.table.emptyTitle') }}</h4>
         <p class="text-xs text-slate-400 max-w-sm mx-auto">
-          Capture prospect inquiries or share your lead intake wizard to build your sales funnel.
+          {{ t('crm.leads.table.emptyText') }}
         </p>
-        <UiButton size="sm" @click="openCreateModal">Capture First Lead</UiButton>
+        <UiButton size="sm" @click="openCreateModal">{{ t('crm.leads.table.captureFirst') }}</UiButton>
       </div>
     </div>
 
     <!-- Lead Details & Questionnaire Responses Modal -->
-    <UiModal v-model="isDetailDrawerOpen" title="Lead Inquiry Details" size="lg">
+    <UiModal v-model="isDetailDrawerOpen" :title="t('crm.leads.detailsModal.title')" size="lg">
       <div v-if="selectedLead" class="space-y-5">
         <!-- Lead Header -->
         <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -418,7 +420,7 @@ const getPriorityBadge = (priority: string) => {
             <h3 class="text-base font-black text-slate-900">{{ selectedLead.name }}</h3>
             <p class="text-xs text-slate-500 font-medium">
               {{ selectedLead.title ? `${selectedLead.title} at ` : '' }}
-              <strong class="text-slate-800">{{ selectedLead.company || 'Individual Prospect' }}</strong>
+              <strong class="text-slate-800">{{ selectedLead.company || t('crm.leads.detailsModal.individualProspect') }}</strong>
             </p>
           </div>
 
@@ -435,21 +437,21 @@ const getPriorityBadge = (priority: string) => {
         <!-- Contact & Value Summary Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Est. Value / Budget</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leads.detailsModal.estBudget') }}</span>
             <p class="font-mono font-black text-primary-700 text-sm">
               {{ selectedLead.estimated_value ? `$${Number(selectedLead.estimated_value).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—' }}
             </p>
           </div>
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Channel</span>
-            <p class="font-bold text-slate-800 capitalize">{{ selectedLead.source.replace('_', ' ') }}</p>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leads.detailsModal.channel') }}</span>
+            <p class="font-bold text-slate-800 capitalize">{{ t(`crm.leads.sources.${selectedLead.source}`, selectedLead.source.replace('_', ' ')) }}</p>
           </div>
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leads.detailsModal.email') }}</span>
             <p class="font-mono font-bold text-slate-800 truncate">{{ selectedLead.email || '—' }}</p>
           </div>
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.leads.detailsModal.phone') }}</span>
             <p class="font-mono font-bold text-slate-800 truncate">{{ selectedLead.phone || '—' }}</p>
           </div>
         </div>
@@ -457,7 +459,7 @@ const getPriorityBadge = (priority: string) => {
         <!-- Submitted Form Questionnaire Responses -->
         <div v-if="selectedLead.custom_form_responses && Object.keys(selectedLead.custom_form_responses).length" class="space-y-3">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
-            Submitted Questionnaire Responses
+            {{ t('crm.leads.detailsModal.questionnaireResponses') }}
           </h4>
 
           <div class="space-y-2.5">
@@ -478,7 +480,7 @@ const getPriorityBadge = (priority: string) => {
 
         <!-- Notes -->
         <div v-if="selectedLead.notes" class="space-y-1.5 pt-1">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">Additional Inquiry Notes</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">{{ t('crm.leads.detailsModal.notes') }}</h4>
           <p class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
             {{ selectedLead.notes }}
           </p>
@@ -486,118 +488,118 @@ const getPriorityBadge = (priority: string) => {
 
         <!-- Footer Actions -->
         <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-          <UiButton variant="outline" size="sm" @click="isDetailDrawerOpen = false">Close</UiButton>
+          <UiButton variant="outline" size="sm" @click="isDetailDrawerOpen = false">{{ t('crm.common.close') }}</UiButton>
           <UiButton
             v-if="selectedLead.status !== 'converted'"
             size="sm"
             @click="isDetailDrawerOpen = false; openConvertModal(selectedLead)"
           >
-            <Sparkles class="w-3.5 h-3.5 mr-1" /> Convert to Pipeline Deal
+            <Sparkles class="w-3.5 h-3.5 mr-1" /> {{ t('crm.leads.detailsModal.convertToDeal') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Create / Edit Lead Modal -->
-    <UiModal v-model="isCreateModalOpen" :title="editingLead ? 'Edit Lead Details' : 'Capture New Lead'" size="lg">
+    <UiModal v-model="isCreateModalOpen" :title="editingLead ? t('crm.leads.formModal.editTitle') : t('crm.leads.formModal.createTitle')" size="lg">
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="leadForm.name" label="Contact Name" placeholder="Jane Smith" required />
-          <UiInput v-model="leadForm.company" label="Company / Organization" placeholder="Acme Inc." />
+          <UiInput v-model="leadForm.name" :label="t('crm.leads.formModal.contactName')" placeholder="Jane Smith" required />
+          <UiInput v-model="leadForm.company" :label="t('crm.leads.formModal.company')" placeholder="Acme Inc." />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <UiInput v-model="leadForm.title" label="Job Title" placeholder="VP Operations" />
-          <UiInput v-model="leadForm.email" label="Email Address" type="email" placeholder="jane@acme.com" />
-          <UiInput v-model="leadForm.phone" label="Phone Number" placeholder="+1..." />
+          <UiInput v-model="leadForm.title" :label="t('crm.leads.formModal.jobTitle')" placeholder="VP Operations" />
+          <UiInput v-model="leadForm.email" :label="t('crm.leads.formModal.email')" type="email" placeholder="jane@acme.com" />
+          <UiInput v-model="leadForm.phone" :label="t('crm.leads.formModal.phone')" placeholder="+1..." />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <UiSelect
             v-model="leadForm.source"
-            label="Lead Source"
+            :label="t('crm.leads.formModal.source')"
             :options="[
-              { label: 'Website / Organic', value: 'website' },
-              { label: 'Agency Referral', value: 'agency' },
-              { label: 'Social Media', value: 'social_media' },
-              { label: 'Google / Paid Ads', value: 'google_ads' },
-              { label: 'Client Referral', value: 'referral' },
-              { label: 'Cold Outreach', value: 'outreach' },
-              { label: 'Event / Trade Show', value: 'event' },
-              { label: 'Other', value: 'other' },
+              { label: t('crm.leads.sources.website'), value: 'website' },
+              { label: t('crm.leads.sources.agency'), value: 'agency' },
+              { label: t('crm.leads.sources.social_media'), value: 'social_media' },
+              { label: t('crm.leads.sources.google_ads'), value: 'google_ads' },
+              { label: t('crm.leads.sources.referral'), value: 'referral' },
+              { label: t('crm.leads.sources.outreach'), value: 'outreach' },
+              { label: t('crm.leads.sources.event'), value: 'event' },
+              { label: t('crm.leads.sources.other'), value: 'other' },
             ]"
           />
           <UiSelect
             v-model="leadForm.status"
-            label="Status"
+            :label="t('crm.leads.formModal.status')"
             :options="[
-              { label: 'New Lead', value: 'new' },
-              { label: 'Contacted', value: 'contacted' },
-              { label: 'Qualified', value: 'qualified' },
-              { label: 'Unqualified', value: 'unqualified' },
-              { label: 'Converted', value: 'converted' },
+              { label: t('crm.leads.statuses.new'), value: 'new' },
+              { label: t('crm.leads.statuses.contacted'), value: 'contacted' },
+              { label: t('crm.leads.statuses.qualified'), value: 'qualified' },
+              { label: t('crm.leads.statuses.unqualified'), value: 'unqualified' },
+              { label: t('crm.leads.statuses.converted'), value: 'converted' },
             ]"
           />
           <UiSelect
             v-model="leadForm.priority"
-            label="Priority"
+            :label="t('crm.leads.formModal.priority')"
             :options="[
-              { label: 'Low', value: 'low' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'High', value: 'high' },
-              { label: 'Urgent', value: 'urgent' },
+              { label: t('crm.leads.priorities.low'), value: 'low' },
+              { label: t('crm.leads.priorities.medium'), value: 'medium' },
+              { label: t('crm.leads.priorities.high'), value: 'high' },
+              { label: t('crm.leads.priorities.urgent'), value: 'urgent' },
             ]"
           />
-          <UiInput v-model="leadForm.estimated_value" label="Est. Value / Budget ($)" type="number" placeholder="5000" />
+          <UiInput v-model="leadForm.estimated_value" :label="t('crm.leads.formModal.estValue')" type="number" placeholder="5000" />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Notes & Context</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.leads.formModal.notesLabel') }}</label>
           <textarea
             v-model="leadForm.notes"
             rows="3"
-            placeholder="Key discussion points, customer requirements, timeline..."
+            :placeholder="t('crm.leads.formModal.notesPlaceholder')"
             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingLead ? 'Update Lead' : 'Save Lead' }}
+            {{ editingLead ? t('crm.leads.formModal.updateBtn') : t('crm.leads.formModal.saveBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Convert Lead to Deal Modal -->
-    <UiModal v-model="isConvertModalOpen" title="Convert Lead to Customer & Pipeline Deal" size="md">
+    <UiModal v-model="isConvertModalOpen" :title="t('crm.leads.convertModal.title')" size="md">
       <div v-if="convertingLead" class="space-y-5">
         <div class="p-4 bg-primary-50 border border-primary-100 rounded-xl space-y-1">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-primary-900">Lead to be converted</h4>
-          <p class="text-sm font-black text-primary-950">{{ convertingLead.name }} ({{ convertingLead.company || 'Individual' }})</p>
-          <p class="text-xs text-primary-700">Converting will automatically register an active Customer and create an opportunity in your Deals pipeline.</p>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-primary-900">{{ t('crm.leads.convertModal.leadToBeConverted') }}</h4>
+          <p class="text-sm font-black text-primary-950">{{ convertingLead.name }} ({{ convertingLead.company || t('crm.leads.detailsModal.individualProspect') }})</p>
+          <p class="text-xs text-primary-700">{{ t('crm.leads.convertModal.conversionNotice') }}</p>
         </div>
 
         <div class="space-y-4">
-          <UiInput v-model="convertForm.deal_title" label="Deal Title" placeholder="e.g. Enterprise License" required />
-          <UiInput v-model="convertForm.deal_amount" label="Deal Amount ($)" type="number" placeholder="10000" />
+          <UiInput v-model="convertForm.deal_title" :label="t('crm.leads.convertModal.dealTitle')" :placeholder="t('crm.leads.convertModal.dealTitlePlaceholder')" required />
+          <UiInput v-model="convertForm.deal_amount" :label="t('crm.leads.convertModal.dealAmount')" type="number" placeholder="10000" />
           <UiSelect
             v-model="convertForm.stage"
-            label="Initial Pipeline Stage"
+            :label="t('crm.leads.convertModal.initialStage')"
             :options="[
-              { label: 'Qualification', value: 'qualification' },
-              { label: 'Proposal Sent', value: 'proposal' },
-              { label: 'Negotiation', value: 'negotiation' },
-              { label: 'Closed Won', value: 'won' },
+              { label: t('crm.deals.stages.qualification'), value: 'qualification' },
+              { label: t('crm.deals.stages.proposal'), value: 'proposal' },
+              { label: t('crm.deals.stages.negotiation'), value: 'negotiation' },
+              { label: t('crm.deals.stages.won'), value: 'won' },
             ]"
           />
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isConvertModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isConvertModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
           <UiButton :loading="convertMutation.isPending.value" @click="convertMutation.mutate()">
-            Confirm Conversion
+            {{ t('crm.leads.convertModal.confirmBtn') }}
           </UiButton>
         </div>
       </div>

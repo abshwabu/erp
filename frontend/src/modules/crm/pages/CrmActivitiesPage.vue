@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import type { Activity, ActivityType, ActivityStatus } from '@/types/crm'
@@ -28,6 +29,7 @@ import {
   MessageSquare,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -93,22 +95,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Pending Tasks & Follow-ups',
+      label: t('crm.activities.kpis.pendingTasks'),
       value: pending,
       icon: markRaw(Clock),
     },
     {
-      label: 'Completed Activities',
+      label: t('crm.activities.kpis.completedActivities'),
       value: completed,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Logged Client Calls',
+      label: t('crm.activities.kpis.loggedCalls'),
       value: calls,
       icon: markRaw(PhoneCall),
     },
     {
-      label: 'Total Activity History',
+      label: t('crm.activities.kpis.totalHistory'),
       value: list.length,
       icon: markRaw(Layers),
     },
@@ -126,10 +128,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
     isModalOpen.value = false
-    toast.success(editingActivity.value ? 'Activity updated' : 'Activity scheduled')
+    toast.success(editingActivity.value ? t('crm.activities.messages.updated') : t('crm.activities.messages.scheduled'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save activity')
+    toast.error(err?.response?.data?.message || t('crm.activities.messages.failedSave'))
   },
 })
 
@@ -137,7 +139,7 @@ const toggleMutation = useMutation({
   mutationFn: (id: string) => crmApi.toggleActivityComplete(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
-    toast.success('Task status updated')
+    toast.success(t('crm.activities.messages.statusUpdated'))
   },
 })
 
@@ -145,7 +147,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => crmApi.deleteActivity(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm'] })
-    toast.success('Activity removed')
+    toast.success(t('crm.activities.messages.removed'))
   },
 })
 
@@ -181,7 +183,7 @@ const openEditModal = (act: Activity) => {
 
 const handleSave = () => {
   if (!form.value.title) {
-    toast.error('Please enter a title for the activity')
+    toast.error(t('crm.activities.messages.titleRequired'))
     return
   }
   saveMutation.mutate({
@@ -210,11 +212,11 @@ const getActivityIcon = (type: ActivityType) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Activities & Tasks</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Plan client meetings, log sales calls, and track deal follow-up actions.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.activities.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('crm.activities.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Schedule Activity
+        <Plus class="w-4 h-4 mr-2" /> {{ t('crm.activities.scheduleActivity') }}
       </UiButton>
     </div>
 
@@ -241,13 +243,13 @@ const getActivityIcon = (type: ActivityType) => {
             class="px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
             :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            {{ st }}
+            {{ t(`crm.activities.filters.${st}`, st) }}
           </button>
         </div>
 
         <UiInput
           v-model="searchQuery"
-          placeholder="Search activity title, customer..."
+          :placeholder="t('crm.activities.filters.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-64"
         >
@@ -293,14 +295,14 @@ const getActivityIcon = (type: ActivityType) => {
                   {{ act.title }}
                 </h4>
                 <UiBadge variant="default" class="text-[9px] uppercase font-bold">
-                  {{ act.type.replace('_', ' ') }}
+                  {{ t(`crm.activities.types.${act.type}`, act.type.replace('_', ' ')) }}
                 </UiBadge>
                 <UiBadge
                   v-if="act.priority === 'high'"
                   variant="warning"
                   class="text-[9px] font-bold"
                 >
-                  High Priority
+                  {{ t('crm.activities.highPriorityBadge') }}
                 </UiBadge>
               </div>
 
@@ -311,13 +313,13 @@ const getActivityIcon = (type: ActivityType) => {
               <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-0.5">
                 <span v-if="act.due_date" class="flex items-center gap-1 font-medium text-slate-500">
                   <Calendar class="w-3 h-3 text-slate-400" />
-                  Due: {{ new Date(act.due_date).toLocaleString() }}
+                  {{ t('crm.activities.due') }}: {{ new Date(act.due_date).toLocaleString() }}
                 </span>
                 <span v-if="act.customer" class="font-semibold text-slate-700">
                   • {{ act.customer.company || act.customer.name }}
                 </span>
                 <span v-if="act.deal" class="text-primary-600 font-semibold">
-                  • Deal: {{ act.deal.title }}
+                  • {{ t('crm.activities.dealPrefix') }}: {{ act.deal.title }}
                 </span>
               </div>
             </div>
@@ -325,7 +327,7 @@ const getActivityIcon = (type: ActivityType) => {
 
           <!-- Actions -->
           <div class="flex items-center gap-1 shrink-0">
-            <UiButton variant="ghost" size="sm" @click="openEditModal(act)">
+            <UiButton variant="ghost" size="sm" @click="openEditModal(act)" :title="t('crm.activities.modal.editTitle')">
               <Edit class="w-3.5 h-3.5 text-slate-600" />
             </UiButton>
             <UiButton
@@ -333,6 +335,7 @@ const getActivityIcon = (type: ActivityType) => {
               size="sm"
               class="text-red-500 hover:text-red-700 hover:bg-red-50"
               @click="deleteMutation.mutate(act.id)"
+              :title="t('crm.common.delete')"
             >
               <Trash2 class="w-3.5 h-3.5" />
             </UiButton>
@@ -341,68 +344,68 @@ const getActivityIcon = (type: ActivityType) => {
       </div>
 
       <div v-else class="p-12 text-center text-slate-400 text-xs">
-        No activities found. Schedule a task or log a call to keep your pipeline active.
+        {{ t('crm.activities.emptyText') }}
       </div>
     </div>
 
     <!-- Create / Edit Activity Modal -->
-    <UiModal v-model="isModalOpen" :title="editingActivity ? 'Edit Activity' : 'Schedule Activity / Log Task'" size="md">
+    <UiModal v-model="isModalOpen" :title="editingActivity ? t('crm.activities.modal.editTitle') : t('crm.activities.modal.createTitle')" size="md">
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="form.type"
-            label="Activity Type"
+            :label="t('crm.activities.modal.activityType')"
             :options="[
-              { label: 'Sales Call', value: 'call' },
-              { label: 'Client Meeting', value: 'meeting' },
-              { label: 'Email Follow-up', value: 'email' },
-              { label: 'Action Task', value: 'task' },
-              { label: 'Contract Follow-up', value: 'follow_up' },
-              { label: 'Internal Note', value: 'note' },
+              { label: t('crm.activities.types.call'), value: 'call' },
+              { label: t('crm.activities.types.meeting'), value: 'meeting' },
+              { label: t('crm.activities.types.email'), value: 'email' },
+              { label: t('crm.activities.types.task'), value: 'task' },
+              { label: t('crm.activities.types.follow_up'), value: 'follow_up' },
+              { label: t('crm.activities.types.note'), value: 'note' },
             ]"
           />
           <UiSelect
             v-model="form.priority"
-            label="Priority"
+            :label="t('crm.activities.modal.priority')"
             :options="[
-              { label: 'Low', value: 'low' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'High Priority', value: 'high' },
+              { label: t('crm.activities.priorities.low'), value: 'low' },
+              { label: t('crm.activities.priorities.medium'), value: 'medium' },
+              { label: t('crm.activities.priorities.high'), value: 'high' },
             ]"
           />
         </div>
 
-        <UiInput v-model="form.title" label="Activity Title" placeholder="e.g. Call client regarding proposal feedback" required />
+        <UiInput v-model="form.title" :label="t('crm.activities.modal.activityTitle')" :placeholder="t('crm.activities.modal.titlePlaceholder')" required />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="form.customer_id"
-            label="Related Customer (Optional)"
-            :options="[{ label: 'None', value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
+            :label="t('crm.activities.modal.relatedCustomer')"
+            :options="[{ label: t('crm.activities.modal.none'), value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
           />
           <UiSelect
             v-model="form.deal_id"
-            label="Linked Deal (Optional)"
-            :options="[{ label: 'None', value: '' }, ...(deals?.map(d => ({ label: d.title, value: d.id })) || [])]"
+            :label="t('crm.activities.modal.linkedDeal')"
+            :options="[{ label: t('crm.activities.modal.none'), value: '' }, ...(deals?.map(d => ({ label: d.title, value: d.id })) || [])]"
           />
         </div>
 
-        <UiInput v-model="form.due_date" label="Due Date & Time" type="datetime-local" />
+        <UiInput v-model="form.due_date" :label="t('crm.activities.modal.dueDateTime')" type="datetime-local" />
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Description & Agenda</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.activities.modal.descriptionAgenda') }}</label>
           <textarea
             v-model="form.description"
             rows="3"
-            placeholder="Action items, meeting agenda, key takeaways..."
+            :placeholder="t('crm.activities.modal.descriptionPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingActivity ? 'Save Changes' : 'Schedule Activity' }}
+            {{ editingActivity ? t('crm.activities.modal.saveBtn') : t('crm.activities.modal.scheduleBtn') }}
           </UiButton>
         </div>
       </div>

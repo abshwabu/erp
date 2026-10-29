@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import type { CrmContact } from '@/types/crm'
@@ -30,6 +31,7 @@ import {
   Layers,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -94,22 +96,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Directory Contacts',
+      label: t('crm.contacts.kpis.totalContacts'),
       value: list.length,
       icon: markRaw(Users),
     },
     {
-      label: 'Active Customers',
+      label: t('crm.contacts.kpis.activeCustomers'),
       value: customers,
       icon: markRaw(Building2),
     },
     {
-      label: 'Prospects / Leads',
+      label: t('crm.contacts.kpis.leads'),
       value: leads,
       icon: markRaw(TrendingUp),
     },
     {
-      label: 'Strategic Partners',
+      label: t('crm.contacts.kpis.partners'),
       value: partners,
       icon: markRaw(Briefcase),
     },
@@ -127,10 +129,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm', 'contacts'] })
     isModalOpen.value = false
-    toast.success(editingContact.value ? 'Contact updated' : 'Contact created')
+    toast.success(editingContact.value ? t('crm.contacts.messages.updated') : t('crm.contacts.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save contact')
+    toast.error(err?.response?.data?.message || t('crm.contacts.messages.failedSave'))
   },
 })
 
@@ -139,7 +141,7 @@ const deleteMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['crm', 'contacts'] })
     isDrawerOpen.value = false
-    toast.success('Contact deleted')
+    toast.success(t('crm.contacts.messages.deleted'))
   },
 })
 
@@ -188,7 +190,7 @@ const viewContactDetail = (contact: CrmContact) => {
 
 const handleSave = () => {
   if (!contactForm.value.name) {
-    toast.error('Please provide a contact name')
+    toast.error(t('crm.contacts.messages.nameRequired'))
     return
   }
   saveMutation.mutate(contactForm.value)
@@ -196,10 +198,10 @@ const handleSave = () => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'customer': return { label: 'Customer', variant: 'success' as const }
-    case 'lead': return { label: 'Lead', variant: 'info' as const }
-    case 'partner': return { label: 'Partner', variant: 'purple' as const }
-    case 'churned': return { label: 'Churned', variant: 'danger' as const }
+    case 'customer': return { label: t('crm.contacts.statuses.customer'), variant: 'success' as const }
+    case 'lead': return { label: t('crm.contacts.statuses.lead'), variant: 'info' as const }
+    case 'partner': return { label: t('crm.contacts.statuses.partner'), variant: 'purple' as const }
+    case 'churned': return { label: t('crm.contacts.statuses.churned'), variant: 'danger' as const }
     default: return { label: status, variant: 'default' as const }
   }
 }
@@ -210,11 +212,11 @@ const getStatusBadge = (status: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Contacts & Accounts</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Directory of enterprise accounts, prospective clients, and key stakeholders.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('crm.contacts.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('crm.contacts.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Add Contact
+        <Plus class="w-4 h-4 mr-2" /> {{ t('crm.contacts.addContact') }}
       </UiButton>
     </div>
 
@@ -241,13 +243,13 @@ const getStatusBadge = (status: string) => {
             class="px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
             :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            {{ st === 'all' ? `All Contacts (${contacts?.length || 0})` : st }}
+            {{ st === 'all' ? `${t('crm.contacts.statusFilters.all')} (${contacts?.length || 0})` : t(`crm.contacts.statusFilters.${st}`, st) }}
           </button>
         </div>
 
         <UiInput
           v-model="searchQuery"
-          placeholder="Search name, company, email..."
+          :placeholder="t('crm.deals.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-64"
         >
@@ -265,12 +267,12 @@ const getStatusBadge = (status: string) => {
         <table class="min-w-full divide-y divide-slate-100 text-xs">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
             <tr>
-              <th class="px-4 py-3 text-left">Contact & Organization</th>
-              <th class="px-4 py-3 text-left">Contact Details</th>
-              <th class="px-4 py-3 text-left">Status</th>
-              <th class="px-4 py-3 text-left">Location</th>
-              <th class="px-4 py-3 text-center">Deals</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.contacts.table.contactOrg') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.contacts.table.contactDetails') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.contacts.table.status') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('crm.contacts.table.location') }}</th>
+              <th class="px-4 py-3 text-center">{{ t('crm.contacts.table.deals') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('crm.contacts.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -284,7 +286,7 @@ const getStatusBadge = (status: string) => {
                 <div class="font-bold text-slate-900 text-sm">{{ contact.name }}</div>
                 <div class="text-[11px] text-slate-500 font-medium mt-0.5">
                   {{ contact.job_title ? `${contact.job_title} at ` : '' }}
-                  <span class="font-semibold text-slate-700">{{ contact.company || 'Individual' }}</span>
+                  <span class="font-semibold text-slate-700">{{ contact.company || t('crm.contacts.table.individual') }}</span>
                 </div>
               </td>
 
@@ -314,10 +316,10 @@ const getStatusBadge = (status: string) => {
               </td>
 
               <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap" @click.stop>
-                <UiButton variant="ghost" size="sm" @click="viewContactDetail(contact)" title="View Profile">
+                <UiButton variant="ghost" size="sm" @click="viewContactDetail(contact)" :title="t('crm.contacts.profileModal.title')">
                   <Eye class="w-3.5 h-3.5 text-slate-600" />
                 </UiButton>
-                <UiButton variant="ghost" size="sm" @click="openEditModal(contact)" title="Edit Contact">
+                <UiButton variant="ghost" size="sm" @click="openEditModal(contact)" :title="t('crm.contacts.modal.editTitle')">
                   <Edit class="w-3.5 h-3.5 text-slate-600" />
                 </UiButton>
                 <UiButton
@@ -325,7 +327,7 @@ const getStatusBadge = (status: string) => {
                   size="sm"
                   class="text-red-500 hover:text-red-700 hover:bg-red-50"
                   @click="deleteMutation.mutate(contact.id)"
-                  title="Delete Contact"
+                  :title="t('crm.common.delete')"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
                 </UiButton>
@@ -336,65 +338,65 @@ const getStatusBadge = (status: string) => {
       </div>
 
       <div v-else class="p-12 text-center text-slate-400 text-xs">
-        No contacts found matching your criteria.
+        {{ t('crm.contacts.table.emptySearch') }}
       </div>
     </div>
 
     <!-- Create / Edit Contact Modal -->
-    <UiModal v-model="isModalOpen" :title="editingContact ? 'Edit Contact' : 'Add New Contact'" size="lg">
+    <UiModal v-model="isModalOpen" :title="editingContact ? t('crm.contacts.modal.editTitle') : t('crm.contacts.modal.createTitle')" size="lg">
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="contactForm.name" label="Full Name" placeholder="Johnathan Miller" required />
-          <UiInput v-model="contactForm.company" label="Company Name" placeholder="Miller Technologies" />
+          <UiInput v-model="contactForm.name" :label="t('crm.contacts.modal.fullName')" placeholder="Johnathan Miller" required />
+          <UiInput v-model="contactForm.company" :label="t('crm.contacts.modal.companyName')" placeholder="Miller Technologies" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <UiInput v-model="contactForm.job_title" label="Job Title" placeholder="Director of Sales" />
-          <UiInput v-model="contactForm.email" label="Email Address" type="email" placeholder="john@miller.com" />
-          <UiInput v-model="contactForm.phone" label="Phone Number" placeholder="+1 (555) 000-0000" />
+          <UiInput v-model="contactForm.job_title" :label="t('crm.contacts.modal.jobTitle')" placeholder="Director of Sales" />
+          <UiInput v-model="contactForm.email" :label="t('crm.contacts.modal.email')" type="email" placeholder="john@miller.com" />
+          <UiInput v-model="contactForm.phone" :label="t('crm.contacts.modal.phone')" placeholder="+1 (555) 000-0000" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <UiSelect
             v-model="contactForm.status"
-            label="Relationship Status"
+            :label="t('crm.contacts.modal.relationshipStatus')"
             :options="[
-              { label: 'Customer', value: 'customer' },
-              { label: 'Lead / Prospect', value: 'lead' },
-              { label: 'Partner', value: 'partner' },
-              { label: 'Churned', value: 'churned' },
+              { label: t('crm.contacts.statuses.customer'), value: 'customer' },
+              { label: t('crm.contacts.statuses.lead'), value: 'lead' },
+              { label: t('crm.contacts.statuses.partner'), value: 'partner' },
+              { label: t('crm.contacts.statuses.churned'), value: 'churned' },
             ]"
           />
-          <UiInput v-model="contactForm.city" label="City" placeholder="Addis Ababa" />
-          <UiInput v-model="contactForm.country" label="Country" placeholder="Ethiopia" />
+          <UiInput v-model="contactForm.city" :label="t('crm.contacts.modal.city')" placeholder="Addis Ababa" />
+          <UiInput v-model="contactForm.country" :label="t('crm.contacts.modal.country')" placeholder="Ethiopia" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="contactForm.website" label="Website URL" placeholder="https://miller.com" />
-          <UiInput v-model="contactForm.source" label="Acquisition Channel" placeholder="Referral, Inbound, etc." />
+          <UiInput v-model="contactForm.website" :label="t('crm.contacts.modal.website')" placeholder="https://miller.com" />
+          <UiInput v-model="contactForm.source" :label="t('crm.contacts.modal.acquisitionChannel')" placeholder="Referral, Inbound, etc." />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Account Notes</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.contacts.modal.notesLabel') }}</label>
           <textarea
             v-model="contactForm.notes"
             rows="3"
-            placeholder="Account preferences, billing notes, background..."
+            :placeholder="t('crm.contacts.modal.notesPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('crm.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingContact ? 'Save Changes' : 'Create Contact' }}
+            {{ editingContact ? t('crm.contacts.modal.saveBtn') : t('crm.contacts.modal.createBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Detailed Contact Profile Modal -->
-    <UiModal v-model="isDrawerOpen" title="Account & Contact Profile" size="lg">
+    <UiModal v-model="isDrawerOpen" :title="t('crm.contacts.profileModal.title')" size="lg">
       <div v-if="selectedContact" class="space-y-6">
         <!-- Profile Header -->
         <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -406,7 +408,7 @@ const getStatusBadge = (status: string) => {
               <h3 class="font-black text-slate-900 text-base">{{ selectedContact.name }}</h3>
               <p class="text-xs text-slate-500 font-medium">
                 {{ selectedContact.job_title ? `${selectedContact.job_title} at ` : '' }}
-                <strong class="text-slate-800">{{ selectedContact.company || 'Individual Account' }}</strong>
+                <strong class="text-slate-800">{{ selectedContact.company || t('crm.contacts.profileModal.individualAccount') }}</strong>
               </p>
             </div>
           </div>
@@ -419,15 +421,15 @@ const getStatusBadge = (status: string) => {
         <!-- Contact Info Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.contacts.modal.email') }}</span>
             <p class="font-mono text-slate-800 font-bold truncate">{{ selectedContact.email || '—' }}</p>
           </div>
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.contacts.modal.phone') }}</span>
             <p class="font-mono text-slate-800 font-bold truncate">{{ selectedContact.phone || '—' }}</p>
           </div>
           <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-0.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ t('crm.contacts.table.location') }}</span>
             <p class="text-slate-800 font-bold truncate">{{ [selectedContact.city, selectedContact.country].filter(Boolean).join(', ') || '—' }}</p>
           </div>
         </div>
@@ -435,7 +437,7 @@ const getStatusBadge = (status: string) => {
         <!-- Deals Associated -->
         <div class="space-y-3">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
-            Pipeline Deals ({{ selectedContact.deals?.length || 0 }})
+            {{ t('crm.contacts.profileModal.pipelineDeals') }} ({{ selectedContact.deals?.length || 0 }})
           </h4>
 
           <div v-if="selectedContact.deals?.length" class="space-y-2">
@@ -446,16 +448,16 @@ const getStatusBadge = (status: string) => {
             >
               <div>
                 <span class="font-bold text-slate-900">{{ d.title }}</span>
-                <span class="text-slate-400 ml-2 capitalize">({{ d.stage }})</span>
+                <span class="text-slate-400 ml-2 capitalize">({{ t(`crm.deals.stages.${d.stage}`, d.stage) }})</span>
               </div>
               <span class="font-mono font-bold text-slate-900">${{ Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
             </div>
           </div>
-          <p v-else class="text-xs text-slate-400 italic">No deals linked to this account yet.</p>
+          <p v-else class="text-xs text-slate-400 italic">{{ t('crm.contacts.profileModal.noDeals') }}</p>
         </div>
 
         <div class="flex justify-end pt-3 border-t border-slate-100">
-          <UiButton size="sm" @click="isDrawerOpen = false">Close</UiButton>
+          <UiButton size="sm" @click="isDrawerOpen = false">{{ t('crm.contacts.profileModal.close') }}</UiButton>
         </div>
       </div>
     </UiModal>

@@ -11,6 +11,8 @@ import manufacturing from './manufacturing'
 import documents from './documents'
 import sales from './sales'
 import hr from './hr'
+import crm from './crm'
+import payroll from './payroll'
 
 export default {
   common,
@@ -25,5 +27,7 @@ export default {
   manufacturing,
   documents,
   sales,
-  hr
+  hr,
+  crm,
+  payroll
 }

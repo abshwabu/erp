@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery } from '@tanstack/vue-query'
 import { crmApi } from '@/api/crm'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -18,6 +19,7 @@ import {
   Send,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const idOrSlug = (route.params.slug || route.params.id) as string
 const isEmbed = computed(() => route.path.startsWith('/embed/'))
@@ -179,13 +181,13 @@ const handleSubmit = async () => {
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <UiInput v-model="name" label="Full Name *" placeholder="Jane Doe" required />
-            <UiInput v-model="company" label="Company" placeholder="Company Name" />
+            <UiInput v-model="name" :label="`${t('crm.publicLead.name')} *`" placeholder="Jane Doe" required />
+            <UiInput v-model="company" :label="t('crm.publicLead.company')" placeholder="Company Name" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <UiInput v-model="email" label="Email Address *" type="email" placeholder="jane@company.com" />
-            <UiInput v-model="phone" label="Phone Number" type="tel" placeholder="+1..." />
+            <UiInput v-model="email" :label="`${t('crm.publicLead.email')} *`" type="email" placeholder="jane@company.com" />
+            <UiInput v-model="phone" :label="t('crm.publicLead.phone')" type="tel" placeholder="+1..." />
           </div>
 
           <!-- Dynamic Custom Questions -->
@@ -274,7 +276,7 @@ const handleSubmit = async () => {
 
           <!-- Additional Notes -->
           <div class="space-y-1 pt-1">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Additional Project Notes</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('crm.publicLead.notes') }}</label>
             <textarea
               v-model="notes"
               rows="3"
@@ -286,7 +288,7 @@ const handleSubmit = async () => {
           <!-- Submit Action -->
           <div class="pt-3">
             <UiButton type="submit" size="lg" class="w-full font-bold" :loading="isSubmitting">
-              <Send class="w-4 h-4 mr-2" /> Submit Inquiry
+              <Send class="w-4 h-4 mr-2" /> {{ t('crm.publicLead.submit') }}
             </UiButton>
           </div>
         </form>
