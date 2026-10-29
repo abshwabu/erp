@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { MapPin, Plus, Store, Users } from '@lucide/vue'
 import { shopsApi, type CreateShopPayload, type ShopStockMode } from '@/api/shops'
 import { inventoryApi } from '@/api/inventory'
@@ -13,6 +14,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const queryClient = useQueryClient()
 const { hasPermission } = usePermission()
@@ -41,26 +43,38 @@ const { data: locations } = useQuery({
   enabled: computed(() => canManage.value && isCreateOpen.value),
 })
 
-const columns = [
-  { key: 'name', label: 'Shop' },
-  { key: 'code', label: 'Code' },
-  { key: 'stock_mode', label: 'Stock' },
-  { key: 'location', label: 'Location' },
-  { key: 'keepers', label: 'Keepers', align: 'center' as const },
-  { key: 'status', label: 'Status', align: 'center' as const },
-]
+const columns = computed(() => [
+  { key: 'name', label: t('shops.columns.shop') },
+  { key: 'code', label: t('shops.columns.code') },
+  { key: 'stock_mode', label: t('shops.columns.stock') },
+  { key: 'location', label: t('shops.columns.location') },
+  { key: 'keepers', label: t('shops.columns.keepers'), align: 'center' as const },
+  { key: 'status', label: t('shops.columns.status'), align: 'center' as const },
+])
 
 const rows = computed(() =>
   (Array.isArray(shops.value) ? shops.value : []).map((shop) => ({
     id: shop.id,
     name: shop.name,
     code: shop.code,
-    stock_mode: shop.stock_mode === 'own' ? 'Own stock' : 'Shared warehouse',
+    stock_mode: shop.stock_mode === 'own' ? t('shops.stockModes.own') : t('shops.stockModes.shared'),
     location: shop.stock_location?.name || '—',
     keepers: shop.keepers?.length ?? 0,
     is_active: shop.is_active,
   }))
 )
+
+const stockModeOptions = computed(() => [
+  { label: t('shops.stockModes.ownDedicated'), value: 'own' },
+  { label: t('shops.stockModes.shareWarehouse'), value: 'shared_warehouse' },
+])
+
+const warehouseLocationOptions = computed(() => [
+  { label: t('shops.createModal.selectLocationPlaceholder'), value: '' },
+  ...(Array.isArray(locations.value)
+    ? locations.value.map((l: any) => ({ label: `${l.name} (${l.code || l.id})`, value: l.id }))
+    : []),
+])
 
 const createMutation = useMutation({
   mutationFn: () => {
@@ -84,7 +98,7 @@ const createMutation = useMutation({
     if (id) router.push(`/shops/${id}`)
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to create shop'
+    errorMessage.value = err?.message || t('shops.errors.createFailed')
   },
 })
 
@@ -101,11 +115,11 @@ function openCreate() {
 
 function submitCreate() {
   if (!form.name.trim() || !form.code.trim()) {
-    errorMessage.value = 'Name and code are required'
+    errorMessage.value = t('shops.errors.nameAndCodeRequired')
     return
   }
   if (form.stock_mode === 'shared_warehouse' && !form.stock_location_id) {
-    errorMessage.value = 'Select a warehouse location to share'
+    errorMessage.value = t('shops.errors.selectWarehouseLocation')
     return
   }
   createMutation.mutate()
@@ -116,11 +130,11 @@ function submitCreate() {
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Shops</h1>
-        <p class="text-slate-500 text-sm">Create shops, assign keepers, and choose own or shared stock.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('shops.title') }}</h1>
+        <p class="text-slate-500 text-sm">{{ t('shops.subtitle') }}</p>
       </div>
       <UiButton v-if="canManage" size="sm" @click="openCreate">
-        <Plus class="h-4 w-4 mr-2" /> Add Shop
+        <Plus class="h-4 w-4 mr-2" /> {{ t('shops.addShop') }}
       </UiButton>
     </div>
 
@@ -128,8 +142,8 @@ function submitCreate() {
       :columns="columns"
       :data="rows"
       :loading="isLoading"
-      empty-title="No shops yet"
-      empty-description="Create a shop to assign keepers and run POS per location."
+      :empty-title="t('shops.emptyTitle')"
+      :empty-description="t('shops.emptyDescription')"
     >
       <template #cell(name)="{ item }">
         <button
@@ -162,41 +176,53 @@ function submitCreate() {
 
       <template #cell(status)="{ item }">
         <UiBadge :variant="item.is_active ? 'success' : 'danger'">
-          {{ item.is_active ? 'Active' : 'Inactive' }}
+          {{ item.is_active ? t('shops.statusActive') : t('shops.statusInactive') }}
         </UiBadge>
       </template>
     </UiTable>
 
-    <UiModal v-model="isCreateOpen" title="Create Shop" size="md">
+    <UiModal v-model="isCreateOpen" :title="t('shops.createModal.title')" size="md">
       <form class="space-y-4" @submit.prevent="submitCreate">
         <div v-if="errorMessage" class="p-3 bg-red-50 text-red-700 text-xs font-semibold rounded-lg border border-red-200">
           {{ errorMessage }}
         </div>
-        <UiInput v-model="form.name" label="Shop Name" required placeholder="Downtown Store" />
-        <UiInput v-model="form.code" label="Code" required placeholder="DT01" />
+        <UiInput
+          v-model="form.name"
+          :label="t('shops.createModal.nameLabel')"
+          required
+          :placeholder="t('shops.createModal.namePlaceholder')"
+        />
+        <UiInput
+          v-model="form.code"
+          :label="t('shops.createModal.codeLabel')"
+          required
+          :placeholder="t('shops.createModal.codePlaceholder')"
+        />
         <UiSelect
           v-model="form.stock_mode"
-          label="Stock Mode"
-          :options="[
-            { label: 'Own stock (dedicated warehouse)', value: 'own' },
-            { label: 'Share warehouse stock', value: 'shared_warehouse' },
-          ]"
+          :label="t('shops.createModal.stockModeLabel')"
+          :options="stockModeOptions"
         />
         <UiSelect
           v-if="form.stock_mode === 'shared_warehouse'"
           v-model="form.stock_location_id"
-          label="Warehouse Location"
-          :options="[
-            { label: 'Select location…', value: '' },
-            ...(Array.isArray(locations) ? locations.map((l: any) => ({ label: `${l.name} (${l.code || l.id})`, value: l.id })) : []),
-          ]"
+          :label="t('shops.createModal.warehouseLocationLabel')"
+          :options="warehouseLocationOptions"
         />
-        <UiInput v-model="form.phone" label="Phone" />
-        <UiInput v-model="form.notes" label="Notes" />
+        <UiInput
+          v-model="form.phone"
+          :label="t('shops.createModal.phoneLabel')"
+          :placeholder="t('shops.createModal.phonePlaceholder')"
+        />
+        <UiInput
+          v-model="form.notes"
+          :label="t('shops.createModal.notesLabel')"
+          :placeholder="t('shops.createModal.notesPlaceholder')"
+        />
       </form>
       <template #footer>
-        <UiButton variant="ghost" class="mr-2" @click="isCreateOpen = false">Cancel</UiButton>
-        <UiButton :loading="createMutation.isPending.value" @click="submitCreate">Create Shop</UiButton>
+        <UiButton variant="ghost" class="mr-2" @click="isCreateOpen = false">{{ t('common.cancel') }}</UiButton>
+        <UiButton :loading="createMutation.isPending.value" @click="submitCreate">{{ t('shops.createModal.submit') }}</UiButton>
       </template>
     </UiModal>
   </div>

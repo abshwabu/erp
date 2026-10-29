@@ -5,6 +5,7 @@ import dashboard from './dashboard'
 import onboarding from './onboarding'
 import inventory from './inventory'
 import warehouse from './warehouse'
+import shops from './shops'
 
 export default {
   common,
@@ -13,5 +14,6 @@ export default {
   dashboard,
   onboarding,
   inventory,
-  warehouse
+  warehouse,
+  shops
 }

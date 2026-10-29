@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { ArrowLeft, Package, Settings2, Users } from '@lucide/vue'
 import { shopsApi } from '@/api/shops'
 import { usePermission } from '@/composables/usePermission'
@@ -10,11 +11,10 @@ import { formatCurrency } from '@/utils/format'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
-import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable from '@/components/ui/UiTable.vue'
-import UiModal from '@/components/ui/UiModal.vue'
 import StockAdjustmentModal from '@/modules/inventory/components/StockAdjustmentModal.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const queryClient = useQueryClient()
@@ -68,25 +68,24 @@ const { data: users } = useQuery({
   enabled: computed(() => canManage.value && activeTab.value === 'keepers'),
 })
 
-const stockColumns = [
-  { key: 'name', label: 'Product' },
-  { key: 'sku', label: 'SKU' },
-  { key: 'available_quantity', label: 'Available', align: 'center' as const },
-  { key: 'value', label: 'Value', align: 'right' as const },
+const tabs = computed(() => [
+  { id: 'settings' as const, label: t('shops.detail.tabs.settings'), icon: Settings2 },
+  { id: 'stock' as const, label: t('shops.detail.tabs.stock'), icon: Package },
+  { id: 'keepers' as const, label: t('shops.detail.tabs.keepers'), icon: Users },
+])
+
+const stockColumns = computed(() => [
+  { key: 'name', label: t('shops.detail.stock.columns.product') },
+  { key: 'sku', label: t('shops.detail.stock.columns.sku') },
+  { key: 'available_quantity', label: t('shops.detail.stock.columns.available'), align: 'center' as const },
+  { key: 'value', label: t('shops.detail.stock.columns.value'), align: 'right' as const },
   { key: 'actions', label: '', align: 'right' as const },
-]
+])
 
 const stockRows = computed(() =>
   (Array.isArray(stock.value) ? stock.value : []).map((row) => ({
     ...row,
     valueCents: row.available_quantity * (row.cost_price || 0),
-  }))
-)
-
-const productOptions = computed(() =>
-  (Array.isArray(stock.value) ? stock.value : []).map((row) => ({
-    label: `${row.name} (${row.sku})`,
-    value: row.product_id,
   }))
 )
 
@@ -101,9 +100,10 @@ const saveSettingsMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['shops'] })
     errorMessage.value = ''
+    toast.success(t('shops.detail.settings.saveSuccess'))
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to save settings'
+    errorMessage.value = err?.message || t('shops.detail.settings.saveError')
   },
 })
 
@@ -117,10 +117,10 @@ const syncKeepersMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['shops', shopId.value] })
     queryClient.invalidateQueries({ queryKey: ['shops'] })
     errorMessage.value = ''
-    toast.success('Shop keepers updated')
+    toast.success(t('shops.detail.keepers.saveSuccess'))
   },
   onError: (err: any) => {
-    errorMessage.value = err?.message || 'Failed to update keepers'
+    errorMessage.value = err?.message || t('shops.detail.keepers.saveError')
   },
 })
 
@@ -145,13 +145,13 @@ function openAdjust(productId?: string) {
           class="inline-flex items-center text-sm text-slate-500 hover:text-slate-800 mb-2"
           @click="router.push('/shops')"
         >
-          <ArrowLeft class="h-4 w-4 mr-1" /> Back to shops
+          <ArrowLeft class="h-4 w-4 mr-1" /> {{ t('shops.detail.backToShops') }}
         </button>
-        <h1 class="text-2xl font-bold text-slate-900">{{ shop?.name || 'Shop' }}</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{{ shop?.name || t('shops.detail.fallbackShopName') }}</h1>
         <p class="text-slate-500 text-sm font-mono">{{ shop?.code }}</p>
       </div>
       <UiBadge v-if="shop" :variant="shop.is_active ? 'success' : 'danger'">
-        {{ shop.is_active ? 'Active' : 'Inactive' }}
+        {{ shop.is_active ? t('shops.statusActive') : t('shops.statusInactive') }}
       </UiBadge>
     </div>
 
@@ -161,51 +161,47 @@ function openAdjust(productId?: string) {
 
     <div class="flex gap-2 border-b border-slate-200">
       <button
-        v-for="tab in [
-          { id: 'settings', label: 'Settings', icon: Settings2 },
-          { id: 'stock', label: 'Stock', icon: Package },
-          { id: 'keepers', label: 'Keepers', icon: Users },
-        ]"
+        v-for="tab in tabs"
         :key="tab.id"
         type="button"
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px inline-flex items-center gap-2"
         :class="activeTab === tab.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500'"
-        @click="activeTab = tab.id as any"
+        @click="activeTab = tab.id"
       >
         <component :is="tab.icon" class="h-4 w-4" />
         {{ tab.label }}
       </button>
     </div>
 
-    <div v-if="isLoading" class="text-sm text-slate-500">Loading shop…</div>
+    <div v-if="isLoading" class="text-sm text-slate-500">{{ t('shops.detail.loading') }}</div>
 
     <div v-else-if="activeTab === 'settings'" class="bg-white border border-slate-200 rounded-lg p-6 space-y-4 max-w-xl">
-      <UiInput v-model="settings.name" label="Shop Name" />
-      <UiInput v-model="settings.phone" label="Phone" />
-      <UiInput v-model="settings.notes" label="Notes" />
+      <UiInput v-model="settings.name" :label="t('shops.detail.settings.name')" />
+      <UiInput v-model="settings.phone" :label="t('shops.detail.settings.phone')" />
+      <UiInput v-model="settings.notes" :label="t('shops.detail.settings.notes')" />
       <label v-if="canManage" class="flex items-center gap-2 text-sm text-slate-700">
         <input v-model="settings.is_active" type="checkbox" class="rounded border-slate-300" />
-        Active
+        {{ t('shops.detail.settings.activeCheckbox') }}
       </label>
       <div class="text-xs text-slate-500 space-y-1">
-        <p>Stock mode: <strong>{{ shop?.stock_mode === 'own' ? 'Own stock' : 'Shared warehouse' }}</strong></p>
-        <p>Location: <strong>{{ shop?.stock_location?.name || '—' }}</strong></p>
-        <p>Warehouse: <strong>{{ shop?.warehouse?.name || '—' }}</strong></p>
+        <p>{{ t('shops.detail.settings.stockMode') }}: <strong>{{ shop?.stock_mode === 'own' ? t('shops.stockModes.own') : t('shops.stockModes.shared') }}</strong></p>
+        <p>{{ t('shops.detail.settings.location') }}: <strong>{{ shop?.stock_location?.name || '—' }}</strong></p>
+        <p>{{ t('shops.detail.settings.warehouse') }}: <strong>{{ shop?.warehouse?.name || '—' }}</strong></p>
       </div>
       <UiButton :loading="saveSettingsMutation.isPending.value" @click="saveSettingsMutation.mutate()">
-        Save Settings
+        {{ t('shops.detail.settings.save') }}
       </UiButton>
     </div>
 
     <div v-else-if="activeTab === 'stock'" class="space-y-4">
       <div class="flex justify-end">
-        <UiButton size="sm" @click="openAdjust()">Adjust Stock</UiButton>
+        <UiButton size="sm" @click="openAdjust()">{{ t('shops.detail.stock.adjustStock') }}</UiButton>
       </div>
       <UiTable
         :columns="stockColumns"
         :data="stockRows"
         :loading="stockLoading"
-        empty-title="No stock at this shop yet"
+        :empty-title="t('shops.detail.stock.emptyTitle')"
       >
         <template #cell(sku)="{ value }">
           <span class="font-mono text-xs">{{ value }}</span>
@@ -214,14 +210,14 @@ function openAdjust(productId?: string) {
           {{ formatCurrency(item.valueCents / 100) }}
         </template>
         <template #cell(actions)="{ item }">
-          <UiButton size="sm" variant="outline" @click="openAdjust(item.product_id)">Adjust</UiButton>
+          <UiButton size="sm" variant="outline" @click="openAdjust(item.product_id)">{{ t('shops.detail.stock.adjust') }}</UiButton>
         </template>
       </UiTable>
     </div>
 
     <div v-else class="bg-white border border-slate-200 rounded-lg p-6 space-y-4 max-w-2xl">
       <template v-if="canManage">
-        <p class="text-sm text-slate-600">Select users who can operate this shop (settings, stock, POS).</p>
+        <p class="text-sm text-slate-600">{{ t('shops.detail.keepers.description') }}</p>
         <div class="space-y-2 max-h-80 overflow-y-auto">
           <label
             v-for="user in users || []"
@@ -239,7 +235,7 @@ function openAdjust(productId?: string) {
           </label>
         </div>
         <UiButton :loading="syncKeepersMutation.isPending.value" @click="syncKeepersMutation.mutate()">
-          Save Keepers
+          {{ t('shops.detail.keepers.save') }}
         </UiButton>
       </template>
       <template v-else>
@@ -247,7 +243,7 @@ function openAdjust(productId?: string) {
           <li v-for="k in shop?.keepers || []" :key="k.id" class="text-sm text-slate-700">
             {{ k.name }} <span class="text-slate-400">({{ k.email }})</span>
           </li>
-          <li v-if="!(shop?.keepers?.length)" class="text-sm text-slate-500">No keepers assigned.</li>
+          <li v-if="!(shop?.keepers?.length)" class="text-sm text-slate-500">{{ t('shops.detail.keepers.empty') }}</li>
         </ul>
       </template>
     </div>

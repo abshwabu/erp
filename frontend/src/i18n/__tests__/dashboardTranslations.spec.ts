@@ -7,11 +7,13 @@ import enInventory from '../locales/en/inventory'
 import amInventory from '../locales/am/inventory'
 import enWarehouse from '../locales/en/warehouse'
 import amWarehouse from '../locales/am/warehouse'
+import enShops from '../locales/en/shops'
+import amShops from '../locales/am/shops'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, and warehouse in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, and shops in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -20,6 +22,25 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.inventory).toBeDefined()
     expect(en.warehouse).toBeDefined()
     expect(am.warehouse).toBeDefined()
+    expect(en.shops).toBeDefined()
+    expect(am.shops).toBeDefined()
+  })
+
+  it('has identical keys for shops in en and am', () => {
+    const enKeys = Object.keys(enShops).sort()
+    const amKeys = Object.keys(amShops).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enShops.columns).sort()).toEqual(Object.keys(amShops.columns).sort())
+    expect(Object.keys(enShops.stockModes).sort()).toEqual(Object.keys(amShops.stockModes).sort())
+    expect(Object.keys(enShops.createModal).sort()).toEqual(Object.keys(amShops.createModal).sort())
+    expect(Object.keys(enShops.errors).sort()).toEqual(Object.keys(amShops.errors).sort())
+    expect(Object.keys(enShops.detail).sort()).toEqual(Object.keys(amShops.detail).sort())
+    expect(Object.keys(enShops.detail.tabs).sort()).toEqual(Object.keys(amShops.detail.tabs).sort())
+    expect(Object.keys(enShops.detail.settings).sort()).toEqual(Object.keys(amShops.detail.settings).sort())
+    expect(Object.keys(enShops.detail.stock).sort()).toEqual(Object.keys(amShops.detail.stock).sort())
+    expect(Object.keys(enShops.detail.stock.columns).sort()).toEqual(Object.keys(amShops.detail.stock.columns).sort())
+    expect(Object.keys(enShops.detail.keepers).sort()).toEqual(Object.keys(amShops.detail.keepers).sort())
   })
 
   it('has identical keys for warehouse in en and am', () => {
