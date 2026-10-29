@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { documentsApi } from '@/api/documents'
 import {
   Upload,
   FileText,
   X,
-  CheckCircle2,
   AlertCircle,
-  Loader2,
-  Folder,
 } from '@lucide/vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -23,6 +21,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'uploaded'])
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
@@ -37,13 +36,13 @@ const form = reactive({
 const selectedFile = ref<File | null>(null)
 const errors = reactive<Record<string, string>>({})
 
-const folderOptions = [
-  { label: 'General', value: 'general' },
-  { label: 'Contracts', value: 'contracts' },
-  { label: 'Invoices', value: 'invoices' },
-  { label: 'Receipts', value: 'receipts' },
-  { label: 'Policies', value: 'policies' },
-]
+const folderOptions = computed(() => [
+  { label: t('documents.folders.general'), value: 'general' },
+  { label: t('documents.folders.contracts'), value: 'contracts' },
+  { label: t('documents.folders.invoices'), value: 'invoices' },
+  { label: t('documents.folders.receipts'), value: 'receipts' },
+  { label: t('documents.folders.policies'), value: 'policies' },
+])
 
 // Auto-fill name from filename
 watch(selectedFile, (file) => {
@@ -84,8 +83,8 @@ function formatFileSize(bytes: number): string {
 function validate(): boolean {
   Object.keys(errors).forEach((key) => delete errors[key])
 
-  if (!selectedFile.value) errors.file = 'Please select a file to upload'
-  if (!form.name.trim()) errors.name = 'Document name is required'
+  if (!selectedFile.value) errors.file = t('documents.messages.noFileSelected')
+  if (!form.name.trim()) errors.name = t('documents.messages.nameRequired')
 
   return Object.keys(errors).length === 0
 }
@@ -136,7 +135,7 @@ const parsedTags = computed(() => {
 
 const mutation = useMutation({
   mutationFn: () => {
-    if (!selectedFile.value) throw new Error('No file selected')
+    if (!selectedFile.value) throw new Error(t('documents.messages.noFileSelected'))
 
     return documentsApi.uploadDocument({
       file: selectedFile.value,
@@ -170,7 +169,7 @@ function handleSubmit() {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Upload Document"
+    :title="t('documents.uploadModal.title')"
     size="lg"
     @close="resetForm"
   >
@@ -178,7 +177,7 @@ function handleSubmit() {
       <!-- File Drop Zone -->
       <div class="space-y-1.5">
         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-          File <span class="text-red-500 font-bold">*</span>
+          {{ t('documents.uploadModal.fileLabel') }} <span class="text-red-500 font-bold">*</span>
         </label>
         <div
           :class="[
@@ -206,8 +205,8 @@ function handleSubmit() {
             <div class="p-3 bg-slate-100 rounded-2xl mb-3">
               <Upload class="h-8 w-8 text-slate-400" />
             </div>
-            <span class="text-sm font-bold text-slate-700">Click to upload or drag and drop</span>
-            <span class="text-xs text-slate-400 mt-1">PDF, DOC, XLS, CSV, images, ZIP — up to 20MB</span>
+            <span class="text-sm font-bold text-slate-700">{{ t('documents.uploadModal.dropzoneClick') }}</span>
+            <span class="text-xs text-slate-400 mt-1">{{ t('documents.uploadModal.dropzoneHelp') }}</span>
           </template>
 
           <template v-else>
@@ -221,7 +220,7 @@ function handleSubmit() {
               @click.stop="removeFile"
               class="mt-2.5 text-xs text-red-600 hover:text-red-700 font-bold inline-flex items-center gap-1 hover:underline"
             >
-              <X class="w-3.5 h-3.5" /> Remove file
+              <X class="w-3.5 h-3.5" /> {{ t('documents.uploadModal.removeFile') }}
             </button>
           </template>
         </div>
@@ -231,8 +230,8 @@ function handleSubmit() {
       <!-- Document Name -->
       <UiInput
         v-model="form.name"
-        label="Document Name"
-        placeholder="e.g. Vendor Contract Q3 2026"
+        :label="t('documents.uploadModal.documentNameLabel')"
+        :placeholder="t('documents.uploadModal.documentNamePlaceholder')"
         :error="errors.name"
         required
       />
@@ -241,26 +240,26 @@ function handleSubmit() {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <UiSelect
           v-model="form.folder"
-          label="Folder"
+          :label="t('documents.uploadModal.folderLabel')"
           :options="folderOptions"
         />
 
         <UiInput
           v-model="form.tags"
-          label="Tags"
-          placeholder="e.g. finance, q3, urgent"
-          help-text="Comma-separated list of tags"
+          :label="t('documents.uploadModal.tagsLabel')"
+          :placeholder="t('documents.uploadModal.tagsPlaceholder')"
+          :help-text="t('documents.uploadModal.tagsHelp')"
         />
       </div>
 
       <!-- Description -->
       <div class="space-y-1.5">
-        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Description</label>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('documents.uploadModal.descriptionLabel') }}</label>
         <textarea
           v-model="form.description"
           rows="3"
           class="block w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm p-3 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs font-medium text-slate-900 placeholder:text-slate-400"
-          placeholder="Optional description or notes about this document…"
+          :placeholder="t('documents.uploadModal.descriptionPlaceholder')"
         ></textarea>
       </div>
 
@@ -271,14 +270,14 @@ function handleSubmit() {
       >
         <AlertCircle class="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
         <p class="text-xs text-red-700 font-medium">
-          Upload failed. Please check your file and try again.
+          {{ t('documents.uploadModal.uploadFailed') }}
         </p>
       </div>
     </form>
 
     <template #footer>
       <div class="flex items-center justify-end gap-2.5">
-        <UiButton variant="ghost" @click="emit('update:modelValue', false)">Cancel</UiButton>
+        <UiButton variant="ghost" @click="emit('update:modelValue', false)">{{ t('common.cancel') }}</UiButton>
         <UiButton
           type="submit"
           :loading="mutation.isPending.value"
@@ -286,7 +285,7 @@ function handleSubmit() {
           @click="handleSubmit"
         >
           <Upload class="w-4 h-4 mr-1.5" />
-          Upload Document
+          {{ t('documents.uploadModal.submit') }}
         </UiButton>
       </div>
     </template>

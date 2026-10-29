@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { documentsApi, type DocumentItem } from '@/api/documents'
 import {
   FileText,
@@ -14,20 +15,17 @@ import {
   File,
   FileImage,
   FileArchive,
-  Plus,
   X,
-  Eye,
-  Filter,
   HardDrive,
   FolderOpen,
   Clock,
 } from '@lucide/vue'
 import UiTable from '@/components/ui/UiTable.vue'
-import UiBadge from '@/components/ui/UiBadge.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UploadDocumentModal from '../components/UploadDocumentModal.vue'
 import { useToast } from '@/composables/useToast'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -60,14 +58,14 @@ watch(
   }
 )
 
-const folders = [
-  { label: 'All', value: 'all', icon: FolderOpen },
-  { label: 'General', value: 'general', icon: Folder },
-  { label: 'Contracts', value: 'contracts', icon: FileText },
-  { label: 'Invoices', value: 'invoices', icon: FileSpreadsheet },
-  { label: 'Receipts', value: 'receipts', icon: File },
-  { label: 'Policies', value: 'policies', icon: FileCode },
-]
+const folders = computed(() => [
+  { label: t('documents.folders.all'), value: 'all', icon: FolderOpen },
+  { label: t('documents.folders.general'), value: 'general', icon: Folder },
+  { label: t('documents.folders.contracts'), value: 'contracts', icon: FileText },
+  { label: t('documents.folders.invoices'), value: 'invoices', icon: FileSpreadsheet },
+  { label: t('documents.folders.receipts'), value: 'receipts', icon: File },
+  { label: t('documents.folders.policies'), value: 'policies', icon: FileCode },
+])
 
 // ── Data Fetching ────────────────────────────────────────────────────────────
 
@@ -172,6 +170,23 @@ function getFolderBadgeClass(folder: string): string {
   return map[folder] || 'bg-slate-100 text-slate-700'
 }
 
+function getFolderLabel(folder: string): string {
+  switch (folder) {
+    case 'general':
+      return t('documents.folders.general')
+    case 'contracts':
+      return t('documents.folders.contracts')
+    case 'invoices':
+      return t('documents.folders.invoices')
+    case 'receipts':
+      return t('documents.folders.receipts')
+    case 'policies':
+      return t('documents.folders.policies')
+    default:
+      return folder
+  }
+}
+
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   const date = new Date(dateStr)
@@ -188,15 +203,15 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => documentsApi.deleteDocument(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['documents'] })
-    toast.success('Document deleted successfully')
+    toast.success(t('documents.messages.deleteSuccess'))
   },
   onError: () => {
-    toast.error('Failed to delete document')
+    toast.error(t('documents.messages.deleteError'))
   },
 })
 
 function handleDelete(doc: DocumentItem) {
-  if (!confirm(`Are you sure you want to delete "${doc.name}"?`)) return
+  if (!confirm(t('documents.confirmDelete', { name: doc.name }))) return
   deleteMutation.mutate(doc.id)
 }
 
@@ -214,7 +229,7 @@ async function handleDownload(doc: DocumentItem) {
     window.URL.revokeObjectURL(url)
   } catch (e) {
     console.error('Download failed', e)
-    toast.error('Failed to download document')
+    toast.error(t('documents.messages.downloadError'))
   }
 }
 
@@ -231,15 +246,15 @@ const hasActiveFilters = computed(() => {
 
 // ── Table Columns ────────────────────────────────────────────────────────────
 
-const columns = [
+const columns = computed(() => [
   { key: 'icon', label: '', align: 'left' as const },
-  { key: 'name', label: 'Document', sortable: true },
-  { key: 'folder', label: 'Folder' },
-  { key: 'file_size_bytes', label: 'Size', align: 'right' as const },
-  { key: 'uploader', label: 'Uploaded By' },
-  { key: 'created_at', label: 'Date', sortable: true },
+  { key: 'name', label: t('documents.table.document'), sortable: true },
+  { key: 'folder', label: t('documents.table.folder') },
+  { key: 'file_size_bytes', label: t('documents.table.size'), align: 'right' as const },
+  { key: 'uploader', label: t('documents.table.uploadedBy') },
+  { key: 'created_at', label: t('documents.table.date'), sortable: true },
   { key: 'actions', label: '', align: 'right' as const },
-]
+])
 </script>
 
 <template>
@@ -248,13 +263,13 @@ const columns = [
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <div class="flex items-center space-x-2">
-          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Documents</h1>
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ t('documents.title') }}</h1>
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
-            {{ totalCount }} Files
+            {{ t('documents.filesCount', { count: totalCount }) }}
           </span>
         </div>
         <p class="text-slate-500 text-xs sm:text-sm mt-1">
-          Upload, organize, and manage business files, contracts, and receipts.
+          {{ t('documents.subtitle') }}
         </p>
       </div>
 
@@ -266,7 +281,7 @@ const columns = [
           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
         >
           <Upload class="h-4 w-4" />
-          <span>Upload Document</span>
+          <span>{{ t('documents.uploadDocument') }}</span>
         </button>
       </div>
     </div>
@@ -275,7 +290,7 @@ const columns = [
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Files</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('documents.kpis.totalFiles') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">{{ totalCount }}</h3>
         </div>
         <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
@@ -285,7 +300,7 @@ const columns = [
 
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Storage Used</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('documents.kpis.storageUsed') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">{{ formatBytes(totalSizeBytes) }}</h3>
         </div>
         <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -295,7 +310,7 @@ const columns = [
 
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Folders</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('documents.kpis.folders') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">{{ uniqueFolderCount }}</h3>
         </div>
         <div class="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
@@ -305,7 +320,7 @@ const columns = [
 
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">This Week</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('documents.kpis.thisWeek') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">{{ recentUploads }}</h3>
         </div>
         <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
@@ -341,7 +356,7 @@ const columns = [
           <input
             v-model="filters.search"
             type="text"
-            placeholder="Search documents…"
+            :placeholder="t('documents.searchPlaceholder')"
             class="w-full pl-10 pr-10 py-2 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
           />
           <button
@@ -359,7 +374,7 @@ const columns = [
           @click="resetFilters"
           class="text-xs text-blue-600 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
         >
-          Reset Filters
+          {{ t('documents.resetFilters') }}
         </button>
       </div>
     </div>
@@ -370,8 +385,8 @@ const columns = [
         :columns="columns"
         :data="documentList"
         :loading="isLoading"
-        empty-title="No documents found"
-        empty-description="Upload your first document or adjust your search filters."
+        :empty-title="t('documents.table.emptyTitle')"
+        :empty-description="t('documents.table.emptyDescription')"
       >
         <!-- File Icon -->
         <template #cell(icon)="{ item }">
@@ -414,7 +429,7 @@ const columns = [
             ]"
           >
             <Folder class="w-3 h-3 mr-1" />
-            {{ value }}
+            {{ getFolderLabel(value) }}
           </span>
         </template>
 
@@ -439,7 +454,7 @@ const columns = [
             <button
               type="button"
               @click.stop="handleDownload(item)"
-              title="Download"
+              :title="t('documents.table.downloadTooltip')"
               class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
             >
               <Download class="h-4 w-4" />
@@ -447,7 +462,7 @@ const columns = [
             <button
               type="button"
               @click.stop="handleDelete(item)"
-              title="Delete"
+              :title="t('documents.table.deleteTooltip')"
               class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
             >
               <Trash2 class="h-4 w-4" />
@@ -460,7 +475,7 @@ const columns = [
     <!-- Pagination -->
     <div v-if="data?.meta && data.meta.total > 0" class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
       <p class="text-xs font-medium text-slate-500">
-        Showing <span class="font-bold text-slate-700">{{ data.meta.from ?? 0 }}</span>–<span class="font-bold text-slate-700">{{ data.meta.to ?? 0 }}</span> of <span class="font-bold text-slate-700">{{ data.meta.total }}</span> documents
+        {{ t('documents.pagination', { from: data.meta.from ?? 0, to: data.meta.to ?? 0, total: data.meta.total }) }}
       </p>
       <UiPagination
         :current-page="page"

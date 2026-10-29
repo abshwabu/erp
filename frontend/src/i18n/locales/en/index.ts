@@ -8,6 +8,7 @@ import warehouse from './warehouse'
 import shops from './shops'
 import procurement from './procurement'
 import manufacturing from './manufacturing'
+import documents from './documents'
 
 export default {
   common,
@@ -19,5 +20,6 @@ export default {
   warehouse,
   shops,
   procurement,
-  manufacturing
+  manufacturing,
+  documents
 }

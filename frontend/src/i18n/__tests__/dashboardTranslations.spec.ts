@@ -13,11 +13,13 @@ import enProcurement from '../locales/en/procurement'
 import amProcurement from '../locales/am/procurement'
 import enManufacturing from '../locales/en/manufacturing'
 import amManufacturing from '../locales/am/manufacturing'
+import enDocuments from '../locales/en/documents'
+import amDocuments from '../locales/am/documents'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, and manufacturing in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, and documents in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -32,6 +34,20 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.procurement).toBeDefined()
     expect(en.manufacturing).toBeDefined()
     expect(am.manufacturing).toBeDefined()
+    expect(en.documents).toBeDefined()
+    expect(am.documents).toBeDefined()
+  })
+
+  it('has identical keys for documents in en and am', () => {
+    const enKeys = Object.keys(enDocuments).sort()
+    const amKeys = Object.keys(amDocuments).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enDocuments.kpis).sort()).toEqual(Object.keys(amDocuments.kpis).sort())
+    expect(Object.keys(enDocuments.folders).sort()).toEqual(Object.keys(amDocuments.folders).sort())
+    expect(Object.keys(enDocuments.table).sort()).toEqual(Object.keys(amDocuments.table).sort())
+    expect(Object.keys(enDocuments.uploadModal).sort()).toEqual(Object.keys(amDocuments.uploadModal).sort())
+    expect(Object.keys(enDocuments.messages).sort()).toEqual(Object.keys(amDocuments.messages).sort())
   })
 
   it('has identical keys for manufacturing in en and am', () => {
