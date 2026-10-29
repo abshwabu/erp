@@ -7,6 +7,7 @@ import inventory from './inventory'
 import warehouse from './warehouse'
 import shops from './shops'
 import procurement from './procurement'
+import manufacturing from './manufacturing'
 
 export default {
   common,
@@ -17,5 +18,6 @@ export default {
   inventory,
   warehouse,
   shops,
-  procurement
+  procurement,
+  manufacturing
 }

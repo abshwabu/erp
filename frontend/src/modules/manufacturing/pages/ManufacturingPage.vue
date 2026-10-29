@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import {
   manufacturingApi,
   type BillOfMaterial,
@@ -21,21 +22,15 @@ import {
   Layers,
   Factory,
   Boxes,
-  Calendar,
-  AlertCircle,
   Eye,
-  ArrowRight,
-  Clock,
-  Sparkles,
-  MapPin,
   FileSpreadsheet,
   Check,
   Archive,
 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
-import { formatCurrency } from '@/utils/format'
 import type { Product } from '@/types/inventory'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -132,7 +127,11 @@ const productOptions = computed(() =>
 
 const bomOptions = computed(() =>
   activeBoms.value.map((b) => ({
-    label: `${b.name} — Produces: ${b.product?.name || 'Product'} (Yield: ${b.output_quantity})`,
+    label: t('manufacturing.createWoModal.bomOptionSummary', {
+      name: b.name,
+      product: b.product?.name || 'Product',
+      yield: b.output_quantity,
+    }),
     value: b.id,
   }))
 )
@@ -169,6 +168,40 @@ const estimatedMaterialsForWO = computed(() => {
     totalRequired: Math.ceil(line.quantity * ratio),
   }))
 })
+
+function getPriorityLabel(p: string) {
+  switch (p) {
+    case 'urgent':
+      return t('manufacturing.priorities.urgent')
+    case 'high':
+      return t('manufacturing.priorities.high')
+    case 'normal':
+      return t('manufacturing.priorities.normal')
+    case 'low':
+      return t('manufacturing.priorities.low')
+    default:
+      return p
+  }
+}
+
+function getStatusLabel(s: string) {
+  switch (s) {
+    case 'completed':
+      return t('manufacturing.statuses.completed')
+    case 'in_progress':
+      return t('manufacturing.statuses.in_progress')
+    case 'cancelled':
+      return t('manufacturing.statuses.cancelled')
+    case 'draft':
+      return t('manufacturing.statuses.draft')
+    case 'active':
+      return t('manufacturing.statuses.active')
+    case 'archived':
+      return t('manufacturing.statuses.archived')
+    default:
+      return s
+  }
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function openCreateWO(preselectedBomId?: string) {
@@ -238,8 +271,8 @@ function openCompleteModal(wo: WorkOrder) {
 // ── Mutations ───────────────────────────────────────────────────────────────
 const createWOMutation = useMutation({
   mutationFn: () => {
-    if (!woForm.bom_id) throw new Error('Please select a Bill of Material.')
-    if (!woForm.quantity || woForm.quantity < 1) throw new Error('Quantity must be at least 1.')
+    if (!woForm.bom_id) throw new Error(t('manufacturing.messages.selectBom'))
+    if (!woForm.quantity || woForm.quantity < 1) throw new Error(t('manufacturing.messages.quantityMin'))
 
     return manufacturingApi.createWorkOrder({
       bom_id: woForm.bom_id,
@@ -253,23 +286,23 @@ const createWOMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'work-orders'] })
     isCreateWOModalOpen.value = false
-    toast.success('Production Work Order created successfully')
+    toast.success(t('manufacturing.messages.woCreatedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'Failed to create work order'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('manufacturing.messages.woCreatedError')),
 })
 
 const startWOMutation = useMutation({
   mutationFn: (id: string) => manufacturingApi.startWorkOrder(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'work-orders'] })
-    toast.success('Work Order started! Production is in progress.')
+    toast.success(t('manufacturing.messages.woStartedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to start work order'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.woStartedError')),
 })
 
 const completeWOMutation = useMutation({
   mutationFn: () => {
-    if (!selectedWO.value?.id) throw new Error('No work order selected')
+    if (!selectedWO.value?.id) throw new Error(t('manufacturing.messages.noWoSelected'))
     return manufacturingApi.completeWorkOrder(selectedWO.value.id, completeLocationId.value || undefined)
   },
   onSuccess: () => {
@@ -279,35 +312,35 @@ const completeWOMutation = useMutation({
     if (selectedWO.value) {
       isViewWODetailsModalOpen.value = false
     }
-    toast.success('Work Order completed! Output stock received into warehouse.')
+    toast.success(t('manufacturing.messages.woCompletedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to complete work order'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.woCompletedError')),
 })
 
 const cancelWOMutation = useMutation({
   mutationFn: (id: string) => manufacturingApi.cancelWorkOrder(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'work-orders'] })
-    toast.success('Work order cancelled')
+    toast.success(t('manufacturing.messages.woCancelledSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to cancel work order'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.woCancelledError')),
 })
 
 const deleteWOMutation = useMutation({
   mutationFn: (id: string) => manufacturingApi.deleteWorkOrder(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'work-orders'] })
-    toast.success('Work order deleted')
+    toast.success(t('manufacturing.messages.woDeletedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete work order'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.woDeletedError')),
 })
 
 const createBOMMutation = useMutation({
   mutationFn: () => {
-    if (!bomForm.product_id) throw new Error('Please select an output product.')
-    if (!bomForm.name.trim()) throw new Error('BOM Name is required.')
+    if (!bomForm.product_id) throw new Error(t('manufacturing.messages.selectProduct'))
+    if (!bomForm.name.trim()) throw new Error(t('manufacturing.messages.bomNameRequired'))
     const validLines = bomForm.lines.filter((l) => l.material_id && l.quantity > 0)
-    if (validLines.length === 0) throw new Error('Please add at least one component material.')
+    if (validLines.length === 0) throw new Error(t('manufacturing.messages.addAtLeastOneComponent'))
 
     return manufacturingApi.createBom({
       product_id: bomForm.product_id,
@@ -326,27 +359,27 @@ const createBOMMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'boms'] })
     isCreateBOMModalOpen.value = false
-    toast.success('Bill of Material created successfully')
+    toast.success(t('manufacturing.messages.bomCreatedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'Failed to create BOM'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('manufacturing.messages.bomCreatedError')),
 })
 
 const activateBOMMutation = useMutation({
   mutationFn: (id: string) => manufacturingApi.activateBom(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'boms'] })
-    toast.success('BOM activated')
+    toast.success(t('manufacturing.messages.bomActivatedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to activate BOM'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.bomActivatedError')),
 })
 
 const archiveBOMMutation = useMutation({
   mutationFn: (id: string) => manufacturingApi.archiveBom(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['manufacturing', 'boms'] })
-    toast.success('BOM archived')
+    toast.success(t('manufacturing.messages.bomArchivedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to archive BOM'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || t('manufacturing.messages.bomArchivedError')),
 })
 
 const priorityBadgeVariant = (p: string) => {
@@ -365,6 +398,7 @@ const priorityBadgeVariant = (p: string) => {
 const statusBadgeVariant = (s: string) => {
   switch (s) {
     case 'completed':
+    case 'active':
       return 'success'
     case 'in_progress':
       return 'info'
@@ -383,19 +417,19 @@ const statusBadgeVariant = (s: string) => {
       <div>
         <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
           <Factory class="w-7 h-7 text-blue-600" />
-          Manufacturing & Assembly
+          {{ t('manufacturing.title') }}
         </h1>
         <p class="text-sm text-slate-500">
-          Manage Bills of Material (BOMs), schedule production runs, track components, and output finished stock.
+          {{ t('manufacturing.subtitle') }}
         </p>
       </div>
 
       <div class="flex items-center gap-2.5">
         <UiButton variant="outline" @click="openCreateBOM()">
-          <FileSpreadsheet class="w-4 h-4 mr-2" /> New BOM Recipe
+          <FileSpreadsheet class="w-4 h-4 mr-2" /> {{ t('manufacturing.newBomRecipe') }}
         </UiButton>
         <UiButton @click="openCreateWO()">
-          <Plus class="w-4 h-4 mr-2" /> Schedule Work Order
+          <Plus class="w-4 h-4 mr-2" /> {{ t('manufacturing.scheduleWorkOrder') }}
         </UiButton>
       </div>
     </div>
@@ -407,7 +441,7 @@ const statusBadgeVariant = (s: string) => {
           <Factory class="w-5 h-5" />
         </div>
         <div>
-          <span class="text-xs text-slate-500 uppercase font-bold block">Total Work Orders</span>
+          <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.kpis.totalWorkOrders') }}</span>
           <span class="text-xl font-black text-slate-900">{{ totalWOs }}</span>
         </div>
       </div>
@@ -417,7 +451,7 @@ const statusBadgeVariant = (s: string) => {
           <Play class="w-5 h-5" />
         </div>
         <div>
-          <span class="text-xs text-slate-500 uppercase font-bold block">In Progress Runs</span>
+          <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.kpis.inProgressRuns') }}</span>
           <span class="text-xl font-black text-amber-600">{{ inProgressWOs }}</span>
         </div>
       </div>
@@ -427,7 +461,7 @@ const statusBadgeVariant = (s: string) => {
           <CheckCircle2 class="w-5 h-5" />
         </div>
         <div>
-          <span class="text-xs text-slate-500 uppercase font-bold block">Completed Runs</span>
+          <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.kpis.completedRuns') }}</span>
           <span class="text-xl font-black text-emerald-600">{{ completedWOs }}</span>
         </div>
       </div>
@@ -437,7 +471,7 @@ const statusBadgeVariant = (s: string) => {
           <Layers class="w-5 h-5" />
         </div>
         <div>
-          <span class="text-xs text-slate-500 uppercase font-bold block">Active BOM Recipes</span>
+          <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.kpis.activeBoms') }}</span>
           <span class="text-xl font-black text-indigo-600">{{ totalActiveBoms }}</span>
         </div>
       </div>
@@ -455,7 +489,7 @@ const statusBadgeVariant = (s: string) => {
             : 'border-transparent text-slate-500 hover:text-slate-700'
         ]"
       >
-        <Play class="w-4 h-4" /> Work Orders (Production Runs)
+        <Play class="w-4 h-4" /> {{ t('manufacturing.tabs.workOrders') }}
         <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 font-bold">
           {{ workOrders.length }}
         </span>
@@ -471,7 +505,7 @@ const statusBadgeVariant = (s: string) => {
             : 'border-transparent text-slate-500 hover:text-slate-700'
         ]"
       >
-        <Layers class="w-4 h-4" /> Bills of Material (BOMs & Recipes)
+        <Layers class="w-4 h-4" /> {{ t('manufacturing.tabs.boms') }}
         <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 font-bold">
           {{ boms.length }}
         </span>
@@ -484,25 +518,25 @@ const statusBadgeVariant = (s: string) => {
         <table class="min-w-full divide-y divide-slate-200">
           <thead class="bg-slate-50/80">
             <tr>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">WO Number</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Output Product & BOM</th>
-              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Batch Qty</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Priority</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule</th>
-              <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.woNumber') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.outputProductBom') }}</th>
+              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.batchQty') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.priority') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.status') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.schedule') }}</th>
+              <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.workOrdersTable.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white text-sm">
             <tr v-if="woLoading">
-              <td colspan="7" class="px-5 py-10 text-center text-slate-500">Loading work orders…</td>
+              <td colspan="7" class="px-5 py-10 text-center text-slate-500">{{ t('manufacturing.workOrdersTable.loading') }}</td>
             </tr>
             <tr v-else-if="!workOrders.length">
               <td colspan="7" class="px-5 py-12 text-center">
                 <Factory class="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p class="font-medium text-slate-700">No work orders scheduled yet</p>
-                <p class="text-xs text-slate-400 mt-1">Create a BOM recipe first, then schedule your manufacturing run.</p>
-                <UiButton size="sm" class="mt-3" @click="openCreateWO()">Schedule Work Order</UiButton>
+                <p class="font-medium text-slate-700">{{ t('manufacturing.workOrdersTable.emptyTitle') }}</p>
+                <p class="text-xs text-slate-400 mt-1">{{ t('manufacturing.workOrdersTable.emptyDescription') }}</p>
+                <UiButton size="sm" class="mt-3" @click="openCreateWO()">{{ t('manufacturing.scheduleWorkOrder') }}</UiButton>
               </td>
             </tr>
             <tr v-for="wo in workOrders" :key="wo.id" class="hover:bg-slate-50/60 transition-colors">
@@ -520,26 +554,26 @@ const statusBadgeVariant = (s: string) => {
                 </div>
               </td>
               <td class="px-5 py-3.5 text-center font-bold text-slate-900 font-mono">
-                {{ wo.quantity }} units
+                {{ t('manufacturing.workOrdersTable.unitsCount', { count: wo.quantity }) }}
               </td>
               <td class="px-5 py-3.5">
                 <UiBadge :variant="priorityBadgeVariant(wo.priority)" class="capitalize">
-                  {{ wo.priority }}
+                  {{ getPriorityLabel(wo.priority) }}
                 </UiBadge>
               </td>
               <td class="px-5 py-3.5">
                 <UiBadge :variant="statusBadgeVariant(wo.status)" class="capitalize">
-                  {{ wo.status.replace('_', ' ') }}
+                  {{ getStatusLabel(wo.status) }}
                 </UiBadge>
               </td>
               <td class="px-5 py-3.5 text-xs text-slate-600">
-                <div>Start: {{ wo.planned_start || 'Immediate' }}</div>
-                <div v-if="wo.planned_end" class="text-slate-400">Due: {{ wo.planned_end }}</div>
+                <div>{{ t('manufacturing.workOrdersTable.startPrefix') }} {{ wo.planned_start || t('manufacturing.workOrdersTable.immediate') }}</div>
+                <div v-if="wo.planned_end" class="text-slate-400">{{ t('manufacturing.workOrdersTable.duePrefix') }} {{ wo.planned_end }}</div>
               </td>
               <td class="px-5 py-3.5 text-right">
                 <div class="inline-flex items-center gap-2">
                   <UiButton size="sm" variant="ghost" class="text-xs" @click="viewWODetails(wo)">
-                    <Eye class="w-3.5 h-3.5 mr-1" /> View
+                    <Eye class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.workOrdersTable.view') }}
                   </UiButton>
 
                   <!-- Start Run -->
@@ -551,7 +585,7 @@ const statusBadgeVariant = (s: string) => {
                     :loading="startWOMutation.isPending.value"
                     @click="startWOMutation.mutate(wo.id)"
                   >
-                    <Play class="w-3.5 h-3.5 mr-1" /> Start Run
+                    <Play class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.workOrdersTable.startRun') }}
                   </UiButton>
 
                   <!-- Complete Run -->
@@ -562,7 +596,7 @@ const statusBadgeVariant = (s: string) => {
                     class="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold"
                     @click="openCompleteModal(wo)"
                   >
-                    <CheckCircle2 class="w-3.5 h-3.5 mr-1" /> Complete
+                    <CheckCircle2 class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.workOrdersTable.complete') }}
                   </UiButton>
 
                   <!-- Cancel Run -->
@@ -589,24 +623,24 @@ const statusBadgeVariant = (s: string) => {
         <table class="min-w-full divide-y divide-slate-200">
           <thead class="bg-slate-50/80">
             <tr>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">BOM Recipe Name</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Output Finished Product</th>
-              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Yield / Batch</th>
-              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Components</th>
-              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-              <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.recipeName') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.outputProduct') }}</th>
+              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.yieldBatch') }}</th>
+              <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.components') }}</th>
+              <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.status') }}</th>
+              <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('manufacturing.bomsTable.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white text-sm">
             <tr v-if="bomsLoading">
-              <td colspan="6" class="px-5 py-10 text-center text-slate-500">Loading Bills of Material…</td>
+              <td colspan="6" class="px-5 py-10 text-center text-slate-500">{{ t('manufacturing.bomsTable.loading') }}</td>
             </tr>
             <tr v-else-if="!boms.length">
               <td colspan="6" class="px-5 py-12 text-center">
                 <Layers class="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p class="font-medium text-slate-700">No Bills of Material defined yet</p>
-                <p class="text-xs text-slate-400 mt-1">Create a recipe linking raw components to your finished products.</p>
-                <UiButton size="sm" class="mt-3" @click="openCreateBOM()">+ New BOM Recipe</UiButton>
+                <p class="font-medium text-slate-700">{{ t('manufacturing.bomsTable.emptyTitle') }}</p>
+                <p class="text-xs text-slate-400 mt-1">{{ t('manufacturing.bomsTable.emptyDescription') }}</p>
+                <UiButton size="sm" class="mt-3" @click="openCreateBOM()">{{ t('manufacturing.newBomRecipe') }}</UiButton>
               </td>
             </tr>
             <tr v-for="bom in boms" :key="bom.id" class="hover:bg-slate-50/60 transition-colors">
@@ -623,11 +657,11 @@ const statusBadgeVariant = (s: string) => {
                 <div class="text-xs font-mono text-slate-500">{{ bom.product?.sku || 'SKU' }}</div>
               </td>
               <td class="px-5 py-3.5 text-center font-bold font-mono text-slate-900">
-                {{ bom.output_quantity }} units
+                {{ t('manufacturing.bomsTable.unitsCount', { count: bom.output_quantity }) }}
               </td>
               <td class="px-5 py-3.5 text-center">
                 <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
-                  {{ bom.lines?.length || 0 }} components
+                  {{ t('manufacturing.bomsTable.componentsCount', { count: bom.lines?.length || 0 }) }}
                 </span>
               </td>
               <td class="px-5 py-3.5">
@@ -635,13 +669,13 @@ const statusBadgeVariant = (s: string) => {
                   :variant="bom.status === 'active' ? 'success' : bom.status === 'archived' ? 'default' : 'warning'"
                   class="capitalize"
                 >
-                  {{ bom.status }}
+                  {{ getStatusLabel(bom.status) }}
                 </UiBadge>
               </td>
               <td class="px-5 py-3.5 text-right">
                 <div class="inline-flex items-center gap-2">
                   <UiButton size="sm" variant="ghost" class="text-xs" @click="viewBOMDetails(bom)">
-                    <Eye class="w-3.5 h-3.5 mr-1" /> Recipe
+                    <Eye class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.bomsTable.recipe') }}
                   </UiButton>
 
                   <UiButton
@@ -651,7 +685,7 @@ const statusBadgeVariant = (s: string) => {
                     class="text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
                     @click="openCreateWO(bom.id)"
                   >
-                    <Play class="w-3.5 h-3.5 mr-1" /> Produce
+                    <Play class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.bomsTable.produce') }}
                   </UiButton>
 
                   <UiButton
@@ -662,7 +696,7 @@ const statusBadgeVariant = (s: string) => {
                     :loading="activateBOMMutation.isPending.value"
                     @click="activateBOMMutation.mutate(bom.id)"
                   >
-                    <Check class="w-3.5 h-3.5 mr-1" /> Activate
+                    <Check class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.bomsTable.activate') }}
                   </UiButton>
 
                   <UiButton
@@ -670,7 +704,7 @@ const statusBadgeVariant = (s: string) => {
                     size="sm"
                     variant="ghost"
                     class="text-xs text-slate-500 hover:text-slate-700"
-                    title="Archive BOM"
+                    :title="t('manufacturing.bomsTable.archiveTooltip')"
                     @click="archiveBOMMutation.mutate(bom.id)"
                   >
                     <Archive class="w-3.5 h-3.5" />
@@ -684,14 +718,14 @@ const statusBadgeVariant = (s: string) => {
     </div>
 
     <!-- Create Work Order Modal -->
-    <UiModal v-model="isCreateWOModalOpen" title="Schedule Production Work Order" size="xl">
+    <UiModal v-model="isCreateWOModalOpen" :title="t('manufacturing.createWoModal.title')" size="xl">
       <form @submit.prevent="createWOMutation.mutate()" class="space-y-4">
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Select BOM Recipe *</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.createWoModal.selectBomLabel') }}</label>
           <UiSelect
             v-model="woForm.bom_id"
             :options="bomOptions"
-            placeholder="Select a bill of materials..."
+            :placeholder="t('manufacturing.createWoModal.selectBomPlaceholder')"
             required
           />
         </div>
@@ -702,12 +736,12 @@ const statusBadgeVariant = (s: string) => {
             type="number"
             min="1"
             step="1"
-            label="Production Quantity (Finished Units) *"
+            :label="t('manufacturing.createWoModal.quantityLabel')"
             required
           />
 
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Priority Level</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.createWoModal.priorityLabel') }}</label>
             <div class="grid grid-cols-4 gap-2">
               <button
                 v-for="p in ['low', 'normal', 'high', 'urgent'] as const"
@@ -721,22 +755,22 @@ const statusBadgeVariant = (s: string) => {
                     : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                 ]"
               >
-                {{ p }}
+                {{ getPriorityLabel(p) }}
               </button>
             </div>
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="woForm.planned_start" type="date" label="Planned Start Date" />
-          <UiInput v-model="woForm.planned_end" type="date" label="Target Completion Date" />
+          <UiInput v-model="woForm.planned_start" type="date" :label="t('manufacturing.createWoModal.plannedStartLabel')" />
+          <UiInput v-model="woForm.planned_end" type="date" :label="t('manufacturing.createWoModal.plannedEndLabel')" />
         </div>
 
         <!-- Live Material Requirements Estimation Matrix -->
         <div v-if="selectedBOMForWO && estimatedMaterialsForWO.length > 0" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
           <div class="flex items-center justify-between text-xs font-bold text-slate-700">
-            <span>Required Components for {{ woForm.quantity }} Unit(s):</span>
-            <span class="text-blue-600 font-mono">BOM Yield: {{ selectedBOMForWO.output_quantity }} unit(s)</span>
+            <span>{{ t('manufacturing.createWoModal.requiredComponentsTitle', { quantity: woForm.quantity }) }}</span>
+            <span class="text-blue-600 font-mono">{{ t('manufacturing.createWoModal.bomYieldNote', { yield: selectedBOMForWO.output_quantity }) }}</span>
           </div>
           <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
             <div
@@ -757,34 +791,34 @@ const statusBadgeVariant = (s: string) => {
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Production Notes / Batch Code</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.createWoModal.notesLabel') }}</label>
           <textarea
             v-model="woForm.notes"
             rows="2"
             class="block w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-sm font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            placeholder="e.g. Line 2 priority assembly run for client order..."
+            :placeholder="t('manufacturing.createWoModal.notesPlaceholder')"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="ghost" @click="isCreateWOModalOpen = false">Cancel</UiButton>
+          <UiButton variant="ghost" @click="isCreateWOModalOpen = false">{{ t('common.cancel') }}</UiButton>
           <UiButton :loading="createWOMutation.isPending.value" type="submit">
-            Schedule Production
+            {{ t('manufacturing.createWoModal.submit') }}
           </UiButton>
         </div>
       </form>
     </UiModal>
 
     <!-- Create Bill of Materials Modal -->
-    <UiModal v-model="isCreateBOMModalOpen" title="Create Bill of Materials (Recipe)" size="2xl">
+    <UiModal v-model="isCreateBOMModalOpen" :title="t('manufacturing.createBomModal.title')" size="2xl">
       <form @submit.prevent="createBOMMutation.mutate()" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Finished Output Product *</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.createBomModal.productLabel') }}</label>
             <UiSelect
               v-model="bomForm.product_id"
               :options="productOptions"
-              placeholder="Select finished product..."
+              :placeholder="t('manufacturing.createBomModal.selectProductPlaceholder')"
               @update:model-value="onFinishedProductSelect"
               required
             />
@@ -792,8 +826,8 @@ const statusBadgeVariant = (s: string) => {
 
           <UiInput
             v-model="bomForm.name"
-            label="BOM Recipe Name *"
-            placeholder="e.g. Deluxe Gaming Chair Assembly"
+            :label="t('manufacturing.createBomModal.nameLabel')"
+            :placeholder="t('manufacturing.createBomModal.namePlaceholder')"
             required
           />
         </div>
@@ -804,13 +838,13 @@ const statusBadgeVariant = (s: string) => {
             type="number"
             min="1"
             step="1"
-            label="Output Batch Size (Yield) *"
-            help-text="Units of finished product produced per batch"
+            :label="t('manufacturing.createBomModal.outputQuantityLabel')"
+            :help-text="t('manufacturing.createBomModal.outputQuantityHelp')"
             required
           />
 
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Initial Status</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.createBomModal.initialStatusLabel') }}</label>
             <div class="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -822,7 +856,7 @@ const statusBadgeVariant = (s: string) => {
                     : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                 ]"
               >
-                Active
+                {{ t('manufacturing.statuses.active') }}
               </button>
               <button
                 type="button"
@@ -834,7 +868,7 @@ const statusBadgeVariant = (s: string) => {
                     : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                 ]"
               >
-                Draft
+                {{ t('manufacturing.statuses.draft') }}
               </button>
             </div>
           </div>
@@ -844,11 +878,11 @@ const statusBadgeVariant = (s: string) => {
         <div class="space-y-3 pt-2">
           <div class="flex items-center justify-between border-b border-slate-200 pb-2">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Required Raw Materials & Components</h3>
-              <p class="text-xs text-slate-500">Components required to manufacture {{ bomForm.output_quantity }} unit(s) of finished goods.</p>
+              <h3 class="text-sm font-bold text-slate-900">{{ t('manufacturing.createBomModal.componentsTitle') }}</h3>
+              <p class="text-xs text-slate-500">{{ t('manufacturing.createBomModal.componentsSubtitle', { quantity: bomForm.output_quantity }) }}</p>
             </div>
             <UiButton type="button" size="sm" variant="outline" @click="addBOMLine()">
-              <Plus class="w-3.5 h-3.5 mr-1" /> Add Component
+              <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.createBomModal.addComponent') }}
             </UiButton>
           </div>
 
@@ -859,11 +893,11 @@ const statusBadgeVariant = (s: string) => {
               class="p-3 rounded-xl border border-slate-200 bg-slate-50/50 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end"
             >
               <div class="sm:col-span-6">
-                <label class="block text-xs font-bold text-slate-700 mb-1">Component Product *</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1">{{ t('manufacturing.createBomModal.componentProductLabel') }}</label>
                 <UiSelect
                   v-model="line.material_id"
                   :options="productOptions"
-                  placeholder="Select material..."
+                  :placeholder="t('manufacturing.createBomModal.selectMaterialPlaceholder')"
                   required
                 />
               </div>
@@ -874,7 +908,7 @@ const statusBadgeVariant = (s: string) => {
                   type="number"
                   min="1"
                   step="1"
-                  label="Qty *"
+                  :label="t('manufacturing.createBomModal.quantityLabel')"
                   required
                 />
               </div>
@@ -882,8 +916,8 @@ const statusBadgeVariant = (s: string) => {
               <div class="sm:col-span-3">
                 <UiInput
                   v-model="line.unit"
-                  label="Unit"
-                  placeholder="pcs / kg / m"
+                  :label="t('manufacturing.createBomModal.unitLabel')"
+                  :placeholder="t('manufacturing.createBomModal.unitPlaceholder')"
                 />
               </div>
 
@@ -892,7 +926,7 @@ const statusBadgeVariant = (s: string) => {
                   type="button"
                   class="text-slate-400 hover:text-red-500 transition-colors p-1"
                   @click="removeBOMLine(idx)"
-                  title="Remove Component"
+                  :title="t('manufacturing.createBomModal.removeComponentTooltip')"
                 >
                   <Trash2 class="w-4 h-4" />
                 </button>
@@ -902,23 +936,23 @@ const statusBadgeVariant = (s: string) => {
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="ghost" @click="isCreateBOMModalOpen = false">Cancel</UiButton>
+          <UiButton variant="ghost" @click="isCreateBOMModalOpen = false">{{ t('common.cancel') }}</UiButton>
           <UiButton :loading="createBOMMutation.isPending.value" type="submit">
-            Save Bill of Materials
+            {{ t('manufacturing.createBomModal.submit') }}
           </UiButton>
         </div>
       </form>
     </UiModal>
 
     <!-- Complete Work Order Modal -->
-    <UiModal v-model="isCompleteWOModalOpen" title="Complete Work Order & Store Stock" size="md">
+    <UiModal v-model="isCompleteWOModalOpen" :title="t('manufacturing.completeWoModal.title')" size="md">
       <div class="space-y-4">
         <p class="text-sm text-slate-600">
-          Completing Work Order <strong class="text-slate-900 font-mono">{{ selectedWO?.number }}</strong> will record the manufacturing run as complete.
+          {{ t('manufacturing.completeWoModal.confirmText', { number: selectedWO?.number }) }}
         </p>
 
         <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-          <div class="text-xs text-slate-500 font-bold uppercase">Manufactured Output:</div>
+          <div class="text-xs text-slate-500 font-bold uppercase">{{ t('manufacturing.completeWoModal.manufacturedOutputHeader') }}</div>
           <div class="font-bold text-slate-900 text-base">
             {{ selectedWO?.quantity }} × {{ selectedWO?.bom?.product?.name || selectedWO?.bom?.name }}
           </div>
@@ -926,66 +960,66 @@ const statusBadgeVariant = (s: string) => {
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Destination Warehouse / Location *</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.completeWoModal.destinationLocationLabel') }}</label>
           <UiSelect
             v-model="completeLocationId"
             :options="locationOptions"
-            placeholder="Select location to store finished goods..."
+            :placeholder="t('manufacturing.completeWoModal.selectLocationPlaceholder')"
             required
           />
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="ghost" @click="isCompleteWOModalOpen = false">Cancel</UiButton>
+          <UiButton variant="ghost" @click="isCompleteWOModalOpen = false">{{ t('common.cancel') }}</UiButton>
           <UiButton
             :loading="completeWOMutation.isPending.value"
             class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             @click="completeWOMutation.mutate()"
           >
-            Confirm & Complete Production
+            {{ t('manufacturing.completeWoModal.submit') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- View Work Order Details Modal -->
-    <UiModal v-model="isViewWODetailsModalOpen" :title="`Work Order Details - ${selectedWO?.number}`" size="xl">
+    <UiModal v-model="isViewWODetailsModalOpen" :title="selectedWO ? t('manufacturing.woDetailsModal.title', { number: selectedWO.number }) : ''" size="xl">
       <div v-if="selectedWO" class="space-y-5">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Output Product</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.woDetailsModal.outputProduct') }}</span>
             <span class="font-bold text-slate-900">{{ selectedWO.bom?.product?.name || '—' }}</span>
             <span class="text-xs font-mono text-slate-400 block">{{ selectedWO.bom?.product?.sku }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Batch Quantity</span>
-            <span class="font-bold text-slate-900 font-mono text-base">{{ selectedWO.quantity }} units</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.woDetailsModal.batchQuantity') }}</span>
+            <span class="font-bold text-slate-900 font-mono text-base">{{ t('manufacturing.woDetailsModal.unitsCount', { count: selectedWO.quantity }) }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Status</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.woDetailsModal.status') }}</span>
             <UiBadge :variant="statusBadgeVariant(selectedWO.status)" class="mt-1 capitalize">
-              {{ selectedWO.status.replace('_', ' ') }}
+              {{ getStatusLabel(selectedWO.status) }}
             </UiBadge>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Priority</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.woDetailsModal.priority') }}</span>
             <UiBadge :variant="priorityBadgeVariant(selectedWO.priority)" class="mt-1 capitalize">
-              {{ selectedWO.priority }}
+              {{ getPriorityLabel(selectedWO.priority) }}
             </UiBadge>
           </div>
         </div>
 
         <!-- Required Components in this WO -->
         <div class="space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Required Recipe Components</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.woDetailsModal.componentsTitle') }}</h4>
           <div class="border border-slate-200 rounded-xl overflow-hidden">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">Material</th>
-                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">SKU</th>
-                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">Per Batch</th>
-                  <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">Total Required</th>
+                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.woDetailsModal.columns.material') }}</th>
+                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.woDetailsModal.columns.sku') }}</th>
+                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.woDetailsModal.columns.perBatch') }}</th>
+                  <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.woDetailsModal.columns.totalRequired') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 bg-white">
@@ -1003,7 +1037,7 @@ const statusBadgeVariant = (s: string) => {
         </div>
 
         <div v-if="selectedWO.notes" class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700">
-          <strong class="block text-slate-900 mb-0.5">Production Notes:</strong>
+          <strong class="block text-slate-900 mb-0.5">{{ t('manufacturing.woDetailsModal.productionNotes') }}</strong>
           {{ selectedWO.notes }}
         </div>
 
@@ -1015,54 +1049,54 @@ const statusBadgeVariant = (s: string) => {
               class="border-blue-300 text-blue-700"
               @click="startWOMutation.mutate(selectedWO.id)"
             >
-              <Play class="w-3.5 h-3.5 mr-1" /> Start Run
+              <Play class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.woDetailsModal.startRun') }}
             </UiButton>
             <UiButton
               v-if="selectedWO.status === 'in_progress'"
               class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               @click="openCompleteModal(selectedWO)"
             >
-              <CheckCircle2 class="w-3.5 h-3.5 mr-1" /> Complete & Store Stock
+              <CheckCircle2 class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.woDetailsModal.completeAndStore') }}
             </UiButton>
           </div>
 
-          <UiButton variant="ghost" @click="isViewWODetailsModalOpen = false">Close</UiButton>
+          <UiButton variant="ghost" @click="isViewWODetailsModalOpen = false">{{ t('common.close') }}</UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- View BOM Details Modal -->
-    <UiModal v-model="isViewBOMDetailsModalOpen" :title="`Bill of Materials - ${selectedBOM?.name}`" size="xl">
+    <UiModal v-model="isViewBOMDetailsModalOpen" :title="selectedBOM ? t('manufacturing.bomDetailsModal.title', { name: selectedBOM.name }) : ''" size="xl">
       <div v-if="selectedBOM" class="space-y-5">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Output Finished Product</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.bomDetailsModal.outputProduct') }}</span>
             <span class="font-bold text-slate-900">{{ selectedBOM.product?.name }}</span>
             <span class="text-xs font-mono text-slate-400 block">{{ selectedBOM.product?.sku }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Batch Output Size</span>
-            <span class="font-bold font-mono text-slate-900 text-base">{{ selectedBOM.output_quantity }} units</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.bomDetailsModal.batchOutputSize') }}</span>
+            <span class="font-bold font-mono text-slate-900 text-base">{{ t('manufacturing.bomDetailsModal.unitsCount', { count: selectedBOM.output_quantity }) }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Status</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('manufacturing.bomDetailsModal.status') }}</span>
             <UiBadge :variant="selectedBOM.status === 'active' ? 'success' : 'default'" class="mt-1 capitalize">
-              {{ selectedBOM.status }}
+              {{ getStatusLabel(selectedBOM.status) }}
             </UiBadge>
           </div>
         </div>
 
         <div class="space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Component Ingredients / Parts List</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('manufacturing.bomDetailsModal.partsListTitle') }}</h4>
           <div class="border border-slate-200 rounded-xl overflow-hidden">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">Material / Component</th>
-                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">SKU</th>
-                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">Quantity</th>
-                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">Unit</th>
-                  <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">Notes</th>
+                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.bomDetailsModal.columns.material') }}</th>
+                  <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.bomDetailsModal.columns.sku') }}</th>
+                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.bomDetailsModal.columns.quantity') }}</th>
+                  <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.bomDetailsModal.columns.unit') }}</th>
+                  <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">{{ t('manufacturing.bomDetailsModal.columns.notes') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 bg-white">
@@ -1085,11 +1119,11 @@ const statusBadgeVariant = (s: string) => {
             class="border-blue-300 text-blue-700"
             @click="isViewBOMDetailsModalOpen = false; openCreateWO(selectedBOM.id)"
           >
-            <Play class="w-3.5 h-3.5 mr-1" /> Produce From This Recipe
+            <Play class="w-3.5 h-3.5 mr-1" /> {{ t('manufacturing.bomDetailsModal.produceFromRecipe') }}
           </UiButton>
           <div v-else></div>
 
-          <UiButton variant="ghost" @click="isViewBOMDetailsModalOpen = false">Close</UiButton>
+          <UiButton variant="ghost" @click="isViewBOMDetailsModalOpen = false">{{ t('common.close') }}</UiButton>
         </div>
       </div>
     </UiModal>

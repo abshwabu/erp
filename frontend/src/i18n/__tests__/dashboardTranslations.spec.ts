@@ -11,11 +11,13 @@ import enShops from '../locales/en/shops'
 import amShops from '../locales/am/shops'
 import enProcurement from '../locales/en/procurement'
 import amProcurement from '../locales/am/procurement'
+import enManufacturing from '../locales/en/manufacturing'
+import amManufacturing from '../locales/am/manufacturing'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, and procurement in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, and manufacturing in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -28,6 +30,29 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.shops).toBeDefined()
     expect(en.procurement).toBeDefined()
     expect(am.procurement).toBeDefined()
+    expect(en.manufacturing).toBeDefined()
+    expect(am.manufacturing).toBeDefined()
+  })
+
+  it('has identical keys for manufacturing in en and am', () => {
+    const enKeys = Object.keys(enManufacturing).sort()
+    const amKeys = Object.keys(amManufacturing).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enManufacturing.kpis).sort()).toEqual(Object.keys(amManufacturing.kpis).sort())
+    expect(Object.keys(enManufacturing.tabs).sort()).toEqual(Object.keys(amManufacturing.tabs).sort())
+    expect(Object.keys(enManufacturing.priorities).sort()).toEqual(Object.keys(amManufacturing.priorities).sort())
+    expect(Object.keys(enManufacturing.statuses).sort()).toEqual(Object.keys(amManufacturing.statuses).sort())
+    expect(Object.keys(enManufacturing.workOrdersTable).sort()).toEqual(Object.keys(amManufacturing.workOrdersTable).sort())
+    expect(Object.keys(enManufacturing.bomsTable).sort()).toEqual(Object.keys(amManufacturing.bomsTable).sort())
+    expect(Object.keys(enManufacturing.createWoModal).sort()).toEqual(Object.keys(amManufacturing.createWoModal).sort())
+    expect(Object.keys(enManufacturing.createBomModal).sort()).toEqual(Object.keys(amManufacturing.createBomModal).sort())
+    expect(Object.keys(enManufacturing.completeWoModal).sort()).toEqual(Object.keys(amManufacturing.completeWoModal).sort())
+    expect(Object.keys(enManufacturing.woDetailsModal).sort()).toEqual(Object.keys(amManufacturing.woDetailsModal).sort())
+    expect(Object.keys(enManufacturing.woDetailsModal.columns).sort()).toEqual(Object.keys(amManufacturing.woDetailsModal.columns).sort())
+    expect(Object.keys(enManufacturing.bomDetailsModal).sort()).toEqual(Object.keys(amManufacturing.bomDetailsModal).sort())
+    expect(Object.keys(enManufacturing.bomDetailsModal.columns).sort()).toEqual(Object.keys(amManufacturing.bomDetailsModal.columns).sort())
+    expect(Object.keys(enManufacturing.messages).sort()).toEqual(Object.keys(amManufacturing.messages).sort())
   })
 
   it('has identical keys for procurement in en and am', () => {
