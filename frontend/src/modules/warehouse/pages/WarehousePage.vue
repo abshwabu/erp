@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { ArrowRightLeft, MapPin, PackagePlus, Plus } from '@lucide/vue'
 import { inventoryApi } from '@/api/inventory'
 import { warehouseApi } from '@/api/warehouse'
@@ -14,6 +15,7 @@ import UiTable from '@/components/ui/UiTable.vue'
 
 type TabId = 'locations' | 'receive' | 'transfer'
 
+const { t, te } = useI18n()
 const toast = useToast()
 const queryClient = useQueryClient()
 const activeTab = ref<TabId>('locations')
@@ -139,13 +141,13 @@ const transferAvailableAtSource = computed(() => {
   return match ? (match.available_quantity ?? match.quantity_on_hand ?? 0) : 0
 })
 
-const locationColumns = [
-  { key: 'name', label: 'Name' },
-  { key: 'code', label: 'Code' },
-  { key: 'type', label: 'Type' },
-  { key: 'warehouse', label: 'Warehouse' },
-  { key: 'status', label: 'Status', align: 'center' as const },
-]
+const locationColumns = computed(() => [
+  { key: 'name', label: t('warehouse.tableColumns.name') },
+  { key: 'code', label: t('warehouse.tableColumns.code') },
+  { key: 'type', label: t('warehouse.tableColumns.type') },
+  { key: 'warehouse', label: t('warehouse.tableColumns.warehouse') },
+  { key: 'status', label: t('warehouse.tableColumns.status'), align: 'center' as const },
+])
 
 const locationRows = computed(() =>
   (Array.isArray(locations.value) ? locations.value : []).map((loc: any) => ({
@@ -180,10 +182,10 @@ const createLocationMutation = useMutation({
     locationForm.code = ''
     locationForm.type = 'storage'
     invalidateStockQueries()
-    toast.success('Location created')
+    toast.success(t('warehouse.locationCreatedSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to create location')
+    toast.error(err?.response?.data?.message || t('warehouse.locationCreatedFailed'))
   },
 })
 
@@ -200,10 +202,10 @@ const receiveMutation = useMutation({
     receiveForm.quantity = 1
     receiveForm.unit_cost = 0
     invalidateStockQueries()
-    toast.success('Stock received')
+    toast.success(t('warehouse.stockReceivedSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || err?.message || 'Failed to receive stock')
+    toast.error(err?.response?.data?.message || err?.message || t('warehouse.stockReceivedFailed'))
   },
 })
 
@@ -219,16 +221,16 @@ const transferMutation = useMutation({
   onSuccess: () => {
     transferForm.quantity = 1
     invalidateStockQueries()
-    toast.success('Stock transferred')
+    toast.success(t('warehouse.stockTransferredSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || err?.message || 'Failed to transfer stock')
+    toast.error(err?.response?.data?.message || err?.message || t('warehouse.stockTransferredFailed'))
   },
 })
 
 function submitLocation() {
   if (!locationForm.name.trim() || !locationForm.code.trim()) {
-    toast.error('Name and code are required')
+    toast.error(t('warehouse.nameAndCodeRequired'))
     return
   }
   createLocationMutation.mutate()
@@ -236,15 +238,15 @@ function submitLocation() {
 
 function submitReceive() {
   if (!receiveForm.product_id || !receiveForm.location_id) {
-    toast.error('Product and location are required')
+    toast.error(t('warehouse.productAndLocationRequired'))
     return
   }
   if (receiveHasVariants.value && !receiveForm.variant_id) {
-    toast.error('Please select a product variant')
+    toast.error(t('warehouse.selectVariantRequired'))
     return
   }
   if (!receiveForm.quantity || receiveForm.quantity < 1) {
-    toast.error('Quantity must be at least 1')
+    toast.error(t('warehouse.quantityMinOne'))
     return
   }
   receiveMutation.mutate()
@@ -252,49 +254,55 @@ function submitReceive() {
 
 function submitTransfer() {
   if (!transferForm.product_id || !transferForm.from_location_id || !transferForm.to_location_id) {
-    toast.error('Product and both locations are required')
+    toast.error(t('warehouse.productAndBothLocationsRequired'))
     return
   }
   if (transferHasVariants.value && !transferForm.variant_id) {
-    toast.error('Please select a product variant')
+    toast.error(t('warehouse.selectVariantRequired'))
     return
   }
   if (transferForm.from_location_id === transferForm.to_location_id) {
-    toast.error('From and to locations must differ')
+    toast.error(t('warehouse.locationsMustDiffer'))
     return
   }
   if (!transferForm.quantity || transferForm.quantity < 1) {
-    toast.error('Quantity must be at least 1')
+    toast.error(t('warehouse.quantityMinOne'))
     return
   }
   if (transferAvailableAtSource.value !== null && transferForm.quantity > transferAvailableAtSource.value) {
-    toast.error(`Insufficient stock at source location. Available: ${transferAvailableAtSource.value}`)
+    toast.error(t('warehouse.insufficientStockAtSource', { count: transferAvailableAtSource.value }))
     return
   }
   transferMutation.mutate()
 }
 
-const tabs = [
-  { id: 'locations' as const, label: 'Locations', icon: MapPin },
-  { id: 'receive' as const, label: 'Receive', icon: PackagePlus },
-  { id: 'transfer' as const, label: 'Transfer', icon: ArrowRightLeft },
-]
+const tabs = computed(() => [
+  { id: 'locations' as const, label: t('warehouse.tabs.locations'), icon: MapPin },
+  { id: 'receive' as const, label: t('warehouse.tabs.receive'), icon: PackagePlus },
+  { id: 'transfer' as const, label: t('warehouse.tabs.transfer'), icon: ArrowRightLeft },
+])
 
-const typeOptions = [
-  { label: 'Storage', value: 'storage' },
-  { label: 'Receive', value: 'receive' },
-  { label: 'Pick', value: 'pick' },
-  { label: 'Pack', value: 'pack' },
-  { label: 'Stage', value: 'stage' },
-  { label: 'Ship', value: 'ship' },
-]
+const typeOptions = computed(() => [
+  { label: t('warehouse.locationTypes.storage'), value: 'storage' },
+  { label: t('warehouse.locationTypes.receive'), value: 'receive' },
+  { label: t('warehouse.locationTypes.pick'), value: 'pick' },
+  { label: t('warehouse.locationTypes.pack'), value: 'pack' },
+  { label: t('warehouse.locationTypes.stage'), value: 'stage' },
+  { label: t('warehouse.locationTypes.ship'), value: 'ship' },
+])
+
+const formatLocationType = (type: string) => {
+  const key = `warehouse.locationTypes.${type}`
+  if (te(key)) return t(key)
+  return type
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900">Warehouse</h1>
-      <p class="text-slate-500 text-sm">Manage locations, receive stock, and transfer between bins.</p>
+      <h1 class="text-2xl font-bold text-slate-900">{{ $t('warehouse.warehouse') }}</h1>
+      <p class="text-slate-500 text-sm">{{ $t('warehouse.warehouseSubtitle') }}</p>
     </div>
 
     <div class="flex border-b border-slate-200">
@@ -302,7 +310,7 @@ const typeOptions = [
         v-for="tab in tabs"
         :key="tab.id"
         type="button"
-        class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+        class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
         :class="activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
         @click="activeTab = tab.id"
       >
@@ -313,14 +321,14 @@ const typeOptions = [
 
     <!-- Locations -->
     <div v-if="activeTab === 'locations'" class="space-y-6">
-      <UiCard title="Create location">
+      <UiCard :title="$t('warehouse.createLocation')">
         <form class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end" @submit.prevent="submitLocation">
-          <UiInput v-model="locationForm.name" label="Name" required placeholder="Receiving dock" />
-          <UiInput v-model="locationForm.code" label="Code" required placeholder="RECV-01" />
-          <UiSelect v-model="locationForm.type" label="Type" :options="typeOptions" />
+          <UiInput v-model="locationForm.name" :label="$t('warehouse.nameLabel')" required :placeholder="$t('warehouse.namePlaceholder')" />
+          <UiInput v-model="locationForm.code" :label="$t('warehouse.codeLabel')" required :placeholder="$t('warehouse.codePlaceholder')" />
+          <UiSelect v-model="locationForm.type" :label="$t('warehouse.typeLabel')" :options="typeOptions" />
           <UiButton type="submit" :disabled="createLocationMutation.isPending.value">
             <Plus class="h-4 w-4 mr-2" />
-            Add location
+            {{ $t('warehouse.addLocationBtn') }}
           </UiButton>
         </form>
       </UiCard>
@@ -329,8 +337,8 @@ const typeOptions = [
         :columns="locationColumns"
         :data="locationRows"
         :loading="locationsLoading"
-        empty-title="No locations yet"
-        empty-description="Create a stock location above to get started."
+        :empty-title="$t('warehouse.noLocationsTitle')"
+        :empty-description="$t('warehouse.noLocationsDescription')"
       >
         <template #cell(name)="{ item }">
           <span class="font-medium text-slate-900">{{ item.name }}</span>
@@ -339,11 +347,11 @@ const typeOptions = [
           <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{{ value }}</code>
         </template>
         <template #cell(type)="{ value }">
-          <span class="capitalize text-slate-600">{{ value }}</span>
+          <span class="capitalize text-slate-600">{{ formatLocationType(value) }}</span>
         </template>
         <template #cell(status)="{ item }">
           <UiBadge :variant="item.isActive ? 'success' : 'default'">
-            {{ item.isActive ? 'Active' : 'Inactive' }}
+            {{ item.isActive ? $t('warehouse.active') : $t('warehouse.inactive') }}
           </UiBadge>
         </template>
       </UiTable>
@@ -351,46 +359,46 @@ const typeOptions = [
 
     <!-- Receive -->
     <div v-else-if="activeTab === 'receive'">
-      <UiCard title="Receive stock">
+      <UiCard :title="$t('warehouse.receiveStockTitle')">
         <form class="space-y-4 max-w-xl" @submit.prevent="submitReceive">
           <UiSelect
             v-model="receiveForm.product_id"
-            label="Product"
+            :label="$t('warehouse.productLabel')"
             required
             :options="productOptions"
           />
           <UiSelect
             v-if="receiveHasVariants"
             v-model="receiveForm.variant_id"
-            label="Variant"
+            :label="$t('warehouse.variantLabel')"
             required
             :options="receiveVariantOptions"
           />
           <UiSelect
             v-model="receiveForm.location_id"
-            label="Location"
+            :label="$t('warehouse.locationLabel')"
             required
             :options="locationOptions"
           />
           <div class="grid grid-cols-2 gap-4">
             <UiInput
               v-model.number="receiveForm.quantity"
-              label="Quantity"
+              :label="$t('warehouse.quantityLabel')"
               type="number"
               min="1"
               required
             />
             <UiInput
               v-model.number="receiveForm.unit_cost"
-              label="Unit cost (cents)"
+              :label="$t('warehouse.unitCostLabel')"
               type="number"
               min="0"
-              help-text="Optional; defaults to product cost"
+              :help-text="$t('warehouse.unitCostHelp')"
             />
           </div>
           <UiButton type="submit" :disabled="receiveMutation.isPending.value">
             <PackagePlus class="h-4 w-4 mr-2" />
-            Receive stock
+            {{ $t('warehouse.receiveStockBtn') }}
           </UiButton>
         </form>
       </UiCard>
@@ -398,25 +406,25 @@ const typeOptions = [
 
     <!-- Transfer -->
     <div v-else>
-      <UiCard title="Transfer between locations">
+      <UiCard :title="$t('warehouse.transferTitle')">
         <form class="space-y-4 max-w-xl" @submit.prevent="submitTransfer">
           <UiSelect
             v-model="transferForm.product_id"
-            label="Product"
+            :label="$t('warehouse.productLabel')"
             required
             :options="productOptions"
           />
           <UiSelect
             v-if="transferHasVariants"
             v-model="transferForm.variant_id"
-            label="Variant"
+            :label="$t('warehouse.variantLabel')"
             required
             :options="transferVariantOptions"
           />
           <div class="space-y-1">
             <UiSelect
               v-model="transferForm.from_location_id"
-              label="From location"
+              :label="$t('warehouse.fromLocationLabel')"
               required
               :options="locationOptions"
             />
@@ -424,28 +432,28 @@ const typeOptions = [
               v-if="transferForm.from_location_id && transferAvailableAtSource !== null"
               class="text-xs text-slate-500 font-medium px-1 flex items-center gap-1.5"
             >
-              <span>Available at Source:</span>
+              <span>{{ $t('warehouse.availableAtSource') }}</span>
               <UiBadge :variant="(transferAvailableAtSource || 0) > 0 ? 'success' : 'danger'">
-                {{ transferAvailableAtSource }} units
+                {{ $t('warehouse.unitsCount', { count: transferAvailableAtSource }) }}
               </UiBadge>
             </div>
           </div>
           <UiSelect
             v-model="transferForm.to_location_id"
-            label="To location"
+            :label="$t('warehouse.toLocationLabel')"
             required
             :options="locationOptions"
           />
           <UiInput
             v-model.number="transferForm.quantity"
-            label="Quantity"
+            :label="$t('warehouse.quantityLabel')"
             type="number"
             min="1"
             required
           />
           <UiButton type="submit" :disabled="transferMutation.isPending.value">
             <ArrowRightLeft class="h-4 w-4 mr-2" />
-            Transfer stock
+            {{ $t('warehouse.transferStockBtn') }}
           </UiButton>
         </form>
       </UiCard>
