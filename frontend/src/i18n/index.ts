@@ -24,10 +24,10 @@ export const i18n = createI18n({
 
 export function setAppLocale(locale: SupportedLocale): void {
   if (SUPPORTED_LOCALES.some(l => l.code === locale)) {
-    if (i18n.mode === 'legacy') {
-      i18n.global.locale = locale
-    } else {
+    if (typeof (i18n.global.locale as any) === 'object' && 'value' in (i18n.global.locale as any)) {
       (i18n.global.locale as any).value = locale
+    } else {
+      (i18n.global as any).locale = locale
     }
     localStorage.setItem('app_locale', locale)
     document.documentElement.lang = locale

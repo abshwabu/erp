@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/client'
 import { useOnboardingStore } from '@/stores/onboarding'
 import OnboardingBanner from '@/components/shared/OnboardingBanner.vue'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher.vue'
 import {
   TrendingUp,
   TrendingDown,
@@ -63,6 +65,7 @@ ChartJS.register(
 const router = useRouter()
 const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
+const { t, locale } = useI18n()
 
 const loading = ref(true)
 
@@ -98,23 +101,32 @@ const dashboardData = ref({
 
 const currentHour = new Date().getHours()
 const greeting = computed(() => {
-  if (currentHour < 12) return 'Good morning'
-  if (currentHour < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (currentHour < 12) return t('dashboard.greetingMorning')
+  if (currentHour < 18) return t('dashboard.greetingAfternoon')
+  return t('dashboard.greetingEvening')
 })
 
 const userName = computed(() => authStore.user?.name || 'Administrator')
 
 function formatCents(cents: number) {
+  const val = (cents || 0) / 100
+  if (locale.value === 'am') {
+    return (
+      new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(val) + ' ብር'
+    )
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format((cents || 0) / 100)
+  }).format(val)
 }
 
 function formatDate(dateStr: string) {
-  if (!dateStr) return 'Just now'
-  return new Date(dateStr).toLocaleDateString(undefined, {
+  if (!dateStr) return t('dashboard.justNow')
+  return new Date(dateStr).toLocaleDateString(locale.value === 'am' ? 'am-ET' : 'en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -157,7 +169,7 @@ const revenueChartData = computed(() => {
     labels,
     datasets: [
       {
-        label: 'Gross Sales Revenue ($)',
+        label: `${t('dashboard.grossSalesLabel')} (${locale.value === 'am' ? 'ብር' : '$'})`,
         data,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.12)',
@@ -170,7 +182,7 @@ const revenueChartData = computed(() => {
   }
 })
 
-const lineChartOptions = {
+const lineChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -191,12 +203,12 @@ const lineChartOptions = {
     y: {
       grid: { color: 'rgba(226, 232, 240, 0.6)' },
       ticks: {
-        callback: (val: any) => `$${val}`,
+        callback: (val: any) => (locale.value === 'am' ? `${val} ብር` : `$${val}`),
       },
       beginAtZero: true,
     },
   },
-}
+}))
 
 // Inventory Breakdown Doughnut Chart (Real Optimal vs Low vs Out of Stock)
 const inventoryChartData = computed(() => {
@@ -204,7 +216,7 @@ const inventoryChartData = computed(() => {
 
   if (total_products === 0) {
     return {
-      labels: ['No Catalog Items Added'],
+      labels: [t('dashboard.noCatalogItems')],
       datasets: [
         {
           data: [1],
@@ -216,7 +228,7 @@ const inventoryChartData = computed(() => {
   }
 
   return {
-    labels: ['Healthy Stock', 'Low Stock Alert', 'Out of Stock'],
+    labels: [t('dashboard.healthyStock'), t('dashboard.lowStockAlert'), t('dashboard.outOfStock')],
     datasets: [
       {
         data: [optimal_count, low_stock_count, out_of_stock_count],
@@ -256,13 +268,13 @@ const doughnutChartOptions = {
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-200 mb-3 border border-white/10">
             <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Enterprise Cloud ERP &bull; Real-Time Telemetry
+            {{ $t('dashboard.bannerBadge') }}
           </div>
           <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">
             {{ greeting }}, {{ userName }}! 👋
           </h1>
           <p class="mt-1 text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-            Real-time multi-tenant dashboard with live inventory stock tracking, POS checkouts, online storefronts, and accounting ledger synchronization.
+            {{ $t('dashboard.bannerSubtitle') }}
           </p>
         </div>
 
@@ -273,7 +285,7 @@ const doughnutChartOptions = {
             class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <ShoppingCart class="w-4 h-4" />
-            <span>POS Register</span>
+            <span>{{ $t('dashboard.posRegister') }}</span>
           </button>
 
           <button
@@ -281,16 +293,18 @@ const doughnutChartOptions = {
             class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs sm:text-sm border border-white/15 backdrop-blur-md transition-all"
           >
             <Plus class="w-4 h-4" />
-            <span>Add Product</span>
+            <span>{{ $t('dashboard.addProduct') }}</span>
           </button>
 
           <button
             @click="loadDashboardData()"
-            title="Refresh Live Data"
+            :title="$t('dashboard.refreshData')"
             class="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all"
           >
             <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }" />
           </button>
+
+          <LanguageSwitcher variant="pill" :compact="true" />
         </div>
       </div>
     </div>
@@ -303,7 +317,7 @@ const doughnutChartOptions = {
       <!-- Metric 1: Monthly Sales Revenue -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Monthly Revenue</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t('dashboard.monthlyRevenue') }}</span>
           <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
             <DollarSign class="w-5 h-5" />
           </div>
@@ -324,14 +338,14 @@ const doughnutChartOptions = {
           </span>
         </div>
         <p class="mt-2 text-xs text-slate-500">
-          Prior month: {{ formatCents(dashboardData.financial.prev_monthly_revenue_cents) }}
+          {{ $t('dashboard.priorMonth', { amount: formatCents(dashboardData.financial.prev_monthly_revenue_cents) }) }}
         </p>
       </div>
 
       <!-- Metric 2: Today's Orders -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Today's Sales</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t('dashboard.todaySales') }}</span>
           <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
             <ShoppingCart class="w-5 h-5" />
           </div>
@@ -341,23 +355,23 @@ const doughnutChartOptions = {
             {{ formatCents(dashboardData.financial.today_revenue_cents) }}
           </span>
           <span class="text-xs font-semibold text-slate-500">
-            {{ dashboardData.financial.today_orders_count }} orders
+            {{ $t('dashboard.ordersCount', { count: dashboardData.financial.today_orders_count }) }}
           </span>
         </div>
-        <p class="mt-2 text-xs text-slate-500">Across POS, Sales & Web Store</p>
+        <p class="mt-2 text-xs text-slate-500">{{ $t('dashboard.salesChannels') }}</p>
       </div>
 
       <!-- Metric 3: Active Catalog & Inventory -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Catalog Inventory</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t('dashboard.catalogInventory') }}</span>
           <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
             <Package class="w-5 h-5" />
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
           <span class="text-xl sm:text-2xl font-black text-slate-900">
-            {{ dashboardData.inventory.total_products }} Products
+            {{ $t('dashboard.productsCount', { count: dashboardData.inventory.total_products }) }}
           </span>
           <span
             v-if="dashboardData.inventory.low_stock_count > 0"
@@ -365,36 +379,36 @@ const doughnutChartOptions = {
             @click="router.push('/inventory/stock')"
           >
             <AlertTriangle class="w-3.5 h-3.5 mr-1" />
-            {{ dashboardData.inventory.low_stock_count }} Low
+            {{ $t('dashboard.lowStockCount', { count: dashboardData.inventory.low_stock_count }) }}
           </span>
         </div>
         <p class="mt-2 text-xs text-slate-500">
-          Valuation: {{ formatCents(dashboardData.inventory.total_valuation_cents) }}
+          {{ $t('dashboard.valuation', { amount: formatCents(dashboardData.inventory.total_valuation_cents) }) }}
         </p>
       </div>
 
       <!-- Metric 4: Workforce & Storefronts -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Active Workforce</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t('dashboard.activeWorkforce') }}</span>
           <div class="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
             <Users class="w-5 h-5" />
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
           <span class="text-xl sm:text-2xl font-black text-slate-900">
-            {{ dashboardData.operations.employee_count }} Staff
+            {{ $t('dashboard.staffCount', { count: dashboardData.operations.employee_count }) }}
           </span>
           <span
             v-if="dashboardData.operations.pending_leaves_count > 0"
             class="inline-flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full cursor-pointer"
             @click="router.push('/hr/leaves')"
           >
-            {{ dashboardData.operations.pending_leaves_count }} Leave Req
+            {{ $t('dashboard.leaveReqCount', { count: dashboardData.operations.pending_leaves_count }) }}
           </span>
         </div>
         <p class="mt-2 text-xs text-slate-500">
-          {{ dashboardData.operations.active_storefronts }} Live Web Store{{ dashboardData.operations.active_storefronts === 1 ? '' : 's' }}
+          {{ dashboardData.operations.active_storefronts === 1 ? $t('dashboard.liveWebStore', { count: dashboardData.operations.active_storefronts }) : $t('dashboard.liveWebStores', { count: dashboardData.operations.active_storefronts }) }}
         </p>
       </div>
     </div>
@@ -405,14 +419,14 @@ const doughnutChartOptions = {
       <div class="lg:col-span-2 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900">Sales & Revenue Trend</h3>
-            <p class="text-xs text-slate-500">Monthly gross sales history across all integrated channels</p>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900">{{ $t('dashboard.salesRevenueTrend') }}</h3>
+            <p class="text-xs text-slate-500">{{ $t('dashboard.salesTrendSubtitle') }}</p>
           </div>
           <button
             @click="router.push('/accounting')"
             class="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center space-x-1"
           >
-            <span>Ledger Details</span>
+            <span>{{ $t('dashboard.ledgerDetails') }}</span>
             <ArrowRight class="w-3.5 h-3.5" />
           </button>
         </div>
@@ -426,14 +440,14 @@ const doughnutChartOptions = {
       <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900">Inventory Health</h3>
-            <p class="text-xs text-slate-500">Catalog stock level distribution</p>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900">{{ $t('dashboard.inventoryHealth') }}</h3>
+            <p class="text-xs text-slate-500">{{ $t('dashboard.inventoryHealthSubtitle') }}</p>
           </div>
           <button
             @click="router.push('/inventory/products')"
             class="text-xs font-semibold text-primary-600 hover:text-primary-700"
           >
-            Manage
+            {{ $t('dashboard.manage') }}
           </button>
         </div>
 
@@ -443,15 +457,15 @@ const doughnutChartOptions = {
 
         <div class="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100 text-center text-xs">
           <div>
-            <span class="text-slate-400 block text-[10px] uppercase font-bold">Optimal</span>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ $t('dashboard.optimalStock') }}</span>
             <span class="font-bold text-emerald-600">{{ dashboardData.inventory.optimal_count }}</span>
           </div>
           <div>
-            <span class="text-slate-400 block text-[10px] uppercase font-bold">Low Stock</span>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ $t('dashboard.lowStock') }}</span>
             <span class="font-bold text-amber-600">{{ dashboardData.inventory.low_stock_count }}</span>
           </div>
           <div>
-            <span class="text-slate-400 block text-[10px] uppercase font-bold">Out of Stock</span>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ $t('dashboard.outOfStock') }}</span>
             <span class="font-bold text-red-600">{{ dashboardData.inventory.out_of_stock_count }}</span>
           </div>
         </div>
@@ -465,20 +479,20 @@ const doughnutChartOptions = {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <AlertTriangle class="w-5 h-5 text-amber-500" />
-            <h3 class="text-base font-bold text-slate-900">Stock Reorder Alerts</h3>
+            <h3 class="text-base font-bold text-slate-900">{{ $t('dashboard.stockReorderAlerts') }}</h3>
           </div>
           <button
             @click="router.push('/inventory/stock')"
             class="text-xs font-semibold text-primary-600 hover:text-primary-700"
           >
-            View All Stock
+            {{ $t('dashboard.viewAllStock') }}
           </button>
         </div>
 
         <div v-if="dashboardData.inventory.low_stock_items.length === 0" class="text-center py-10 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
           <ShieldCheck class="w-10 h-10 text-emerald-500 mx-auto" />
-          <p class="text-xs sm:text-sm font-semibold text-slate-700">All product stock levels are optimal!</p>
-          <p class="text-[11px] text-slate-400">No items are currently below their minimum threshold.</p>
+          <p class="text-xs sm:text-sm font-semibold text-slate-700">{{ $t('dashboard.allStockOptimal') }}</p>
+          <p class="text-[11px] text-slate-400">{{ $t('dashboard.noItemsBelowMin') }}</p>
         </div>
 
         <div v-else class="space-y-2.5">
@@ -489,20 +503,20 @@ const doughnutChartOptions = {
           >
             <div class="space-y-0.5 truncate pr-2">
               <h4 class="font-bold text-xs text-slate-900 truncate">{{ item.name }}</h4>
-              <p class="text-[11px] font-mono text-slate-400">SKU: {{ item.sku }}</p>
+              <p class="text-[11px] font-mono text-slate-400">{{ $t('dashboard.sku', { sku: item.sku }) }}</p>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
               <div class="text-right">
                 <span :class="['text-xs font-bold', item.available_quantity === 0 ? 'text-red-600' : 'text-amber-600']">
-                  {{ item.available_quantity }} in stock
+                  {{ $t('dashboard.inStock', { count: item.available_quantity }) }}
                 </span>
-                <p class="text-[10px] text-slate-400">Min: {{ item.min_quantity }}</p>
+                <p class="text-[10px] text-slate-400">{{ $t('dashboard.minQuantity', { count: item.min_quantity }) }}</p>
               </div>
               <button
                 @click="router.push('/procurement/purchase-orders')"
                 class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-900 text-white hover:bg-primary-600 transition-colors"
               >
-                Reorder
+                {{ $t('dashboard.reorder') }}
               </button>
             </div>
           </div>
@@ -514,20 +528,20 @@ const doughnutChartOptions = {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <Clock class="w-5 h-5 text-indigo-500" />
-            <h3 class="text-base font-bold text-slate-900">Recent Transactions & Orders</h3>
+            <h3 class="text-base font-bold text-slate-900">{{ $t('dashboard.recentTransactions') }}</h3>
           </div>
           <button
             @click="router.push('/sales/invoices')"
             class="text-xs font-semibold text-primary-600 hover:text-primary-700"
           >
-            Sales Ledger
+            {{ $t('dashboard.salesLedger') }}
           </button>
         </div>
 
         <div v-if="dashboardData.operations.recent_orders.length === 0" class="text-center py-10 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
           <ShoppingCart class="w-10 h-10 text-slate-300 mx-auto" />
-          <p class="text-xs sm:text-sm font-semibold text-slate-700">No transactions recorded yet.</p>
-          <p class="text-[11px] text-slate-400">Orders completed via POS or web storefronts will stream here in real time.</p>
+          <p class="text-xs sm:text-sm font-semibold text-slate-700">{{ $t('dashboard.noTransactionsYet') }}</p>
+          <p class="text-[11px] text-slate-400">{{ $t('dashboard.realtimeStreamNotice') }}</p>
         </div>
 
         <div v-else class="space-y-2.5">

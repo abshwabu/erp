@@ -35,7 +35,7 @@ function selectLocale(code: SupportedLocale) {
 
 const currentLocaleCode = computed(() => (locale.value || 'en') as SupportedLocale)
 const currentLocaleObj = computed(() => {
-  return SUPPORTED_LOCALES.find(l => l.code === currentLocaleCode.value) || SUPPORTED_LOCALES[0]
+  return SUPPORTED_LOCALES.find(l => l.code === currentLocaleCode.value) || SUPPORTED_LOCALES[0]!
 })
 </script>
 

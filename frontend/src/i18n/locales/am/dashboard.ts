@@ -1,0 +1,58 @@
+export default {
+  // Banner
+  bannerBadge: 'የድርጅት ደመና ERP • የቀጥታ መረጃ ቴሌሜትሪ',
+  greetingMorning: 'እንደምን አደሩ',
+  greetingAfternoon: 'እንደምን ዋሉ',
+  greetingEvening: 'እንደምን አመሹ',
+  bannerSubtitle: 'የቀጥታ የዕቃ ክምችት ክትትል፣ የPOS ሽያጭ መመዝገቢያ፣ የድረ-ገጽ መደብር እና የሂሳብ መዝገብ ማመሳሰያ የቀጥታ ዳሽቦርድ።',
+  posRegister: 'የPOS መመዝገቢያ',
+  addProduct: 'ምርት መዝግብ',
+  refreshData: 'የቀጥታ መረጃን አድስ',
+
+  // Metrics
+  monthlyRevenue: 'የወሩ አጠቃላይ ገቢ',
+  priorMonth: 'ያለፈው ወር፡ {amount}',
+  todaySales: 'የዛሬ ሽያጭ',
+  ordersCount: '{count} ትዕዛዞች',
+  salesChannels: 'በPOS፣ ቀጥታ ሽያጭና በድረ-ገጽ መደብር',
+  catalogInventory: 'የዕቃ ካታሎግ ክምችት',
+  productsCount: '{count} ምርቶች',
+  lowStockCount: '{count} ዝቅተኛ',
+  valuation: 'ጠቅላላ ዋጋ፡ {amount}',
+  activeWorkforce: 'ንቁ ሠራተኞች',
+  staffCount: '{count} ሠራተኞች',
+  leaveReqCount: '{count} የእረፍት ጥያቄ',
+  liveWebStore: '{count} ንቁ የኦንላይን መደብር',
+  liveWebStores: '{count} ንቁ የኦንላይን መደብሮች',
+
+  // Charts
+  salesRevenueTrend: 'የሽያጭና ገቢ አዝማሚያ',
+  salesTrendSubtitle: 'በሁሉም የሽያጭ መስመሮች የወርሃዊ አጠቃላይ ሽያጭ ታሪክ',
+  ledgerDetails: 'የሂሳብ መዝገብ ዝርዝር',
+  grossSalesLabel: 'የጠቅላላ ሽያጭ ገቢ',
+  inventoryHealth: 'የክምችት ሁኔታ ጤናማነት',
+  inventoryHealthSubtitle: 'የምርቶች ክምችት መጠን ስርጭት',
+  manage: 'አስተዳድር',
+  optimalStock: 'በቂ',
+  lowStock: 'ዝቅተኛ ክምችት',
+  outOfStock: 'ያለቀ ክምችት',
+  healthyStock: 'በቂ ክምችት',
+  lowStockAlert: 'ዝቅተኛ ክምችት ማስጠንቀቂያ',
+  noCatalogItems: 'ምንም የተመዘገበ ምርት የለም',
+
+  // Operational Split Grid
+  stockReorderAlerts: 'የዕቃ ማዘዣ ማስጠንቀቂያዎች',
+  viewAllStock: 'ሁሉንም ክምችት ይመልከቱ',
+  allStockOptimal: 'ሁሉም ምርቶች በበቂ ክምችት ደረጃ ላይ ይገኛሉ!',
+  noItemsBelowMin: 'በአሁኑ ሰዓት ከአነስተኛ መጠን በታች የወረደ ዕቃ የለም።',
+  inStock: '{count} በክምችት አለ',
+  minQuantity: 'ዝቅተኛ፡ {count}',
+  reorder: 'እዘዝ',
+  sku: 'SKU፡ {sku}',
+
+  recentTransactions: 'የቅርብ ጊዜ ግብይቶችና ትዕዛዞች',
+  salesLedger: 'የሽያጭ መዝገብ',
+  noTransactionsYet: 'እስካሁን የተመዘገበ ግብይት የለም።',
+  realtimeStreamNotice: 'በPOS ወይም በድረ-ገጽ መደብሮች የተጠናቀቁ ትዕዛዞች በቀጥታ እዚህ ይታያሉ።',
+  justNow: 'አሁን',
+}

@@ -1,0 +1,58 @@
+export default {
+  // Banner
+  bannerBadge: 'Enterprise Cloud ERP • Real-Time Telemetry',
+  greetingMorning: 'Good morning',
+  greetingAfternoon: 'Good afternoon',
+  greetingEvening: 'Good evening',
+  bannerSubtitle: 'Real-time multi-tenant dashboard with live inventory stock tracking, POS checkouts, online storefronts, and accounting ledger synchronization.',
+  posRegister: 'POS Register',
+  addProduct: 'Add Product',
+  refreshData: 'Refresh Live Data',
+
+  // Metrics
+  monthlyRevenue: 'Monthly Revenue',
+  priorMonth: 'Prior month: {amount}',
+  todaySales: "Today's Sales",
+  ordersCount: '{count} orders',
+  salesChannels: 'Across POS, Sales & Web Store',
+  catalogInventory: 'Catalog Inventory',
+  productsCount: '{count} Products',
+  lowStockCount: '{count} Low',
+  valuation: 'Valuation: {amount}',
+  activeWorkforce: 'Active Workforce',
+  staffCount: '{count} Staff',
+  leaveReqCount: '{count} Leave Req',
+  liveWebStore: '{count} Live Web Store',
+  liveWebStores: '{count} Live Web Stores',
+
+  // Charts
+  salesRevenueTrend: 'Sales & Revenue Trend',
+  salesTrendSubtitle: 'Monthly gross sales history across all integrated channels',
+  ledgerDetails: 'Ledger Details',
+  grossSalesLabel: 'Gross Sales Revenue',
+  inventoryHealth: 'Inventory Health',
+  inventoryHealthSubtitle: 'Catalog stock level distribution',
+  manage: 'Manage',
+  optimalStock: 'Optimal',
+  lowStock: 'Low Stock',
+  outOfStock: 'Out of Stock',
+  healthyStock: 'Healthy Stock',
+  lowStockAlert: 'Low Stock Alert',
+  noCatalogItems: 'No Catalog Items Added',
+
+  // Operational Split Grid
+  stockReorderAlerts: 'Stock Reorder Alerts',
+  viewAllStock: 'View All Stock',
+  allStockOptimal: 'All product stock levels are optimal!',
+  noItemsBelowMin: 'No items are currently below their minimum threshold.',
+  inStock: '{count} in stock',
+  minQuantity: 'Min: {count}',
+  reorder: 'Reorder',
+  sku: 'SKU: {sku}',
+
+  recentTransactions: 'Recent Transactions & Orders',
+  salesLedger: 'Sales Ledger',
+  noTransactionsYet: 'No transactions recorded yet.',
+  realtimeStreamNotice: 'Orders completed via POS or web storefronts will stream here in real time.',
+  justNow: 'Just now',
+}

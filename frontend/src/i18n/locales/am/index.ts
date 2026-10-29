@@ -1,9 +1,13 @@
 import common from './common'
 import pos from './pos'
 import nav from './nav'
+import dashboard from './dashboard'
+import onboarding from './onboarding'
 
 export default {
   common,
   pos,
-  nav
+  nav,
+  dashboard,
+  onboarding
 }
