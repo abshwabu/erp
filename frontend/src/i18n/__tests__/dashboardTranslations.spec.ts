@@ -9,11 +9,13 @@ import enWarehouse from '../locales/en/warehouse'
 import amWarehouse from '../locales/am/warehouse'
 import enShops from '../locales/en/shops'
 import amShops from '../locales/am/shops'
+import enProcurement from '../locales/en/procurement'
+import amProcurement from '../locales/am/procurement'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, and shops in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, and procurement in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -24,6 +26,23 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.warehouse).toBeDefined()
     expect(en.shops).toBeDefined()
     expect(am.shops).toBeDefined()
+    expect(en.procurement).toBeDefined()
+    expect(am.procurement).toBeDefined()
+  })
+
+  it('has identical keys for procurement in en and am', () => {
+    const enKeys = Object.keys(enProcurement).sort()
+    const amKeys = Object.keys(amProcurement).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enProcurement.table).sort()).toEqual(Object.keys(amProcurement.table).sort())
+    expect(Object.keys(enProcurement.status).sort()).toEqual(Object.keys(amProcurement.status).sort())
+    expect(Object.keys(enProcurement.createModal).sort()).toEqual(Object.keys(amProcurement.createModal).sort())
+    expect(Object.keys(enProcurement.supplierModal).sort()).toEqual(Object.keys(amProcurement.supplierModal).sort())
+    expect(Object.keys(enProcurement.receiveModal).sort()).toEqual(Object.keys(amProcurement.receiveModal).sort())
+    expect(Object.keys(enProcurement.detailsModal).sort()).toEqual(Object.keys(amProcurement.detailsModal).sort())
+    expect(Object.keys(enProcurement.detailsModal.columns).sort()).toEqual(Object.keys(amProcurement.detailsModal.columns).sort())
+    expect(Object.keys(enProcurement.messages).sort()).toEqual(Object.keys(amProcurement.messages).sort())
   })
 
   it('has identical keys for shops in en and am', () => {

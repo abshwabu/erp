@@ -6,6 +6,7 @@ import onboarding from './onboarding'
 import inventory from './inventory'
 import warehouse from './warehouse'
 import shops from './shops'
+import procurement from './procurement'
 
 export default {
   common,
@@ -15,5 +16,6 @@ export default {
   onboarding,
   inventory,
   warehouse,
-  shops
+  shops,
+  procurement
 }

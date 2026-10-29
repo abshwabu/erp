@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
 import { procurementApi, type PurchaseOrder } from '@/api/procurement'
 import { inventoryApi } from '@/api/inventory'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -8,12 +9,13 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
-import { Plus, Trash2, Package, Eye, CheckCircle, PackagePlus, Sparkles, Layers, Building2, MapPin } from '@lucide/vue'
+import { Plus, Trash2, Package, Eye, PackagePlus, Sparkles, Building2, MapPin } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import { formatCurrency } from '@/utils/format'
 import CreateEditProductModal from '@/modules/inventory/components/CreateEditProductModal.vue'
 import type { Product, ProductCategory } from '@/types/inventory'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -105,6 +107,21 @@ const locationOptions = computed(() => {
     value: loc.id,
   }))
 })
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case 'ordered':
+      return t('procurement.status.ordered')
+    case 'received':
+      return t('procurement.status.received')
+    case 'cancelled':
+      return t('procurement.status.cancelled')
+    case 'draft':
+      return t('procurement.status.draft')
+    default:
+      return status
+  }
+}
 
 function getProductVariants(productId: string) {
   const prod = productsList.value.find((p) => String(p.id) === String(productId))
@@ -205,7 +222,7 @@ async function handleProductCreated() {
   }
   isProductModalOpen.value = false
   activeLineIndexForNewProduct.value = null
-  toast.success('Product created and added to Purchase Order')
+  toast.success(t('procurement.messages.productCreatedAndAdded'))
 }
 
 const poTotalAmount = computed(() => {
@@ -244,13 +261,13 @@ function openReceiveModal(po: PurchaseOrder) {
 // ── Mutations ───────────────────────────────────────────────────────────────
 const createPOMutation = useMutation({
   mutationFn: () => {
-    if (!poForm.supplier_id) throw new Error('Please select a supplier.')
+    if (!poForm.supplier_id) throw new Error(t('procurement.messages.selectSupplier'))
     const validLines = poForm.lines.filter((l) => l.product_id && l.quantity > 0)
-    if (validLines.length === 0) throw new Error('Please add at least one product line item.')
+    if (validLines.length === 0) throw new Error(t('procurement.messages.addAtLeastOneLine'))
 
     for (const l of validLines) {
       if (hasVariants(l.product_id) && !l.variant_id) {
-        throw new Error('Please select a variant for each multi-variant product line.')
+        throw new Error(t('procurement.messages.selectVariantForMultiVariant'))
       }
     }
 
@@ -270,14 +287,14 @@ const createPOMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['procurement', 'orders'] })
     isPOModalOpen.value = false
-    toast.success('Purchase order created successfully')
+    toast.success(t('procurement.messages.poCreatedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'Failed to create PO'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('procurement.messages.poCreatedError')),
 })
 
 const createSupplierMutation = useMutation({
   mutationFn: () => {
-    if (!supplierForm.name.trim()) throw new Error('Supplier name is required')
+    if (!supplierForm.name.trim()) throw new Error(t('procurement.messages.supplierNameRequired'))
     return procurementApi.createSupplier(supplierForm)
   },
   onSuccess: () => {
@@ -286,14 +303,14 @@ const createSupplierMutation = useMutation({
     supplierForm.name = ''
     supplierForm.email = ''
     supplierForm.phone = ''
-    toast.success('Supplier created')
+    toast.success(t('procurement.messages.supplierCreatedSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'Failed to create supplier'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('procurement.messages.supplierCreatedError')),
 })
 
 const receiveMutation = useMutation({
   mutationFn: () => {
-    if (!poToReceive.value?.id) throw new Error('No purchase order selected')
+    if (!poToReceive.value?.id) throw new Error(t('procurement.messages.noPOSelected'))
     return procurementApi.receivePurchaseOrder(poToReceive.value.id, receiveLocationId.value || undefined)
   },
   onSuccess: () => {
@@ -303,9 +320,9 @@ const receiveMutation = useMutation({
     if (selectedPO.value && poToReceive.value && selectedPO.value.id === poToReceive.value.id) {
       isDetailsModalOpen.value = false
     }
-    toast.success('Purchase Order received into warehouse inventory!')
+    toast.success(t('procurement.messages.receiveSuccess'))
   },
-  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'Receive failed'),
+  onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('procurement.messages.receiveError')),
 })
 </script>
 
@@ -314,17 +331,17 @@ const receiveMutation = useMutation({
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Procurement & Purchase Orders</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('procurement.title') }}</h1>
         <p class="text-sm text-slate-500">
-          Source products from suppliers, manage purchase order line items, and receive stock into warehouses.
+          {{ t('procurement.subtitle') }}
         </p>
       </div>
       <div class="flex items-center gap-2.5">
         <UiButton variant="outline" @click="isSupplierModalOpen = true">
-          <Building2 class="w-4 h-4 mr-2" /> Add Supplier
+          <Building2 class="w-4 h-4 mr-2" /> {{ t('procurement.addSupplier') }}
         </UiButton>
         <UiButton @click="openNewPO()">
-          <Plus class="w-4 h-4 mr-2" /> New Purchase Order
+          <Plus class="w-4 h-4 mr-2" /> {{ t('procurement.newPurchaseOrder') }}
         </UiButton>
       </div>
     </div>
@@ -334,24 +351,24 @@ const receiveMutation = useMutation({
       <table class="min-w-full divide-y divide-slate-200">
         <thead class="bg-slate-50/80">
           <tr>
-            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">PO Number</th>
-            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Supplier</th>
-            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Order Date</th>
-            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Items / Lines</th>
-            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-            <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Total Amount</th>
-            <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.poNumber') }}</th>
+            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.supplier') }}</th>
+            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.orderDate') }}</th>
+            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.itemsLines') }}</th>
+            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.status') }}</th>
+            <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.totalAmount') }}</th>
+            <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('procurement.table.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 bg-white text-sm">
           <tr v-if="ordersLoading">
-            <td colspan="7" class="px-5 py-10 text-center text-slate-500">Loading purchase orders…</td>
+            <td colspan="7" class="px-5 py-10 text-center text-slate-500">{{ t('procurement.table.loading') }}</td>
           </tr>
           <tr v-else-if="!(orders || []).length">
             <td colspan="7" class="px-5 py-12 text-center">
               <Package class="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p class="font-medium text-slate-700">No purchase orders created yet</p>
-              <p class="text-xs text-slate-400 mt-1">Create your first purchase order to replenish stock.</p>
+              <p class="font-medium text-slate-700">{{ t('procurement.table.emptyTitle') }}</p>
+              <p class="text-xs text-slate-400 mt-1">{{ t('procurement.table.emptyDescription') }}</p>
             </td>
           </tr>
           <tr v-for="po in orders" :key="po.id" class="hover:bg-slate-50/60 transition-colors">
@@ -367,11 +384,11 @@ const receiveMutation = useMutation({
             <td class="px-5 py-3.5">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/60">
-                  {{ po.lines?.length || 0 }} item(s)
+                  {{ t('procurement.table.itemsCount', { count: po.lines?.length || 0 }) }}
                 </span>
                 <span v-if="po.lines?.[0]?.product?.name" class="text-xs text-slate-500 truncate max-w-[180px]">
                   {{ po.lines[0].product.name }}
-                  <span v-if="(po.lines?.length || 0) > 1" class="text-blue-600 font-medium"> +{{ po.lines.length - 1 }} more</span>
+                  <span v-if="(po.lines?.length || 0) > 1" class="text-blue-600 font-medium"> {{ t('procurement.table.moreItems', { count: po.lines.length - 1 }) }}</span>
                 </span>
               </div>
             </td>
@@ -383,7 +400,7 @@ const receiveMutation = useMutation({
                   po.status === 'cancelled' ? 'danger' : 'default'
                 "
               >
-                {{ po.status }}
+                {{ getStatusLabel(po.status) }}
               </UiBadge>
             </td>
             <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900">
@@ -392,7 +409,7 @@ const receiveMutation = useMutation({
             <td class="px-5 py-3.5 text-right">
               <div class="inline-flex items-center gap-2">
                 <UiButton size="sm" variant="ghost" class="text-xs" @click="viewPODetails(po)">
-                  <Eye class="w-3.5 h-3.5 mr-1" /> View
+                  <Eye class="w-3.5 h-3.5 mr-1" /> {{ t('procurement.table.view') }}
                 </UiButton>
                 <UiButton
                   v-if="po.status !== 'received' && po.status !== 'cancelled'"
@@ -401,7 +418,7 @@ const receiveMutation = useMutation({
                   class="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   @click="openReceiveModal(po)"
                 >
-                  <PackagePlus class="w-3.5 h-3.5 mr-1" /> Receive
+                  <PackagePlus class="w-3.5 h-3.5 mr-1" /> {{ t('procurement.table.receive') }}
                 </UiButton>
               </div>
             </td>
@@ -411,24 +428,24 @@ const receiveMutation = useMutation({
     </div>
 
     <!-- Create Purchase Order Modal -->
-    <UiModal v-model="isPOModalOpen" title="Create Purchase Order" size="2xl">
+    <UiModal v-model="isPOModalOpen" :title="t('procurement.createModal.title')" size="2xl">
       <form @submit.prevent="createPOMutation.mutate()" class="space-y-5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Supplier *</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('procurement.createModal.supplierLabel') }}</label>
               <button
                 type="button"
                 class="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
                 @click="isSupplierModalOpen = true"
               >
-                <Plus class="w-3.5 h-3.5" /> New Supplier
+                <Plus class="w-3.5 h-3.5" /> {{ t('procurement.createModal.newSupplierLink') }}
               </button>
             </div>
             <UiSelect
               v-model="poForm.supplier_id"
               :options="supplierOptions"
-              placeholder="Select supplier..."
+              :placeholder="t('procurement.createModal.selectSupplierPlaceholder')"
               required
             />
           </div>
@@ -436,7 +453,7 @@ const receiveMutation = useMutation({
           <UiInput
             v-model="poForm.order_date"
             type="date"
-            label="Order Date *"
+            :label="t('procurement.createModal.orderDateLabel')"
             required
           />
         </div>
@@ -445,8 +462,8 @@ const receiveMutation = useMutation({
         <div class="space-y-3 pt-2">
           <div class="flex items-center justify-between border-b border-slate-200 pb-2">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Purchase Order Line Items</h3>
-              <p class="text-xs text-slate-500">Select existing product & variant, or create a brand new product.</p>
+              <h3 class="text-sm font-bold text-slate-900">{{ t('procurement.createModal.lineItemsTitle') }}</h3>
+              <p class="text-xs text-slate-500">{{ t('procurement.createModal.lineItemsSubtitle') }}</p>
             </div>
             <div class="flex items-center gap-2">
               <button
@@ -454,10 +471,10 @@ const receiveMutation = useMutation({
                 class="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
                 @click="openCreateProductForLine(poForm.lines.length - 1)"
               >
-                <Sparkles class="w-3.5 h-3.5 text-blue-600" /> + Create New Product
+                <Sparkles class="w-3.5 h-3.5 text-blue-600" /> {{ t('procurement.createModal.createNewProduct') }}
               </button>
               <UiButton type="button" size="sm" variant="outline" @click="addLineItem()">
-                <Plus class="w-3.5 h-3.5 mr-1" /> Add Line
+                <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('procurement.createModal.addLine') }}
               </UiButton>
             </div>
           </div>
@@ -470,12 +487,12 @@ const receiveMutation = useMutation({
               class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative group"
             >
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-700">Line #{{ idx + 1 }}</span>
+                <span class="text-xs font-bold text-slate-700">{{ t('procurement.createModal.lineHeader', { number: idx + 1 }) }}</span>
                 <button
                   type="button"
                   class="text-slate-400 hover:text-red-500 transition-colors p-1"
                   @click="removeLineItem(idx)"
-                  title="Remove Line Item"
+                  :title="t('procurement.createModal.removeLineTooltip')"
                 >
                   <Trash2 class="w-4 h-4" />
                 </button>
@@ -485,11 +502,11 @@ const receiveMutation = useMutation({
                 <!-- Product Selector -->
                 <div :class="hasVariants(line.product_id) ? 'sm:col-span-4' : 'sm:col-span-6'">
                   <div class="flex items-center justify-between mb-1">
-                    <label class="text-xs font-bold text-slate-700">Product *</label>
+                    <label class="text-xs font-bold text-slate-700">{{ t('procurement.createModal.productLabel') }}</label>
                   </div>
                   <UiSelect
                     v-model="line.product_id"
-                    :options="[{ label: 'Select product...', value: '' }, ...productSelectOptions]"
+                    :options="[{ label: t('procurement.createModal.selectProductPlaceholder'), value: '' }, ...productSelectOptions]"
                     @update:model-value="handleProductChange(idx)"
                     required
                   />
@@ -497,7 +514,7 @@ const receiveMutation = useMutation({
 
                 <!-- Variant Selector (if product has variants) -->
                 <div v-if="hasVariants(line.product_id)" class="sm:col-span-3">
-                  <label class="text-xs font-bold text-slate-700 mb-1 block">Variant *</label>
+                  <label class="text-xs font-bold text-slate-700 mb-1 block">{{ t('procurement.createModal.variantLabel') }}</label>
                   <UiSelect
                     v-model="line.variant_id"
                     :options="getProductVariants(line.product_id)"
@@ -513,7 +530,7 @@ const receiveMutation = useMutation({
                     type="number"
                     min="1"
                     step="1"
-                    label="Qty *"
+                    :label="t('procurement.createModal.quantityLabel')"
                     required
                   />
                 </div>
@@ -525,19 +542,17 @@ const receiveMutation = useMutation({
                     type="number"
                     min="0"
                     step="0.01"
-                    label="Cost ($) *"
+                    :label="t('procurement.createModal.unitCostLabel')"
                     required
-                  >
-                    <template #prefix><span class="text-xs font-bold text-slate-400">$</span></template>
-                  </UiInput>
+                  />
                 </div>
               </div>
 
               <!-- Line Summary Row -->
               <div class="flex items-center justify-between pt-1 text-xs text-slate-500">
-                <span class="truncate max-w-[320px]">{{ line.description || 'No description' }}</span>
+                <span class="truncate max-w-[320px]">{{ line.description || t('procurement.createModal.noDescription') }}</span>
                 <span class="font-bold text-slate-900 font-mono">
-                  Line Total: ${{ ((Number(line.quantity || 0) * Number(line.unit_cost || 0))).toFixed(2) }}
+                  {{ t('procurement.createModal.lineTotal') }} {{ formatCurrency((Number(line.quantity || 0) * Number(line.unit_cost || 0))) }}
                 </span>
               </div>
             </div>
@@ -545,89 +560,102 @@ const receiveMutation = useMutation({
 
           <!-- Total Banner -->
           <div class="flex items-center justify-between p-4 rounded-xl bg-slate-900 text-white font-mono">
-            <span class="text-sm uppercase tracking-wider text-slate-300 font-bold">Purchase Order Total:</span>
-            <span class="text-xl font-black text-emerald-400">${{ poTotalAmount.toFixed(2) }}</span>
+            <span class="text-sm uppercase tracking-wider text-slate-300 font-bold">{{ t('procurement.createModal.poTotal') }}</span>
+            <span class="text-xl font-black text-emerald-400">{{ formatCurrency(poTotalAmount) }}</span>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
-          <UiButton variant="ghost" @click="isPOModalOpen = false">Cancel</UiButton>
+          <UiButton variant="ghost" @click="isPOModalOpen = false">{{ t('common.cancel') }}</UiButton>
           <UiButton :loading="createPOMutation.isPending.value" type="submit">
-            Create Purchase Order
+            {{ t('procurement.createModal.submit') }}
           </UiButton>
         </div>
       </form>
     </UiModal>
 
     <!-- Create Supplier Modal -->
-    <UiModal v-model="isSupplierModalOpen" title="Add Supplier" size="md">
+    <UiModal v-model="isSupplierModalOpen" :title="t('procurement.supplierModal.title')" size="md">
       <form @submit.prevent="createSupplierMutation.mutate()" class="space-y-4">
-        <UiInput v-model="supplierForm.name" label="Supplier Company / Name *" required placeholder="e.g. Acme Corp" />
-        <UiInput v-model="supplierForm.email" label="Email Address" type="email" placeholder="contact@acme.com" />
-        <UiInput v-model="supplierForm.phone" label="Phone Number" placeholder="+1 (555) 000-0000" />
+        <UiInput
+          v-model="supplierForm.name"
+          :label="t('procurement.supplierModal.nameLabel')"
+          required
+          :placeholder="t('procurement.supplierModal.namePlaceholder')"
+        />
+        <UiInput
+          v-model="supplierForm.email"
+          :label="t('procurement.supplierModal.emailLabel')"
+          type="email"
+          :placeholder="t('procurement.supplierModal.emailPlaceholder')"
+        />
+        <UiInput
+          v-model="supplierForm.phone"
+          :label="t('procurement.supplierModal.phoneLabel')"
+          :placeholder="t('procurement.supplierModal.phonePlaceholder')"
+        />
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="ghost" @click="isSupplierModalOpen = false">Cancel</UiButton>
-          <UiButton :loading="createSupplierMutation.isPending.value" type="submit">Save Supplier</UiButton>
+          <UiButton variant="ghost" @click="isSupplierModalOpen = false">{{ t('common.cancel') }}</UiButton>
+          <UiButton :loading="createSupplierMutation.isPending.value" type="submit">{{ t('procurement.supplierModal.submit') }}</UiButton>
         </div>
       </form>
     </UiModal>
 
     <!-- Receive Stock Modal -->
-    <UiModal v-model="isReceiveModalOpen" title="Receive Purchase Order Stock" size="md">
+    <UiModal v-model="isReceiveModalOpen" :title="t('procurement.receiveModal.title')" size="md">
       <div class="space-y-4">
         <p class="text-sm text-slate-600">
-          Confirm receiving stock for Purchase Order <strong class="text-slate-900 font-mono">{{ poToReceive?.number }}</strong>.
-          Products and variants will automatically be credited to the chosen stock location.
+          {{ t('procurement.receiveModal.confirmDescription', { number: poToReceive?.number }) }}
         </p>
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Destination Warehouse / Location *</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('procurement.receiveModal.destinationLocationLabel') }}</label>
           <UiSelect
             v-model="receiveLocationId"
             :options="locationOptions"
-            placeholder="Select location..."
+            :placeholder="t('procurement.receiveModal.selectLocationPlaceholder')"
             required
           />
         </div>
 
         <div class="p-3 bg-blue-50 rounded-xl text-xs text-blue-800 border border-blue-200 flex items-start gap-2">
           <MapPin class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <span>Stock movement will record a <strong>receive</strong> entry tied to this Purchase Order.</span>
+          <span>{{ t('procurement.receiveModal.movementNote') }}</span>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiButton variant="ghost" @click="isReceiveModalOpen = false">Cancel</UiButton>
+          <UiButton variant="ghost" @click="isReceiveModalOpen = false">{{ t('common.cancel') }}</UiButton>
           <UiButton
             :loading="receiveMutation.isPending.value"
             class="bg-emerald-600 hover:bg-emerald-700 text-white"
             @click="receiveMutation.mutate()"
           >
-            Confirm & Receive Stock
+            {{ t('procurement.receiveModal.submit') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- PO Details Modal -->
-    <UiModal v-model="isDetailsModalOpen" :title="`Purchase Order Details - ${selectedPO?.number}`" size="2xl">
+    <UiModal v-model="isDetailsModalOpen" :title="selectedPO ? t('procurement.detailsModal.title', { number: selectedPO.number }) : ''" size="2xl">
       <div v-if="selectedPO" class="space-y-5">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Supplier</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('procurement.detailsModal.supplier') }}</span>
             <span class="font-bold text-slate-900">{{ selectedPO.supplier?.name || '—' }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Order Date</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('procurement.detailsModal.orderDate') }}</span>
             <span class="font-medium text-slate-900">{{ selectedPO.order_date }}</span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Status</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('procurement.detailsModal.status') }}</span>
             <UiBadge :variant="selectedPO.status === 'received' ? 'success' : 'info'" class="mt-1">
-              {{ selectedPO.status }}
+              {{ getStatusLabel(selectedPO.status) }}
             </UiBadge>
           </div>
           <div>
-            <span class="text-xs text-slate-500 uppercase font-bold block">Total Cost</span>
+            <span class="text-xs text-slate-500 uppercase font-bold block">{{ t('procurement.detailsModal.totalCost') }}</span>
             <span class="font-mono font-black text-slate-900 text-base">
               {{ formatCurrency(selectedPO.total_cents / 100) }}
             </span>
@@ -639,19 +667,19 @@ const receiveMutation = useMutation({
           <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50">
               <tr>
-                <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">Product & Variant</th>
-                <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">SKU</th>
-                <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">Ordered</th>
-                <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">Received</th>
-                <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">Unit Cost</th>
-                <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">Subtotal</th>
+                <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.productVariant') }}</th>
+                <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.sku') }}</th>
+                <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.ordered') }}</th>
+                <th class="px-4 py-2.5 text-center text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.received') }}</th>
+                <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.unitCost') }}</th>
+                <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase">{{ t('procurement.detailsModal.columns.subtotal') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
               <tr v-for="line in selectedPO.lines || []" :key="line.id">
                 <td class="px-4 py-3">
                   <div class="font-semibold text-slate-900">{{ line.product?.name || line.description }}</div>
-                  <div v-if="line.variant" class="text-xs text-blue-600 font-medium">Variant: {{ line.variant.name }}</div>
+                  <div v-if="line.variant" class="text-xs text-blue-600 font-medium">{{ t('procurement.detailsModal.variantPrefix') }} {{ line.variant.name }}</div>
                 </td>
                 <td class="px-4 py-3 font-mono text-xs text-slate-600">
                   {{ line.variant?.sku || line.product?.sku || '—' }}
@@ -662,9 +690,9 @@ const receiveMutation = useMutation({
                     {{ line.received_quantity || 0 }}
                   </UiBadge>
                 </td>
-                <td class="px-4 py-3 text-right font-mono">${{ (line.unit_cost_cents / 100).toFixed(2) }}</td>
+                <td class="px-4 py-3 text-right font-mono">{{ formatCurrency(line.unit_cost_cents / 100) }}</td>
                 <td class="px-4 py-3 text-right font-mono font-bold text-slate-900">
-                  ${{ ((Number(line.quantity) * Number(line.unit_cost_cents)) / 100).toFixed(2) }}
+                  {{ formatCurrency((Number(line.quantity) * Number(line.unit_cost_cents)) / 100) }}
                 </td>
               </tr>
             </tbody>
@@ -678,11 +706,11 @@ const receiveMutation = useMutation({
             class="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
             @click="openReceiveModal(selectedPO)"
           >
-            <PackagePlus class="w-4 h-4 mr-2" /> Receive Into Stock
+            <PackagePlus class="w-4 h-4 mr-2" /> {{ t('procurement.detailsModal.receiveIntoStock') }}
           </UiButton>
           <div v-else></div>
 
-          <UiButton variant="ghost" @click="isDetailsModalOpen = false">Close</UiButton>
+          <UiButton variant="ghost" @click="isDetailsModalOpen = false">{{ t('common.close') }}</UiButton>
         </div>
       </div>
     </UiModal>
