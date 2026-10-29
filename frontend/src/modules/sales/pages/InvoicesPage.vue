@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { salesApi, type Invoice, type InvoiceStatus, type Customer } from '@/api/sales'
 import { inventoryApi } from '@/api/inventory'
@@ -34,6 +35,7 @@ import {
   CheckCircle2,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const activeTab = ref<'invoices' | 'customers'>('invoices')
 const searchQuery = ref('')
@@ -187,7 +189,7 @@ const createCustomerMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to create customer'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.createCustomerError')
   },
 })
 
@@ -203,7 +205,7 @@ const updateCustomerMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to update customer'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.updateCustomerError')
   },
 })
 
@@ -214,7 +216,7 @@ const deleteCustomerMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to delete customer'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.deleteCustomerError')
   },
 })
 
@@ -244,7 +246,7 @@ const createInvoiceMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to create invoice'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.createInvoiceError')
   },
 })
 
@@ -256,7 +258,7 @@ const markSentMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to mark invoice as sent'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.markSentError')
   },
 })
 
@@ -276,13 +278,25 @@ const recordPaymentMutation = useMutation({
     errorMessage.value = ''
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to record payment'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('sales.messages.recordPaymentError')
   },
 })
 
 const customerOptions = computed(() => [
-  { label: 'Select customer', value: '' },
+  { label: t('sales.createInvoiceModal.selectCustomer'), value: '' },
   ...(customers.value || []).map((c) => ({ label: c.name, value: c.id })),
+])
+
+const invoiceStatusOptions = computed(() => [
+  { label: t('sales.createInvoiceModal.statusSent'), value: 'sent' },
+  { label: t('sales.createInvoiceModal.statusDraft'), value: 'draft' },
+])
+
+const paymentMethodOptions = computed(() => [
+  { label: t('sales.paymentModal.methods.cash'), value: 'cash' },
+  { label: t('sales.paymentModal.methods.card'), value: 'card' },
+  { label: t('sales.paymentModal.methods.bankTransfer'), value: 'bank_transfer' },
+  { label: t('sales.paymentModal.methods.other'), value: 'other' },
 ])
 
 const filteredInvoices = computed(() => {
@@ -309,23 +323,23 @@ const filteredCustomers = computed(() => {
   )
 })
 
-const invoiceColumns = [
-  { key: 'number', label: 'Invoice #' },
-  { key: 'customer', label: 'Customer' },
-  { key: 'dates', label: 'Dates' },
-  { key: 'breakdown', label: 'Subtotal / Tax', align: 'right' as const },
-  { key: 'total', label: 'Total Amount', align: 'right' as const },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions', align: 'right' as const },
-]
+const invoiceColumns = computed(() => [
+  { key: 'number', label: t('sales.invoiceTable.columns.number') },
+  { key: 'customer', label: t('sales.invoiceTable.columns.customer') },
+  { key: 'dates', label: t('sales.invoiceTable.columns.dates') },
+  { key: 'breakdown', label: t('sales.invoiceTable.columns.subtotalTax'), align: 'right' as const },
+  { key: 'total', label: t('sales.invoiceTable.columns.totalAmount'), align: 'right' as const },
+  { key: 'status', label: t('sales.invoiceTable.columns.status') },
+  { key: 'actions', label: t('sales.invoiceTable.columns.actions'), align: 'right' as const },
+])
 
-const customerColumns = [
-  { key: 'name', label: 'Customer Name' },
-  { key: 'contact', label: 'Contact Details' },
-  { key: 'invoices_count', label: 'Invoices', align: 'center' as const },
-  { key: 'financials', label: 'Financial Summary' },
-  { key: 'actions', label: 'Actions', align: 'right' as const },
-]
+const customerColumns = computed(() => [
+  { key: 'name', label: t('sales.customerTable.columns.name') },
+  { key: 'contact', label: t('sales.customerTable.columns.contact') },
+  { key: 'invoices_count', label: t('sales.customerTable.columns.invoices'), align: 'center' as const },
+  { key: 'financials', label: t('sales.customerTable.columns.financials') },
+  { key: 'actions', label: t('sales.customerTable.columns.actions'), align: 'right' as const },
+])
 
 // Real-time calculations
 const invoiceSubtotal = computed(() =>
@@ -418,10 +432,10 @@ const handleSaveCustomerEdit = () => {
 
 const handleDeleteCustomer = (customer: Customer) => {
   if ((customer.invoices_count ?? 0) > 0) {
-    alert(`Cannot delete "${customer.name}" because they have ${customer.invoices_count} invoice(s) on record.`)
+    alert(t('sales.messages.cannotDeleteWithInvoices', { name: customer.name, count: customer.invoices_count }))
     return
   }
-  if (!confirm(`Are you sure you want to delete customer "${customer.name}"?`)) return
+  if (!confirm(t('sales.messages.confirmDeleteCustomer', { name: customer.name }))) return
   deleteCustomerMutation.mutate(customer.id)
 }
 
@@ -480,13 +494,13 @@ const markPaid = async (invoice: Invoice) => {
     await salesApi.recordPayment(current.id, {
       amount_cents: outstanding,
       method: 'cash',
-      reference: 'Marked paid',
+      reference: t('sales.paymentModal.markedPaidRef'),
     })
     queryClient.invalidateQueries({ queryKey: ['sales', 'invoices'] })
     queryClient.invalidateQueries({ queryKey: ['sales', 'customers'] })
     queryClient.invalidateQueries({ queryKey: ['accounting'] })
   } catch (err: any) {
-    errorMessage.value = err?.message || 'Failed to mark invoice as paid'
+    errorMessage.value = err?.message || t('sales.messages.markPaidError')
   }
 }
 
@@ -509,15 +523,15 @@ const cents = (value: any) => {
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Sales & Invoicing</h1>
-        <p class="text-slate-500">Manage customer billing, receivables, line items with inventory search, and accounting payments.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('sales.title') }}</h1>
+        <p class="text-slate-500">{{ t('sales.subtitle') }}</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="openCustomerModal">
-          <Users class="h-4 w-4 mr-2" /> New Customer
+          <Users class="h-4 w-4 mr-2" /> {{ t('sales.newCustomer') }}
         </UiButton>
         <UiButton @click="openInvoiceModal()">
-          <Plus class="h-4 w-4 mr-2" /> New Invoice
+          <Plus class="h-4 w-4 mr-2" /> {{ t('sales.newInvoice') }}
         </UiButton>
       </div>
     </div>
@@ -533,7 +547,7 @@ const cents = (value: any) => {
       <!-- Total Invoiced -->
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Invoiced</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('sales.kpis.totalInvoiced') }}</p>
           <div class="p-2 rounded-xl bg-blue-50 text-blue-600">
             <Receipt class="w-4 h-4" />
           </div>
@@ -541,13 +555,13 @@ const cents = (value: any) => {
         <p class="mt-2 text-2xl font-black text-slate-900 font-mono">
           {{ cents(financialSummary.totalInvoicedCents) }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Issued & sent invoices</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('sales.kpis.totalInvoicedDesc') }}</p>
       </div>
 
       <!-- Total Collected -->
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Collected</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('sales.kpis.totalCollected') }}</p>
           <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600">
             <CheckCircle2 class="w-4 h-4" />
           </div>
@@ -555,13 +569,13 @@ const cents = (value: any) => {
         <p class="mt-2 text-2xl font-black text-emerald-600 font-mono">
           {{ cents(financialSummary.totalCollectedCents) }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Payments recorded in accounting</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('sales.kpis.totalCollectedDesc') }}</p>
       </div>
 
       <!-- Outstanding Receivables -->
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Outstanding Balance</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('sales.kpis.outstandingBalance') }}</p>
           <div class="p-2 rounded-xl bg-amber-50 text-amber-600">
             <Clock class="w-4 h-4" />
           </div>
@@ -569,13 +583,13 @@ const cents = (value: any) => {
         <p class="mt-2 text-2xl font-black text-amber-600 font-mono">
           {{ cents(financialSummary.totalOutstandingCents) }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Unpaid customer balances</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('sales.kpis.outstandingBalanceDesc') }}</p>
       </div>
 
       <!-- Overdue Amount -->
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Overdue Invoices</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('sales.kpis.overdueInvoices') }}</p>
           <div class="p-2 rounded-xl bg-red-50 text-red-600">
             <AlertCircle class="w-4 h-4" />
           </div>
@@ -583,7 +597,7 @@ const cents = (value: any) => {
         <p class="mt-2 text-2xl font-black text-red-600 font-mono">
           {{ cents(financialSummary.overdueCents) }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">{{ financialSummary.overdueCount }} invoice(s) past due date</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('sales.kpis.overdueInvoicesDesc', { count: financialSummary.overdueCount }) }}</p>
       </div>
     </div>
 
@@ -595,7 +609,7 @@ const cents = (value: any) => {
         @click="activeTab = 'invoices'"
       >
         <FileText class="h-4 w-4" />
-        <span>Invoices ({{ invoices?.length || 0 }})</span>
+        <span>{{ t('sales.tabs.invoices', { count: invoices?.length || 0 }) }}</span>
       </button>
       <button
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2"
@@ -603,13 +617,13 @@ const cents = (value: any) => {
         @click="activeTab = 'customers'"
       >
         <Users class="h-4 w-4" />
-        <span>Customers ({{ customers?.length || 0 }})</span>
+        <span>{{ t('sales.tabs.customers', { count: customers?.length || 0 }) }}</span>
       </button>
     </div>
 
     <!-- Search Input -->
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-      <UiInput v-model="searchQuery" :placeholder="activeTab === 'invoices' ? 'Search invoices by number, customer, status…' : 'Search customers by name, email, phone…'" class="w-full max-w-sm">
+      <UiInput v-model="searchQuery" :placeholder="activeTab === 'invoices' ? t('sales.searchInvoicesPlaceholder') : t('sales.searchCustomersPlaceholder')" class="w-full max-w-sm">
         <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
       </UiInput>
     </div>
@@ -630,7 +644,7 @@ const cents = (value: any) => {
           type="button"
           @click="viewCustomerInvoices(item.customer)"
           class="text-left font-medium text-blue-600 hover:underline"
-          :title="'View invoices for ' + (item.customer?.name || '')"
+          :title="t('sales.invoiceTable.viewCustomerInvoices', { name: item.customer?.name || '' })"
         >
           {{ item.customer?.name || '—' }}
         </button>
@@ -638,30 +652,30 @@ const cents = (value: any) => {
 
       <template #cell(dates)="{ item }">
         <div class="text-xs space-y-0.5">
-          <p class="text-slate-700">Issued: <span class="font-medium">{{ formatDate(item.issue_date) }}</span></p>
-          <p class="text-slate-400">Due: <span class="font-medium">{{ formatDate(item.due_date) }}</span></p>
+          <p class="text-slate-700">{{ t('sales.invoiceTable.issued') }} <span class="font-medium">{{ formatDate(item.issue_date) }}</span></p>
+          <p class="text-slate-400">{{ t('sales.invoiceTable.due') }} <span class="font-medium">{{ formatDate(item.due_date) }}</span></p>
         </div>
       </template>
 
       <template #cell(breakdown)="{ item }">
         <div class="text-right text-xs space-y-0.5 font-mono">
-          <p class="text-slate-600">Net: {{ cents(item.subtotal_cents) }}</p>
-          <p v-if="Number(item.tax_cents || 0) > 0" class="text-amber-600">+ Tax: {{ cents(item.tax_cents) }}</p>
+          <p class="text-slate-600">{{ t('sales.invoiceTable.net') }} {{ cents(item.subtotal_cents) }}</p>
+          <p v-if="Number(item.tax_cents || 0) > 0" class="text-amber-600">{{ t('sales.invoiceTable.tax') }} {{ cents(item.tax_cents) }}</p>
         </div>
       </template>
 
       <template #cell(total)="{ item }">
         <div class="text-right font-bold text-slate-900 font-mono text-sm">{{ cents(item.total_cents) }}</div>
         <div v-if="Number(item.amount_paid_cents || 0) > 0" class="text-right text-[11px] text-emerald-600 font-semibold font-mono">
-          Paid {{ cents(item.amount_paid_cents) }}
+          {{ t('sales.invoiceTable.paid') }} {{ cents(item.amount_paid_cents) }}
         </div>
         <div v-if="Math.max(0, Number(item.total_cents || 0) - Number(item.amount_paid_cents || 0)) > 0 && item.status !== 'void'" class="text-right text-[11px] text-amber-600 font-bold font-mono">
-          Due {{ cents(Math.max(0, Number(item.total_cents || 0) - Number(item.amount_paid_cents || 0))) }}
+          {{ t('sales.invoiceTable.amountDue') }} {{ cents(Math.max(0, Number(item.total_cents || 0) - Number(item.amount_paid_cents || 0))) }}
         </div>
       </template>
 
       <template #cell(status)="{ item }">
-        <UiBadge :variant="statusVariant(item.status)" class="capitalize font-bold">{{ item.status }}</UiBadge>
+        <UiBadge :variant="statusVariant(item.status)" class="capitalize font-bold">{{ t('sales.status.' + item.status) }}</UiBadge>
       </template>
 
       <template #cell(actions)="{ item }">
@@ -673,7 +687,7 @@ const cents = (value: any) => {
             :loading="markSentMutation.isPending.value"
             @click="markSentMutation.mutate(item.id)"
           >
-            Mark Sent
+            {{ t('sales.invoiceTable.actions.markSent') }}
           </UiButton>
           <UiButton
             v-if="item.status === 'sent'"
@@ -681,14 +695,14 @@ const cents = (value: any) => {
             size="sm"
             @click="openPaymentModal(item)"
           >
-            Record Payment
+            {{ t('sales.invoiceTable.actions.recordPayment') }}
           </UiButton>
           <UiButton
             v-if="item.status === 'draft' || item.status === 'sent'"
             size="sm"
             @click="markPaid(item)"
           >
-            Mark Paid
+            {{ t('sales.invoiceTable.actions.markPaid') }}
           </UiButton>
         </div>
       </template>
@@ -720,7 +734,7 @@ const cents = (value: any) => {
             <Phone class="w-3.5 h-3.5 text-slate-400" />
             <span>{{ item.phone }}</span>
           </div>
-          <span v-if="!item.email && !item.phone" class="text-slate-400 italic">No contact info</span>
+          <span v-if="!item.email && !item.phone" class="text-slate-400 italic">{{ t('sales.customerTable.noContactInfo') }}</span>
         </div>
       </template>
 
@@ -738,20 +752,20 @@ const cents = (value: any) => {
       <template #cell(financials)="{ item }">
         <div class="text-xs space-y-0.5 font-mono">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-slate-400">Total Invoiced:</span>
+            <span class="text-slate-400">{{ t('sales.customerTable.totalInvoiced') }}</span>
             <span class="font-bold text-slate-900">{{ cents(item.total_invoiced_cents) }}</span>
           </div>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-slate-400">Total Paid:</span>
+            <span class="text-slate-400">{{ t('sales.customerTable.totalPaid') }}</span>
             <span class="font-semibold text-emerald-600">{{ cents(item.total_paid_cents) }}</span>
           </div>
           <div v-if="Number(item.outstanding_cents || 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
-            <span class="text-amber-600 font-bold">Outstanding:</span>
+            <span class="text-amber-600 font-bold">{{ t('sales.customerTable.outstanding') }}</span>
             <span class="font-bold text-amber-600">{{ cents(item.outstanding_cents) }}</span>
           </div>
           <div v-else-if="Number(item.total_invoiced_cents || 0) > 0" class="flex items-center justify-between gap-4 pt-0.5 border-t border-slate-100">
-            <span class="text-emerald-600 font-medium">Status:</span>
-            <span class="font-bold text-emerald-600">✓ Fully Settled</span>
+            <span class="text-emerald-600 font-medium">{{ t('sales.customerTable.status') }}</span>
+            <span class="font-bold text-emerald-600">{{ t('sales.customerTable.fullySettled') }}</span>
           </div>
         </div>
       </template>
@@ -765,10 +779,10 @@ const cents = (value: any) => {
             variant="outline"
             class="text-xs"
             @click="openInvoiceModal(item.id)"
-            title="Create Invoice for this customer"
+            :title="t('sales.customerTable.actions.createInvoiceTooltip')"
           >
             <Plus class="w-3.5 h-3.5 mr-1 text-primary-600" />
-            Invoice
+            {{ t('sales.customerTable.actions.invoice') }}
           </UiButton>
 
           <!-- Edit Customer -->
@@ -776,7 +790,7 @@ const cents = (value: any) => {
             type="button"
             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
             @click="openEditCustomerModal(item)"
-            title="Edit Customer"
+            :title="t('sales.customerTable.actions.editCustomerTooltip')"
           >
             <Edit2 class="w-4 h-4" />
           </button>
@@ -787,7 +801,7 @@ const cents = (value: any) => {
             class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
             :disabled="(item.invoices_count ?? 0) > 0"
             @click="handleDeleteCustomer(item)"
-            :title="(item.invoices_count ?? 0) > 0 ? 'Cannot delete customer with invoices' : 'Delete Customer'"
+            :title="(item.invoices_count ?? 0) > 0 ? t('sales.customerTable.actions.cannotDeleteTooltip') : t('sales.customerTable.actions.deleteCustomerTooltip')"
           >
             <Trash2 class="w-4 h-4" />
           </button>
@@ -796,48 +810,45 @@ const cents = (value: any) => {
     </UiTable>
 
     <!-- Create Invoice Modal -->
-    <UiModal v-model="isInvoiceModalOpen" title="New Sales Invoice" size="2xl">
+    <UiModal v-model="isInvoiceModalOpen" :title="t('sales.createInvoiceModal.title')" size="2xl">
       <div class="space-y-5">
         <!-- Customer & Date Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <div class="flex justify-between items-center">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Customer <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('sales.createInvoiceModal.customer') }} <span class="text-red-500">*</span></label>
               <button
                 type="button"
                 @click="openCustomerModal"
                 class="text-xs text-blue-600 hover:text-blue-700 font-bold inline-flex items-center gap-1 hover:underline"
               >
-                <Plus class="w-3.5 h-3.5" /> New Customer
+                <Plus class="w-3.5 h-3.5" /> {{ t('sales.createInvoiceModal.newCustomer') }}
               </button>
             </div>
             <UiSelect
               v-model="invoiceForm.customer_id"
               :options="customerOptions"
-              placeholder="Select customer"
+              :placeholder="t('sales.createInvoiceModal.selectCustomer')"
             />
           </div>
           <UiSelect
             v-model="invoiceForm.status"
-            label="Status"
-            :options="[
-              { label: 'Sent (Posted to Accounting)', value: 'sent' },
-              { label: 'Draft', value: 'draft' },
-            ]"
+            :label="t('sales.createInvoiceModal.status')"
+            :options="invoiceStatusOptions"
           />
-          <UiInput v-model="invoiceForm.issue_date" type="date" label="Issue Date" />
-          <UiInput v-model="invoiceForm.due_date" type="date" label="Due Date" />
+          <UiInput v-model="invoiceForm.issue_date" type="date" :label="t('sales.createInvoiceModal.issueDate')" />
+          <UiInput v-model="invoiceForm.due_date" type="date" :label="t('sales.createInvoiceModal.dueDate')" />
         </div>
 
         <!-- Line Items with Inventory Product Search -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Line Items</h3>
-              <p class="text-xs text-slate-400">Search products from your inventory catalog or type custom items.</p>
+              <h3 class="text-sm font-bold text-slate-900">{{ t('sales.createInvoiceModal.lineItems') }}</h3>
+              <p class="text-xs text-slate-400">{{ t('sales.createInvoiceModal.lineItemsSubtitle') }}</p>
             </div>
             <UiButton variant="outline" size="sm" type="button" @click="addLine">
-              <Plus class="w-3.5 h-3.5 mr-1" /> Add Line
+              <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('sales.createInvoiceModal.addLine') }}
             </UiButton>
           </div>
 
@@ -851,13 +862,13 @@ const cents = (value: any) => {
                 <!-- Product / Description Combobox -->
                 <div class="col-span-12 md:col-span-6 relative">
                   <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                    Product / Description <span class="text-red-500">*</span>
+                    {{ t('sales.createInvoiceModal.productDescription') }} <span class="text-red-500">*</span>
                   </label>
                   <div class="relative">
                     <input
                       type="text"
                       v-model="line.description"
-                      placeholder="Type or search inventory products…"
+                      :placeholder="t('sales.createInvoiceModal.productSearchPlaceholder')"
                       @focus="line.is_dropdown_open = true"
                       @input="line.is_dropdown_open = true"
                       class="block w-full rounded-xl border border-slate-200 bg-white text-sm py-2.5 pl-3 pr-8 font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
@@ -877,7 +888,7 @@ const cents = (value: any) => {
                     class="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white rounded-xl shadow-xl border border-slate-200 py-1 max-h-56 overflow-y-auto"
                   >
                     <div class="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
-                      <span>Inventory Catalog</span>
+                      <span>{{ t('sales.createInvoiceModal.inventoryCatalog') }}</span>
                       <button
                         type="button"
                         class="text-slate-400 hover:text-slate-600 text-xs"
@@ -888,7 +899,7 @@ const cents = (value: any) => {
                     </div>
 
                     <div v-if="productsLoading" class="p-3 text-xs text-slate-400 text-center">
-                      Loading products…
+                      {{ t('sales.createInvoiceModal.loadingProducts') }}
                     </div>
 
                     <template v-else>
@@ -908,7 +919,7 @@ const cents = (value: any) => {
                             {{ formatCurrency((prod.selling_price || 0) / 100) }}
                           </span>
                           <p class="text-[10px] text-emerald-600 font-medium">
-                            {{ prod.available_quantity ?? prod.quantity_on_hand ?? 0 }} in stock
+                            {{ t('sales.createInvoiceModal.inStock', { count: prod.available_quantity ?? prod.quantity_on_hand ?? 0 }) }}
                           </p>
                         </div>
                       </button>
@@ -917,7 +928,7 @@ const cents = (value: any) => {
                         v-if="getFilteredProducts(line.description).length === 0"
                         class="p-3 text-xs text-slate-500 text-center"
                       >
-                        No inventory matches. Custom item description will be used.
+                        {{ t('sales.createInvoiceModal.noInventoryMatches') }}
                       </div>
                     </template>
                   </div>
@@ -934,7 +945,7 @@ const cents = (value: any) => {
                   <UiInput
                     v-model="line.quantity"
                     type="number"
-                    label="Qty"
+                    :label="t('sales.createInvoiceModal.quantity')"
                     min="0.01"
                     step="1"
                   />
@@ -945,7 +956,7 @@ const cents = (value: any) => {
                   <UiInput
                     v-model="line.unit_price"
                     type="number"
-                    label="Unit Price ($)"
+                    :label="t('sales.createInvoiceModal.unitPrice')"
                     step="0.01"
                     min="0"
                   />
@@ -958,7 +969,7 @@ const cents = (value: any) => {
                     class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-30"
                     :disabled="invoiceForm.lines.length === 1"
                     @click="removeLine(index)"
-                    title="Remove line"
+                    :title="t('sales.createInvoiceModal.removeLine')"
                   >
                     <Trash2 class="h-4 w-4" />
                   </button>
@@ -968,10 +979,10 @@ const cents = (value: any) => {
               <!-- Line Summary -->
               <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200/50">
                 <span>
-                  Line Subtotal: <strong class="text-slate-800">{{ formatCurrency(Number(line.quantity || 0) * Number(line.unit_price || 0)) }}</strong>
+                  {{ t('sales.createInvoiceModal.lineSubtotal') }} <strong class="text-slate-800">{{ formatCurrency(Number(line.quantity || 0) * Number(line.unit_price || 0)) }}</strong>
                 </span>
                 <span v-if="Number(invoiceForm.tax_percent || 0) > 0" class="text-slate-600">
-                  Unit Price + {{ invoiceForm.tax_percent }}% Tax: <strong class="text-slate-900">{{ formatCurrency(getLineEffectivePriceWithTax(Number(line.unit_price || 0))) }}</strong>
+                  {{ t('sales.createInvoiceModal.unitPriceWithTax', { percent: invoiceForm.tax_percent }) }} <strong class="text-slate-900">{{ formatCurrency(getLineEffectivePriceWithTax(Number(line.unit_price || 0))) }}</strong>
                 </span>
               </div>
             </div>
@@ -982,7 +993,7 @@ const cents = (value: any) => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100">
           <div class="space-y-2">
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-              Tax Rate (%) <span class="text-slate-400 font-normal">Calculated & added to subtotal</span>
+              {{ t('sales.createInvoiceModal.taxRate') }} <span class="text-slate-400 font-normal">{{ t('sales.createInvoiceModal.taxRateDesc') }}</span>
             </label>
             <div class="relative">
               <input
@@ -1001,7 +1012,7 @@ const cents = (value: any) => {
 
             <!-- Quick Preset Percentages -->
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[11px] font-semibold text-slate-500 mr-1">Presets:</span>
+              <span class="text-[11px] font-semibold text-slate-500 mr-1">{{ t('sales.createInvoiceModal.presets') }}</span>
               <button
                 v-for="rate in [0, 5, 10, 15, 18, 20]"
                 :key="rate"
@@ -1021,12 +1032,12 @@ const cents = (value: any) => {
 
           <!-- Notes -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Invoice Notes</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('sales.createInvoiceModal.notes') }}</label>
             <textarea
               v-model="invoiceForm.notes"
               rows="2"
               class="block w-full rounded-xl border border-slate-200 bg-white text-xs p-2.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400 font-medium text-slate-900"
-              placeholder="Payment terms, bank details, or thank you message…"
+              :placeholder="t('sales.createInvoiceModal.notesPlaceholder')"
             ></textarea>
           </div>
         </div>
@@ -1034,100 +1045,94 @@ const cents = (value: any) => {
         <!-- Real-time Financial Breakdown -->
         <div class="rounded-2xl bg-slate-900 text-white p-4 space-y-2 shadow-sm">
           <div class="flex items-center justify-between text-xs text-slate-300">
-            <span>Subtotal (Net)</span>
+            <span>{{ t('sales.createInvoiceModal.subtotalNet') }}</span>
             <span class="font-mono font-bold">{{ formatCurrency(invoiceSubtotal) }}</span>
           </div>
 
           <div class="flex items-center justify-between text-xs text-slate-300">
-            <span>Tax ({{ Number(invoiceForm.tax_percent || 0) }}%)</span>
+            <span>{{ t('sales.createInvoiceModal.taxAmount', { percent: Number(invoiceForm.tax_percent || 0) }) }}</span>
             <span class="font-mono font-bold text-amber-300">+ {{ formatCurrency(invoiceTaxDollars) }}</span>
           </div>
 
           <div class="pt-2 border-t border-slate-700/80 flex items-center justify-between text-sm">
-            <span class="font-bold">Total Invoice Amount</span>
+            <span class="font-bold">{{ t('sales.createInvoiceModal.totalAmount') }}</span>
             <span class="font-black text-lg text-emerald-400 font-mono">{{ formatCurrency(invoiceTotal) }}</span>
           </div>
         </div>
 
         <!-- Modal Actions -->
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" @click="isInvoiceModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isInvoiceModalOpen = false">{{ t('sales.createInvoiceModal.cancel') }}</UiButton>
           <UiButton
             :loading="createInvoiceMutation.isPending.value"
             :disabled="!invoiceForm.customer_id || invoiceForm.lines.some((l) => !l.description && !l.search_query)"
             @click="createInvoiceMutation.mutate()"
           >
-            Create Invoice
+            {{ t('sales.createInvoiceModal.submit') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Create Customer Modal -->
-    <UiModal v-model="isCustomerModalOpen" title="New Customer" size="md">
+    <UiModal v-model="isCustomerModalOpen" :title="t('sales.customerModal.newTitle')" size="md">
       <div class="space-y-4">
-        <UiInput v-model="customerForm.name" label="Name" placeholder="Acme Corp" />
-        <UiInput v-model="customerForm.email" type="email" label="Email" placeholder="billing@acme.com" />
-        <UiInput v-model="customerForm.phone" label="Phone" placeholder="+1 555 0100" />
+        <UiInput v-model="customerForm.name" :label="t('sales.customerModal.name')" :placeholder="t('sales.customerModal.namePlaceholder')" />
+        <UiInput v-model="customerForm.email" type="email" :label="t('sales.customerModal.email')" :placeholder="t('sales.customerModal.emailPlaceholder')" />
+        <UiInput v-model="customerForm.phone" :label="t('sales.customerModal.phone')" :placeholder="t('sales.customerModal.phonePlaceholder')" />
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" @click="isCustomerModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isCustomerModalOpen = false">{{ t('sales.customerModal.cancel') }}</UiButton>
           <UiButton
             :loading="createCustomerMutation.isPending.value"
             :disabled="!customerForm.name"
             @click="createCustomerMutation.mutate()"
           >
-            Save Customer
+            {{ t('sales.customerModal.saveCustomer') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Edit Customer Modal -->
-    <UiModal v-model="isEditCustomerModalOpen" title="Edit Customer" size="md">
+    <UiModal v-model="isEditCustomerModalOpen" :title="t('sales.customerModal.editTitle')" size="md">
       <div class="space-y-4">
-        <UiInput v-model="customerForm.name" label="Name" placeholder="Acme Corp" />
-        <UiInput v-model="customerForm.email" type="email" label="Email" placeholder="billing@acme.com" />
-        <UiInput v-model="customerForm.phone" label="Phone" placeholder="+1 555 0100" />
+        <UiInput v-model="customerForm.name" :label="t('sales.customerModal.name')" :placeholder="t('sales.customerModal.namePlaceholder')" />
+        <UiInput v-model="customerForm.email" type="email" :label="t('sales.customerModal.email')" :placeholder="t('sales.customerModal.emailPlaceholder')" />
+        <UiInput v-model="customerForm.phone" :label="t('sales.customerModal.phone')" :placeholder="t('sales.customerModal.phonePlaceholder')" />
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" @click="isEditCustomerModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isEditCustomerModalOpen = false">{{ t('sales.customerModal.cancel') }}</UiButton>
           <UiButton
             :loading="updateCustomerMutation.isPending.value"
             :disabled="!customerForm.name"
             @click="handleSaveCustomerEdit"
           >
-            Update Customer
+            {{ t('sales.customerModal.updateCustomer') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Record Payment Modal -->
-    <UiModal v-model="isPaymentModalOpen" title="Record Payment" size="md">
+    <UiModal v-model="isPaymentModalOpen" :title="t('sales.paymentModal.title')" size="md">
       <div class="space-y-4">
         <p v-if="selectedInvoice" class="text-sm text-slate-500">
-          Invoice {{ selectedInvoice.number }} · Outstanding
-          {{ cents(Math.max(0, Number(selectedInvoice.total_cents || 0) - Number(selectedInvoice.amount_paid_cents || 0))) }}
+          {{ t('sales.paymentModal.invoiceOutstanding', { number: selectedInvoice.number, amount: cents(Math.max(0, Number(selectedInvoice.total_cents || 0) - Number(selectedInvoice.amount_paid_cents || 0))) }) }}
         </p>
-        <UiInput v-model="paymentForm.amount_dollars" type="number" label="Amount" step="0.01" />
+        <UiInput v-model="paymentForm.amount_dollars" type="number" :label="t('sales.paymentModal.amount')" step="0.01" />
         <UiSelect
           v-model="paymentForm.method"
-          label="Method"
-          :options="[
-            { label: 'Cash', value: 'cash' },
-            { label: 'Card', value: 'card' },
-            { label: 'Bank Transfer', value: 'bank_transfer' },
-            { label: 'Other', value: 'other' },
-          ]"
+          :label="t('sales.paymentModal.method')"
+          :options="paymentMethodOptions"
         />
-        <UiInput v-model="paymentForm.reference" label="Reference" placeholder="Optional" />
+        <UiInput v-model="paymentForm.reference" :label="t('sales.paymentModal.reference')" :placeholder="t('sales.paymentModal.referencePlaceholder')" />
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" @click="isPaymentModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isPaymentModalOpen = false">{{ t('sales.paymentModal.cancel') }}</UiButton>
           <UiButton
             :loading="recordPaymentMutation.isPending.value"
             :disabled="!paymentForm.amount_dollars"
             @click="submitPayment"
           >
-            Record Payment
+            {{ t('sales.paymentModal.submit') }}
           </UiButton>
         </div>
       </div>

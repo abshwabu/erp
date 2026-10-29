@@ -15,11 +15,13 @@ import enManufacturing from '../locales/en/manufacturing'
 import amManufacturing from '../locales/am/manufacturing'
 import enDocuments from '../locales/en/documents'
 import amDocuments from '../locales/am/documents'
+import enSales from '../locales/en/sales'
+import amSales from '../locales/am/sales'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, and documents in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, and sales in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -36,6 +38,29 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.manufacturing).toBeDefined()
     expect(en.documents).toBeDefined()
     expect(am.documents).toBeDefined()
+    expect(en.sales).toBeDefined()
+    expect(am.sales).toBeDefined()
+  })
+
+  it('has identical keys for sales in en and am', () => {
+    const enKeys = Object.keys(enSales).sort()
+    const amKeys = Object.keys(amSales).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enSales.kpis).sort()).toEqual(Object.keys(amSales.kpis).sort())
+    expect(Object.keys(enSales.tabs).sort()).toEqual(Object.keys(amSales.tabs).sort())
+    expect(Object.keys(enSales.invoiceTable).sort()).toEqual(Object.keys(amSales.invoiceTable).sort())
+    expect(Object.keys(enSales.invoiceTable.columns).sort()).toEqual(Object.keys(amSales.invoiceTable.columns).sort())
+    expect(Object.keys(enSales.invoiceTable.actions).sort()).toEqual(Object.keys(amSales.invoiceTable.actions).sort())
+    expect(Object.keys(enSales.customerTable).sort()).toEqual(Object.keys(amSales.customerTable).sort())
+    expect(Object.keys(enSales.customerTable.columns).sort()).toEqual(Object.keys(amSales.customerTable.columns).sort())
+    expect(Object.keys(enSales.customerTable.actions).sort()).toEqual(Object.keys(amSales.customerTable.actions).sort())
+    expect(Object.keys(enSales.status).sort()).toEqual(Object.keys(amSales.status).sort())
+    expect(Object.keys(enSales.createInvoiceModal).sort()).toEqual(Object.keys(amSales.createInvoiceModal).sort())
+    expect(Object.keys(enSales.customerModal).sort()).toEqual(Object.keys(amSales.customerModal).sort())
+    expect(Object.keys(enSales.paymentModal).sort()).toEqual(Object.keys(amSales.paymentModal).sort())
+    expect(Object.keys(enSales.paymentModal.methods).sort()).toEqual(Object.keys(amSales.paymentModal.methods).sort())
+    expect(Object.keys(enSales.messages).sort()).toEqual(Object.keys(amSales.messages).sort())
   })
 
   it('has identical keys for documents in en and am', () => {
