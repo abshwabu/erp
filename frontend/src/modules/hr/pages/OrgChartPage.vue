@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -10,6 +11,7 @@ import OrgNode from '../components/OrgNode.vue'
 import type { Employee } from '@/types/hr'
 
 const router = useRouter()
+const { t } = useI18n()
 
 const icons = {
   ZoomIn: markRaw(ZoomIn),
@@ -54,13 +56,13 @@ const handleNodeClick = (id: string) => {
   <div class="space-y-6 h-[calc(100vh-12rem)] flex flex-col">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Organizational Chart</h1>
-        <p class="text-slate-500">Visualize the company structure and reporting lines.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('hr.orgChart.title') }}</h1>
+        <p class="text-slate-500">{{ t('hr.orgChart.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-4 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
         <UiSelect 
           v-model="selectedDepartment" 
-          placeholder="All Departments" 
+          :placeholder="t('hr.orgChart.allDepartments')" 
           :options="departments?.map(d => ({ label: d.name, value: d.id })) || []"
           size="sm"
           class="w-48"

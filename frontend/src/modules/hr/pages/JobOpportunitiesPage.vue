@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { recruitmentApi } from '@/api/recruitment'
 import type { JobPosting } from '@/types/recruitment'
@@ -31,6 +32,7 @@ import {
   Layers,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -70,25 +72,32 @@ const filteredJobs = computed(() => {
 
 const statCards = computed(() => [
   {
-    label: 'Active Job Openings',
+    label: t('hr.jobs.stats.activeJobs'),
     value: stats.value?.active_jobs ?? 0,
     icon: markRaw(Briefcase),
   },
   {
-    label: 'Total Applications',
+    label: t('hr.jobs.stats.totalApplications'),
     value: stats.value?.total_applications ?? 0,
     icon: markRaw(Users),
   },
   {
-    label: 'In Interview Pipeline',
+    label: t('hr.jobs.stats.inPipeline'),
     value: stats.value?.in_pipeline ?? 0,
     icon: markRaw(Clock),
   },
   {
-    label: 'Hired Candidates',
+    label: t('hr.jobs.stats.hiredCandidates'),
     value: stats.value?.hired_candidates ?? 0,
     icon: markRaw(CheckCircle2),
   },
+])
+
+const statusFilterTabs = computed(() => [
+  { key: 'all', label: t('hr.jobs.statusFilters.all', { count: jobs.value?.length || 0 }) },
+  { key: 'published', label: t('hr.jobs.statusFilters.published') },
+  { key: 'draft', label: t('hr.jobs.statusFilters.draft') },
+  { key: 'closed', label: t('hr.jobs.statusFilters.closed') },
 ])
 
 // Mutations
@@ -96,10 +105,10 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => recruitmentApi.deleteJob(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['hr', 'jobs'] })
-    toast.success('Job posting removed')
+    toast.success(t('hr.jobs.deleteSuccess'))
   },
   onError: () => {
-    toast.error('Failed to delete job posting')
+    toast.error(t('hr.jobs.deleteError'))
   },
 })
 
@@ -119,7 +128,7 @@ const openApplications = (job: JobPosting) => {
 }
 
 const handleDelete = (job: JobPosting) => {
-  if (confirm(`Are you sure you want to delete "${job.title}"?`)) {
+  if (confirm(t('hr.jobs.confirmDelete', { title: job.title }))) {
     deleteMutation.mutate(job.id)
   }
 }
@@ -127,17 +136,17 @@ const handleDelete = (job: JobPosting) => {
 const copyPublicLink = (job: JobPosting) => {
   const url = `${window.location.origin}/careers/${job.slug || job.id}`
   navigator.clipboard.writeText(url)
-  toast.success('Public job application link copied to clipboard!')
+  toast.success(t('hr.jobs.shareLinkCopied'))
 }
 
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'published':
-      return { label: 'Published & Active', variant: 'success' as const }
+      return { label: t('hr.jobs.badges.published'), variant: 'success' as const }
     case 'draft':
-      return { label: 'Draft (Hidden)', variant: 'warning' as const }
+      return { label: t('hr.jobs.badges.draft'), variant: 'warning' as const }
     case 'closed':
-      return { label: 'Closed', variant: 'danger' as const }
+      return { label: t('hr.jobs.badges.closed'), variant: 'danger' as const }
     default:
       return { label: status, variant: 'default' as const }
   }
@@ -149,13 +158,13 @@ const getStatusBadge = (status: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Job Opportunities & Recruitment</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('hr.jobs.title') }}</h1>
         <p class="text-xs sm:text-sm text-slate-500">
-          Create customized public job application forms with flexible questions (checkboxes, radio, dropdowns, uploads) and review applicant pipelines.
+          {{ t('hr.jobs.subtitle') }}
         </p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Post New Job
+        <Plus class="w-4 h-4 mr-2" /> {{ t('hr.jobs.postNewJob') }}
       </UiButton>
     </div>
 
@@ -174,20 +183,20 @@ const getStatusBadge = (status: string) => {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
         <button
-          v-for="st in ['all', 'published', 'draft', 'closed']"
-          :key="st"
+          v-for="st in statusFilterTabs"
+          :key="st.key"
           type="button"
-          @click="selectedStatus = st"
-          class="px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
-          :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
+          @click="selectedStatus = st.key"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          :class="selectedStatus === st.key ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          {{ st === 'all' ? `All Openings (${jobs?.length || 0})` : st }}
+          {{ st.label }}
         </button>
       </div>
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Search job title, location, department..."
+        :placeholder="t('hr.jobs.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -218,7 +227,7 @@ const getStatusBadge = (status: string) => {
               </h3>
             </div>
 
-            <div class="flex items-center gap-1 text-slate-400 text-xs font-mono" title="Total Page Views">
+            <div class="flex items-center gap-1 text-slate-400 text-xs font-mono" :title="t('hr.jobs.pageViewsTooltip')">
               <Eye class="w-3.5 h-3.5" />
               <span>{{ job.views_count }}</span>
             </div>
@@ -251,7 +260,7 @@ const getStatusBadge = (status: string) => {
               v-if="job.custom_form_schema?.length"
               class="text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md font-semibold text-[11px] flex items-center gap-1"
             >
-              <Layers class="w-3 h-3" /> {{ job.custom_form_schema.length }} custom questions
+              <Layers class="w-3 h-3" /> {{ t('hr.jobs.customQuestionsCount', { count: job.custom_form_schema.length }) }}
             </span>
           </div>
         </div>
@@ -264,16 +273,16 @@ const getStatusBadge = (status: string) => {
               class="font-bold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1.5 hover:underline cursor-pointer"
             >
               <Users class="w-4 h-4" />
-              <span>{{ job.applications_count || 0 }} Candidate Applications</span>
+              <span>{{ t('hr.jobs.candidateApplications', { count: job.applications_count || 0 }) }}</span>
             </button>
 
             <button
               type="button"
               @click="copyPublicLink(job)"
               class="text-xs text-slate-500 hover:text-slate-900 font-semibold inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-              title="Copy Public Form Link"
+              :title="t('hr.jobs.shareLinkTooltip')"
             >
-              <Copy class="w-3 h-3" /> Share Link
+              <Copy class="w-3 h-3" /> {{ t('hr.jobs.shareLink') }}
             </button>
           </div>
 
@@ -283,11 +292,11 @@ const getStatusBadge = (status: string) => {
               target="_blank"
               class="text-slate-500 hover:text-blue-600 font-semibold inline-flex items-center gap-1 transition-colors"
             >
-              <ExternalLink class="w-3.5 h-3.5" /> Public Form
+              <ExternalLink class="w-3.5 h-3.5" /> {{ t('hr.jobs.publicForm') }}
             </a>
 
             <div class="flex items-center gap-1">
-              <UiButton variant="ghost" size="sm" @click="openEditModal(job)" title="Edit Job & Questions">
+              <UiButton variant="ghost" size="sm" @click="openEditModal(job)" :title="t('hr.jobs.editTooltip')">
                 <Edit class="w-3.5 h-3.5" />
               </UiButton>
               <UiButton
@@ -295,7 +304,7 @@ const getStatusBadge = (status: string) => {
                 size="sm"
                 class="text-red-500 hover:text-red-600 hover:bg-red-50"
                 @click="handleDelete(job)"
-                title="Delete Job Opening"
+                :title="t('hr.jobs.deleteTooltip')"
               >
                 <Trash2 class="w-3.5 h-3.5" />
               </UiButton>
@@ -309,13 +318,13 @@ const getStatusBadge = (status: string) => {
     <div v-else class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-4">
       <Briefcase class="w-12 h-12 mx-auto text-slate-300" />
       <div>
-        <h3 class="font-bold text-slate-900 text-base">No job opportunities found</h3>
+        <h3 class="font-bold text-slate-900 text-base">{{ t('hr.jobs.emptyTitle') }}</h3>
         <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-          Create a job opening with custom questions (checkboxes, radio, select, uploads) to start sourcing top talent.
+          {{ t('hr.jobs.emptySubtitle') }}
         </p>
       </div>
       <UiButton size="sm" @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-1.5" /> Post First Job Opening
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('hr.jobs.postFirstJob') }}
       </UiButton>
     </div>
 

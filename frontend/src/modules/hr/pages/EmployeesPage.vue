@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -14,6 +15,7 @@ import { Plus, Search, Users, UserPlus, Calendar, Briefcase, Filter, Trash2, Eye
 import { resolveImageUrl } from '@/utils/format'
 import type { Employee, Department } from '@/types/hr'
 
+const { t } = useI18n()
 const router = useRouter()
 const queryClient = useQueryClient()
 
@@ -73,69 +75,74 @@ const stats = computed(() => {
   const currentYear = now.getFullYear()
 
   return [
-    { label: 'Total Active', value: employees.value?.filter((e) => e.status === 'active').length || 0, icon: markRaw(Users) },
+    { label: t('hr.employees.stats.totalActive'), value: employees.value?.filter((e) => e.status === 'active').length || 0, icon: markRaw(Users) },
     {
-      label: 'New This Month',
+      label: t('hr.employees.stats.newThisMonth'),
       value: employees.value?.filter((e) => {
         const start = new Date(e.start_date)
         return start.getMonth() === currentMonth && start.getFullYear() === currentYear
       }).length || 0,
       icon: markRaw(UserPlus),
     },
-    { label: 'On Leave Today', value: employees.value?.filter((e) => e.status === 'on-leave').length || 0, icon: markRaw(Calendar) },
-    { label: 'Total Staff', value: employees.value?.length || 0, icon: markRaw(Briefcase) },
+    { label: t('hr.employees.stats.onLeaveToday'), value: employees.value?.filter((e) => e.status === 'on-leave').length || 0, icon: markRaw(Calendar) },
+    { label: t('hr.employees.stats.totalStaff'), value: employees.value?.length || 0, icon: markRaw(Briefcase) },
   ]
 })
 
-const columns = [
-  { key: 'name', label: 'Employee' },
-  { key: 'employee_number', label: 'ID' },
-  { key: 'department', label: 'Department' },
-  { key: 'position', label: 'Position' },
-  { key: 'salary', label: 'Salary' },
-  { key: 'employment_type', label: 'Type' },
-  { key: 'status', label: 'Status' },
-  { key: 'start_date', label: 'Start Date' },
-  { key: 'actions', label: 'Actions', align: 'right' as const },
-]
+const columns = computed(() => [
+  { key: 'name', label: t('hr.employees.columns.employee') },
+  { key: 'employee_number', label: t('hr.employees.columns.id') },
+  { key: 'department', label: t('hr.employees.columns.department') },
+  { key: 'position', label: t('hr.employees.columns.position') },
+  { key: 'salary', label: t('hr.employees.columns.salary') },
+  { key: 'employment_type', label: t('hr.employees.columns.type') },
+  { key: 'status', label: t('hr.employees.columns.status') },
+  { key: 'start_date', label: t('hr.employees.columns.startDate') },
+  { key: 'actions', label: t('hr.employees.columns.actions'), align: 'right' as const },
+])
 
 const handleRowClick = (employee: Employee) => {
   router.push({ name: 'hr-employee-profile', params: { id: employee.id } })
 }
 
 const handleDelete = (e: Employee) => {
-  if (confirm(`Are you sure you want to delete employee "${e.first_name} ${e.last_name}"?`)) {
+  if (confirm(t('hr.employees.confirmDelete', { name: `${e.first_name} ${e.last_name}` }))) {
     deleteMutation.mutate(e.id)
   }
 }
 
-const statusOptions = [
-  { label: 'All Statuses', value: '' },
-  { label: 'Active', value: 'active' },
-  { label: 'On Leave', value: 'on-leave' },
-  { label: 'Suspended', value: 'suspended' },
-  { label: 'Terminated', value: 'terminated' },
-]
+const statusOptions = computed(() => [
+  { label: t('hr.employees.allStatuses'), value: '' },
+  { label: t('hr.employees.statuses.active'), value: 'active' },
+  { label: t('hr.employees.statuses.onLeave'), value: 'on-leave' },
+  { label: t('hr.employees.statuses.suspended'), value: 'suspended' },
+  { label: t('hr.employees.statuses.terminated'), value: 'terminated' },
+])
 
-const typeOptions = [
-  { label: 'All Types', value: '' },
-  { label: 'Full-time', value: 'full-time' },
-  { label: 'Part-time', value: 'part-time' },
-  { label: 'Contract', value: 'contract' },
-  { label: 'Intern', value: 'intern' },
-  { label: 'Probationary', value: 'probationary' },
-]
+const typeOptions = computed(() => [
+  { label: t('hr.employees.allTypes'), value: '' },
+  { label: t('hr.employees.types.fullTime'), value: 'full-time' },
+  { label: t('hr.employees.types.partTime'), value: 'part-time' },
+  { label: t('hr.employees.types.contract'), value: 'contract' },
+  { label: t('hr.employees.types.intern'), value: 'intern' },
+  { label: t('hr.employees.types.probationary'), value: 'probationary' },
+])
+
+const departmentOptions = computed(() => [
+  { label: t('hr.employees.allDepartments'), value: '' },
+  ...(departments.value?.map((d) => ({ label: d.name, value: d.id })) || []),
+])
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Employees</h1>
-        <p class="text-slate-500">Manage your workforce, profiles, and employment details.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('hr.employees.title') }}</h1>
+        <p class="text-slate-500">{{ t('hr.employees.subtitle') }}</p>
       </div>
       <UiButton @click="isModalOpen = true">
-        <Plus class="h-4 w-4 mr-2" /> New Employee
+        <Plus class="h-4 w-4 mr-2" /> {{ t('hr.employees.newEmployee') }}
       </UiButton>
     </div>
 
@@ -147,14 +154,14 @@ const typeOptions = [
     <!-- Filters -->
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-4">
       <div class="flex flex-wrap items-center gap-3">
-        <UiInput v-model="searchQuery" placeholder="Search by name, ID, or email..." class="w-full max-w-xs" size="sm">
+        <UiInput v-model="searchQuery" :placeholder="t('hr.employees.searchPlaceholder')" class="w-full max-w-xs" size="sm">
           <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
         </UiInput>
 
         <div class="flex items-center gap-2 flex-wrap flex-1">
           <UiSelect
             v-model="selectedDepartment"
-            :options="[{ label: 'All Departments', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+            :options="departmentOptions"
             class="w-48"
             size="sm"
           />
@@ -176,7 +183,7 @@ const typeOptions = [
             size="sm"
             @click="selectedDepartment = ''; selectedStatus = ''; selectedType = ''; searchQuery = ''"
           >
-            Reset
+            {{ t('hr.employees.reset') }}
           </UiButton>
         </div>
       </div>
@@ -207,7 +214,7 @@ const typeOptions = [
       </template>
 
       <template #cell(department)="{ item }">
-        <div class="text-slate-700 text-xs font-medium">{{ item.department?.name || 'Unassigned' }}</div>
+        <div class="text-slate-700 text-xs font-medium">{{ item.department?.name || t('hr.employees.unassigned') }}</div>
       </template>
 
       <template #cell(position)="{ item }">
@@ -237,10 +244,10 @@ const typeOptions = [
 
       <template #cell(actions)="{ item }">
         <div class="flex justify-end gap-1">
-          <UiButton variant="ghost" size="sm" @click.stop="handleRowClick(item)" title="View Profile">
+          <UiButton variant="ghost" size="sm" @click.stop="handleRowClick(item)" :title="t('hr.employees.viewProfile')">
             <Eye class="h-4 w-4" />
           </UiButton>
-          <UiButton variant="ghost" size="sm" class="text-red-500 hover:text-red-600 hover:bg-red-50" @click.stop="handleDelete(item)" title="Delete Employee">
+          <UiButton variant="ghost" size="sm" class="text-red-500 hover:text-red-600 hover:bg-red-50" @click.stop="handleDelete(item)" :title="t('hr.employees.deleteEmployee')">
             <Trash2 class="h-4 w-4" />
           </UiButton>
         </div>

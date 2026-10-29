@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -16,6 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'saved'])
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -30,15 +32,15 @@ const form = ref({
   notes: '',
 })
 
-const documentTypes = [
-  { label: 'CV / Resume', value: 'cv' },
-  { label: 'Employment Contract', value: 'contract' },
-  { label: 'Educational Degree / Diploma', value: 'education' },
-  { label: 'National ID / Passport', value: 'id_proof' },
-  { label: 'Professional Certification', value: 'certification' },
-  { label: 'Tax & Compliance Form', value: 'tax' },
-  { label: 'Other Document', value: 'other' },
-]
+const documentTypes = computed(() => [
+  { label: t('hr.uploadDocumentModal.categories.cv'), value: 'cv' },
+  { label: t('hr.uploadDocumentModal.categories.contract'), value: 'contract' },
+  { label: t('hr.uploadDocumentModal.categories.education'), value: 'education' },
+  { label: t('hr.uploadDocumentModal.categories.idProof'), value: 'id_proof' },
+  { label: t('hr.uploadDocumentModal.categories.certification'), value: 'certification' },
+  { label: t('hr.uploadDocumentModal.categories.tax'), value: 'tax' },
+  { label: t('hr.uploadDocumentModal.categories.other'), value: 'other' },
+])
 
 const onFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -56,7 +58,7 @@ const onDrop = (event: DragEvent) => {
 
 const handleFile = (file: File) => {
   if (file.size > 26214400) { // 25MB
-    errorMessage.value = 'File size exceeds the 25MB maximum limit.'
+    errorMessage.value = t('hr.uploadDocumentModal.sizeExceeded')
     return
   }
   selectedFile.value = file
@@ -77,7 +79,7 @@ const removeSelectedFile = () => {
 const uploadMutation = useMutation({
   mutationFn: async () => {
     if (!selectedFile.value) {
-      throw new Error('Please select a document file to upload.')
+      throw new Error(t('hr.uploadDocumentModal.selectDocFile'))
     }
     const formData = new FormData()
     formData.append('file', selectedFile.value)
@@ -99,7 +101,7 @@ const uploadMutation = useMutation({
     resetForm()
   },
   onError: (err: any) => {
-    errorMessage.value = err?.response?.data?.message || err?.message || 'Failed to upload document.'
+    errorMessage.value = err?.response?.data?.message || err?.message || t('hr.uploadDocumentModal.uploadError')
   },
 })
 
@@ -130,7 +132,7 @@ const formatBytes = (bytes: number) => {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Upload Employee Document"
+    :title="t('hr.uploadDocumentModal.title')"
     size="lg"
   >
     <div class="space-y-5">
@@ -161,10 +163,10 @@ const formatBytes = (bytes: number) => {
           </div>
           <div>
             <p class="text-sm font-bold text-slate-800">
-              Click to browse or drag & drop document
+              {{ t('hr.uploadDocumentModal.dragDropPrompt') }}
             </p>
             <p class="text-xs text-slate-400 mt-1">
-              Supports PDF, DOCX, DOC, Images, Sheets (Max 25MB)
+              {{ t('hr.uploadDocumentModal.supportedFormats') }}
             </p>
           </div>
         </div>
@@ -193,13 +195,13 @@ const formatBytes = (bytes: number) => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <UiInput
           v-model="form.title"
-          label="Document Title"
-          placeholder="e.g. Master's Degree Certificate, Signed Contract"
+          :label="t('hr.uploadDocumentModal.docTitle')"
+          :placeholder="t('hr.uploadDocumentModal.titlePlaceholder')"
           required
         />
         <UiSelect
           v-model="form.document_type"
-          label="Document Category"
+          :label="t('hr.uploadDocumentModal.docCategory')"
           :options="documentTypes"
           required
         />
@@ -208,21 +210,21 @@ const formatBytes = (bytes: number) => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <UiInput
           v-model="form.expiry_date"
-          label="Expiry Date (Optional)"
+          :label="t('hr.uploadDocumentModal.expiryDate')"
           type="date"
-          placeholder="For contracts, visas, passports"
+          :placeholder="t('hr.uploadDocumentModal.expiryPlaceholder')"
         />
         <UiInput
           v-model="form.notes"
-          label="Notes / Comments (Optional)"
-          placeholder="Additional context or notes"
+          :label="t('hr.uploadDocumentModal.notes')"
+          :placeholder="t('hr.uploadDocumentModal.notesPlaceholder')"
         />
       </div>
 
       <!-- Actions -->
       <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
         <UiButton variant="outline" type="button" @click="emit('update:modelValue', false)" :disabled="uploadMutation.isPending.value">
-          Cancel
+          {{ t('hr.uploadDocumentModal.cancel') }}
         </UiButton>
         <UiButton
           type="button"
@@ -230,7 +232,7 @@ const formatBytes = (bytes: number) => {
           :disabled="!selectedFile || !form.title"
           @click="uploadMutation.mutate()"
         >
-          Upload Document
+          {{ t('hr.uploadDocumentModal.uploadBtn') }}
         </UiButton>
       </div>
     </div>

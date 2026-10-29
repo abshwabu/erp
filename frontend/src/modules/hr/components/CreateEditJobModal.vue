@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import { recruitmentApi } from '@/api/recruitment'
@@ -34,6 +35,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:modelValue', 'saved'])
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -153,17 +155,17 @@ watch(
   { immediate: true }
 )
 
-const fieldTypes: Array<{ label: string; value: FormFieldType; icon: any }> = [
-  { label: 'Short Text', value: 'text', icon: FileText },
-  { label: 'Long Paragraph', value: 'textarea', icon: FileText },
-  { label: 'Numeric Input', value: 'number', icon: FileText },
-  { label: 'Dropdown Select', value: 'select', icon: List },
-  { label: 'Radio (Single Choice)', value: 'radio', icon: CircleDot },
-  { label: 'Checkbox (Multi-Select)', value: 'checkbox', icon: CheckSquare },
-  { label: 'Document Upload', value: 'file', icon: Upload },
-  { label: 'Photo / Image Upload', value: 'image', icon: Image },
-  { label: 'Date Picker', value: 'date', icon: Calendar },
-]
+const fieldTypes = computed<Array<{ label: string; value: FormFieldType; icon: any }>>(() => [
+  { label: t('hr.jobModal.fieldTypes.text'), value: 'text', icon: FileText },
+  { label: t('hr.jobModal.fieldTypes.textarea'), value: 'textarea', icon: FileText },
+  { label: t('hr.jobModal.fieldTypes.number'), value: 'number', icon: FileText },
+  { label: t('hr.jobModal.fieldTypes.select'), value: 'select', icon: List },
+  { label: t('hr.jobModal.fieldTypes.radio'), value: 'radio', icon: CircleDot },
+  { label: t('hr.jobModal.fieldTypes.checkbox'), value: 'checkbox', icon: CheckSquare },
+  { label: t('hr.jobModal.fieldTypes.file'), value: 'file', icon: Upload },
+  { label: t('hr.jobModal.fieldTypes.image'), value: 'image', icon: Image },
+  { label: t('hr.jobModal.fieldTypes.date'), value: 'date', icon: Calendar },
+])
 
 const addQuestion = (type: FormFieldType = 'text') => {
   const count = form.value.custom_form_schema.length + 1
@@ -203,23 +205,23 @@ const saveMutation = useMutation({
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['hr', 'jobs'] })
-    toast.success(isEditing.value ? 'Job posting updated successfully' : 'Job opportunity published successfully')
+    toast.success(isEditing.value ? t('hr.jobModal.toasts.updateSuccess') : t('hr.jobModal.toasts.createSuccess'))
     emit('saved')
     emit('update:modelValue', false)
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save job opportunity')
+    toast.error(err?.response?.data?.message || t('hr.jobModal.toasts.saveError'))
   },
 })
 
 const handleSave = () => {
   if (!form.value.title) {
-    toast.error('Please enter a job title')
+    toast.error(t('hr.jobModal.toasts.titleRequired'))
     activeTab.value = 'details'
     return
   }
   if (!form.value.description) {
-    toast.error('Please provide a job description')
+    toast.error(t('hr.jobModal.toasts.descRequired'))
     activeTab.value = 'details'
     return
   }
@@ -236,19 +238,25 @@ const handleSave = () => {
   saveMutation.mutate(payload)
 }
 
-const employmentTypes = [
-  { label: 'Full-time', value: 'full-time' },
-  { label: 'Part-time', value: 'part-time' },
-  { label: 'Contract', value: 'contract' },
-  { label: 'Internship', value: 'intern' },
-]
+const employmentTypes = computed(() => [
+  { label: t('hr.employees.types.fullTime'), value: 'full-time' },
+  { label: t('hr.employees.types.partTime'), value: 'part-time' },
+  { label: t('hr.employees.types.contract'), value: 'contract' },
+  { label: t('hr.employees.types.intern'), value: 'intern' },
+])
 
-const experienceLevels = [
-  { label: 'Entry Level', value: 'entry' },
-  { label: 'Mid-Level', value: 'mid' },
-  { label: 'Senior', value: 'senior' },
-  { label: 'Lead / Executive', value: 'lead' },
-]
+const experienceLevels = computed(() => [
+  { label: t('hr.jobModal.experienceLevels.entry'), value: 'entry' },
+  { label: t('hr.jobModal.experienceLevels.mid'), value: 'mid' },
+  { label: t('hr.jobModal.experienceLevels.senior'), value: 'senior' },
+  { label: t('hr.jobModal.experienceLevels.lead'), value: 'lead' },
+])
+
+const postingStatuses = computed(() => [
+  { label: t('hr.jobModal.statuses.published'), value: 'published' },
+  { label: t('hr.jobModal.statuses.draft'), value: 'draft' },
+  { label: t('hr.jobModal.statuses.closed'), value: 'closed' },
+])
 
 const currencyOptions = [
   { label: 'USD ($)', value: 'USD' },
@@ -263,7 +271,7 @@ const currencyOptions = [
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    :title="isEditing ? 'Edit Job Opportunity & Application Form' : 'Post New Job Opportunity'"
+    :title="isEditing ? t('hr.jobModal.editTitle') : t('hr.jobModal.createTitle')"
     size="xl"
   >
     <div class="space-y-6">
@@ -276,7 +284,7 @@ const currencyOptions = [
           :class="activeTab === 'details' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
         >
           <Briefcase class="w-4 h-4" />
-          <span>1. Job Details & Role</span>
+          <span>{{ t('hr.jobModal.tabs.details') }}</span>
         </button>
 
         <button
@@ -286,7 +294,7 @@ const currencyOptions = [
           :class="activeTab === 'form_builder' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
         >
           <Layers class="w-4 h-4" />
-          <span>2. Application Form Builder ({{ form.custom_form_schema.length }} Fields)</span>
+          <span>{{ t('hr.jobModal.tabs.formBuilder', { count: form.custom_form_schema.length }) }}</span>
         </button>
 
         <button
@@ -296,80 +304,76 @@ const currencyOptions = [
           :class="activeTab === 'preview' ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
         >
           <Eye class="w-4 h-4" />
-          <span>3. Live Candidate Preview</span>
+          <span>{{ t('hr.jobModal.tabs.preview') }}</span>
         </button>
       </div>
 
       <!-- Tab 1: Job Details -->
       <div v-show="activeTab === 'details'" class="space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiInput v-model="form.title" label="Job Title" placeholder="e.g. Senior Software Engineer" required />
-          <UiInput v-model="form.location" label="Location" placeholder="e.g. Addis Ababa / Remote" required />
+          <UiInput v-model="form.title" :label="t('hr.jobModal.fields.title')" :placeholder="t('hr.jobModal.fields.titlePlaceholder')" required />
+          <UiInput v-model="form.location" :label="t('hr.jobModal.fields.location')" :placeholder="t('hr.jobModal.fields.locationPlaceholder')" required />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <UiSelect
             v-model="form.department_id"
-            label="Department"
-            :options="[{ label: 'None (Unassigned)', value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
+            :label="t('hr.jobModal.fields.department')"
+            :options="[{ label: t('hr.jobModal.fields.unassignedDept'), value: '' }, ...(departments?.map((d) => ({ label: d.name, value: d.id })) || [])]"
           />
           <UiSelect
             v-model="form.position_id"
-            label="Position / Role"
-            :options="[{ label: 'None', value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
+            :label="t('hr.jobModal.fields.position')"
+            :options="[{ label: t('hr.jobModal.fields.nonePosition'), value: '' }, ...(positions?.map((p) => ({ label: p.title, value: p.id })) || [])]"
           />
-          <UiSelect v-model="form.employment_type" label="Employment Type" :options="employmentTypes" />
+          <UiSelect v-model="form.employment_type" :label="t('hr.jobModal.fields.employmentType')" :options="employmentTypes" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <UiSelect v-model="form.experience_level" label="Experience Level" :options="experienceLevels" />
-          <UiInput v-model="form.min_salary" label="Min Salary" type="number" placeholder="Optional" />
-          <UiInput v-model="form.max_salary" label="Max Salary" type="number" placeholder="Optional" />
-          <UiSelect v-model="form.salary_currency" label="Currency" :options="currencyOptions" />
+          <UiSelect v-model="form.experience_level" :label="t('hr.jobModal.fields.experienceLevel')" :options="experienceLevels" />
+          <UiInput v-model="form.min_salary" :label="t('hr.jobModal.fields.minSalary')" type="number" :placeholder="t('hr.jobModal.fields.optional')" />
+          <UiInput v-model="form.max_salary" :label="t('hr.jobModal.fields.maxSalary')" type="number" :placeholder="t('hr.jobModal.fields.optional')" />
+          <UiSelect v-model="form.salary_currency" :label="t('hr.jobModal.fields.currency')" :options="currencyOptions" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="form.deadline" label="Application Deadline" type="date" />
+          <UiInput v-model="form.deadline" :label="t('hr.jobModal.fields.deadline')" type="date" />
           <UiSelect
             v-model="form.status"
-            label="Posting Status"
-            :options="[
-              { label: 'Published (Accepting Applications)', value: 'published' },
-              { label: 'Draft (Hidden)', value: 'draft' },
-              { label: 'Closed (Applications Archived)', value: 'closed' },
-            ]"
+            :label="t('hr.jobModal.fields.status')"
+            :options="postingStatuses"
           />
         </div>
 
         <div class="space-y-1">
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-            Job Description & Responsibilities <span class="text-red-500">*</span>
+            {{ t('hr.jobModal.fields.description') }} <span class="text-red-500">*</span>
           </label>
           <textarea
             v-model="form.description"
             rows="4"
-            placeholder="Outline role summary, primary duties, team structure, and project mission..."
+            :placeholder="t('hr.jobModal.fields.descriptionPlaceholder')"
             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
           ></textarea>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Requirements & Qualifications</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('hr.jobModal.fields.requirements') }}</label>
             <textarea
               v-model="form.requirements"
               rows="3"
-              placeholder="e.g. • 4+ years Vue/TypeScript • Experience in PostgreSQL..."
+              :placeholder="t('hr.jobModal.fields.requirementsPlaceholder')"
               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
             ></textarea>
           </div>
 
           <div class="space-y-1">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Benefits & Perks</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('hr.jobModal.fields.benefits') }}</label>
             <textarea
               v-model="form.benefits"
               rows="3"
-              placeholder="e.g. • Flexible work schedule • Health coverage • Learning stipend..."
+              :placeholder="t('hr.jobModal.fields.benefitsPlaceholder')"
               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600"
             ></textarea>
           </div>
@@ -380,16 +384,16 @@ const currencyOptions = [
       <div v-show="activeTab === 'form_builder'" class="space-y-5">
         <div class="p-4 bg-primary-50/70 border border-primary-100 rounded-xl flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-bold text-primary-900">Custom Dynamic Application Form</h3>
+            <h3 class="text-sm font-bold text-primary-900">{{ t('hr.jobModal.builder.bannerTitle') }}</h3>
             <p class="text-xs text-primary-700 mt-0.5">
-              Standard fields (Full Name, Email, Phone, Cover Letter, Resume, Photo) are collected automatically. Add flexible custom questions below.
+              {{ t('hr.jobModal.builder.bannerSubtitle') }}
             </p>
           </div>
         </div>
 
         <!-- Add Field Palette -->
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">Add Question:</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">{{ t('hr.jobModal.builder.addQuestion') }}</span>
           <button
             v-for="ft in fieldTypes"
             :key="ft.value"
@@ -426,13 +430,13 @@ const currencyOptions = [
                     v-model="question.required"
                     class="h-3.5 w-3.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                   />
-                  <span>Mandatory</span>
+                  <span>{{ t('hr.jobModal.builder.mandatory') }}</span>
                 </label>
                 <button
                   type="button"
                   @click="removeQuestion(index)"
                   class="text-slate-400 hover:text-red-600 p-1 transition-colors cursor-pointer"
-                  title="Remove Question"
+                  :title="t('hr.jobModal.builder.removeQuestion')"
                 >
                   <Trash2 class="w-4 h-4" />
                 </button>
@@ -440,20 +444,20 @@ const currencyOptions = [
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <UiInput v-model="question.label" label="Question Label" placeholder="e.g. Years of Experience" size="sm" required />
-              <UiInput v-model="question.placeholder" label="Placeholder / Hint" placeholder="e.g. Enter URL" size="sm" />
+              <UiInput v-model="question.label" :label="t('hr.jobModal.builder.questionLabel')" :placeholder="t('hr.jobModal.builder.questionLabelPlaceholder')" size="sm" required />
+              <UiInput v-model="question.placeholder" :label="t('hr.jobModal.builder.questionHint')" :placeholder="t('hr.jobModal.builder.questionHintPlaceholder')" size="sm" />
             </div>
 
             <!-- Options builder for Select, Radio, Checkbox -->
             <div v-if="['select', 'radio', 'checkbox'].includes(question.type)" class="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
               <div class="flex items-center justify-between">
-                <label class="text-xs font-bold uppercase tracking-wider text-slate-600">Choice Options</label>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ t('hr.jobModal.builder.choiceOptions') }}</label>
                 <button
                   type="button"
                   @click="addOption(question)"
                   class="text-xs text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-1 hover:underline cursor-pointer"
                 >
-                  <Plus class="w-3 h-3" /> Add Option
+                  <Plus class="w-3 h-3" /> {{ t('hr.jobModal.builder.addOption') }}
                 </button>
               </div>
 
@@ -467,7 +471,7 @@ const currencyOptions = [
                   <input
                     v-model="question.options![optIdx]"
                     class="flex-1 px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    placeholder="Option label"
+                    :placeholder="t('hr.jobModal.builder.optionPlaceholder')"
                   />
                   <button
                     v-if="(question.options?.length || 0) > 1"
@@ -483,7 +487,7 @@ const currencyOptions = [
           </div>
 
           <div v-if="!form.custom_form_schema.length" class="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs">
-            No custom questions added yet. Click one of the "+ Add Question" buttons above to customize your form.
+            {{ t('hr.jobModal.builder.emptyQuestions') }}
           </div>
         </div>
       </div>
@@ -491,12 +495,12 @@ const currencyOptions = [
       <!-- Tab 3: Candidate Live Preview -->
       <div v-show="activeTab === 'preview'" class="space-y-5">
         <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">
-          <span class="font-medium">This is how candidates will view and submit your application form publicly.</span>
+          <span class="font-medium">{{ t('hr.jobModal.preview.previewNotice') }}</span>
         </div>
 
         <div class="p-6 bg-white border border-slate-200 rounded-2xl space-y-6 shadow-xs">
           <div>
-            <h2 class="text-xl font-black text-slate-900">{{ form.title || 'Untitled Job Position' }}</h2>
+            <h2 class="text-xl font-black text-slate-900">{{ form.title || t('hr.jobModal.preview.untitledJob') }}</h2>
             <div class="flex items-center gap-2 text-xs text-slate-500 mt-1">
               <span>{{ form.location }}</span>
               <span>•</span>
@@ -508,14 +512,14 @@ const currencyOptions = [
             </div>
           </div>
 
-          <p class="text-xs text-slate-600 leading-relaxed">{{ form.description || 'Job description preview...' }}</p>
+          <p class="text-xs text-slate-600 leading-relaxed">{{ form.description || '...' }}</p>
 
           <div class="border-t border-slate-100 pt-4 space-y-4">
-            <h3 class="text-sm font-bold text-slate-900">Application Form Preview</h3>
+            <h3 class="text-sm font-bold text-slate-900">{{ t('hr.jobModal.preview.formPreviewHeading') }}</h3>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <UiInput label="Full Name *" placeholder="Jane Doe" disabled />
-              <UiInput label="Email Address *" placeholder="jane@example.com" disabled />
+              <UiInput :label="t('hr.jobModal.preview.fullName')" placeholder="Jane Doe" disabled />
+              <UiInput :label="t('hr.jobModal.preview.emailAddress')" placeholder="jane@example.com" disabled />
             </div>
 
             <!-- Custom Form Questions Preview -->
@@ -528,7 +532,7 @@ const currencyOptions = [
               <UiSelect
                 v-if="q.type === 'select'"
                 :options="q.options?.map(o => ({ label: o, value: o })) || []"
-                :placeholder="q.placeholder || 'Select option'"
+                :placeholder="q.placeholder || t('hr.jobModal.preview.selectOption')"
                 disabled
               />
 
@@ -552,7 +556,7 @@ const currencyOptions = [
               <textarea
                 v-else-if="q.type === 'textarea'"
                 rows="2"
-                :placeholder="q.placeholder || 'Your answer...'"
+                :placeholder="q.placeholder || t('hr.jobModal.preview.yourAnswer')"
                 disabled
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
               ></textarea>
@@ -561,7 +565,7 @@ const currencyOptions = [
               <UiInput
                 v-else
                 :type="q.type === 'number' ? 'number' : q.type === 'date' ? 'date' : 'text'"
-                :placeholder="q.placeholder || 'Your answer'"
+                :placeholder="q.placeholder || t('hr.jobModal.preview.yourAnswer')"
                 disabled
               />
             </div>
@@ -579,7 +583,7 @@ const currencyOptions = [
             type="button"
             @click="activeTab = activeTab === 'preview' ? 'form_builder' : 'details'"
           >
-            ← Previous Step
+            {{ t('hr.jobModal.actions.prevStep') }}
           </UiButton>
           <UiButton
             v-if="activeTab !== 'preview'"
@@ -588,16 +592,16 @@ const currencyOptions = [
             type="button"
             @click="activeTab = activeTab === 'details' ? 'form_builder' : 'preview'"
           >
-            Next Step →
+            {{ t('hr.jobModal.actions.nextStep') }}
           </UiButton>
         </div>
 
         <div class="flex items-center gap-2">
           <UiButton variant="outline" type="button" @click="emit('update:modelValue', false)">
-            Cancel
+            {{ t('hr.jobModal.actions.cancel') }}
           </UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ isEditing ? 'Save Changes' : 'Publish Opportunity' }}
+            {{ isEditing ? t('hr.jobModal.actions.saveChanges') : t('hr.jobModal.actions.publish') }}
           </UiButton>
         </div>
       </div>

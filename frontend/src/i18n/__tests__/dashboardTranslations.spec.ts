@@ -17,11 +17,13 @@ import enDocuments from '../locales/en/documents'
 import amDocuments from '../locales/am/documents'
 import enSales from '../locales/en/sales'
 import amSales from '../locales/am/sales'
+import enHr from '../locales/en/hr'
+import amHr from '../locales/am/hr'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, and sales in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, and hr in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -40,6 +42,51 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.documents).toBeDefined()
     expect(en.sales).toBeDefined()
     expect(am.sales).toBeDefined()
+    expect(en.hr).toBeDefined()
+    expect(am.hr).toBeDefined()
+  })
+
+  it('has identical keys for hr in en and am', () => {
+    const enKeys = Object.keys(enHr).sort()
+    const amKeys = Object.keys(amHr).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enHr.employees).sort()).toEqual(Object.keys(amHr.employees).sort())
+    expect(Object.keys(enHr.employees.stats).sort()).toEqual(Object.keys(amHr.employees.stats).sort())
+    expect(Object.keys(enHr.employees.columns).sort()).toEqual(Object.keys(amHr.employees.columns).sort())
+    expect(Object.keys(enHr.employees.statuses).sort()).toEqual(Object.keys(amHr.employees.statuses).sort())
+    expect(Object.keys(enHr.employees.types).sort()).toEqual(Object.keys(amHr.employees.types).sort())
+
+    expect(Object.keys(enHr.employeeModal).sort()).toEqual(Object.keys(amHr.employeeModal).sort())
+    expect(Object.keys(enHr.employeeModal.genders).sort()).toEqual(Object.keys(amHr.employeeModal.genders).sort())
+    expect(Object.keys(enHr.employeeModal.frequencies).sort()).toEqual(Object.keys(amHr.employeeModal.frequencies).sort())
+    expect(Object.keys(enHr.employeeModal.methods).sort()).toEqual(Object.keys(amHr.employeeModal.methods).sort())
+    expect(Object.keys(enHr.employeeModal.quickDept).sort()).toEqual(Object.keys(amHr.employeeModal.quickDept).sort())
+    expect(Object.keys(enHr.employeeModal.quickPosition).sort()).toEqual(Object.keys(amHr.employeeModal.quickPosition).sort())
+
+    expect(Object.keys(enHr.departments).sort()).toEqual(Object.keys(amHr.departments).sort())
+    expect(Object.keys(enHr.departments.stats).sort()).toEqual(Object.keys(amHr.departments.stats).sort())
+    expect(Object.keys(enHr.departments.columns).sort()).toEqual(Object.keys(amHr.departments.columns).sort())
+
+    expect(Object.keys(enHr.attendance).sort()).toEqual(Object.keys(amHr.attendance).sort())
+    expect(Object.keys(enHr.attendance.kpis).sort()).toEqual(Object.keys(amHr.attendance.kpis).sort())
+    expect(Object.keys(enHr.attendance.columns).sort()).toEqual(Object.keys(amHr.attendance.columns).sort())
+    expect(Object.keys(enHr.attendance.statuses).sort()).toEqual(Object.keys(amHr.attendance.statuses).sort())
+    expect(Object.keys(enHr.attendance.modal).sort()).toEqual(Object.keys(amHr.attendance.modal).sort())
+
+    expect(Object.keys(enHr.leave).sort()).toEqual(Object.keys(amHr.leave).sort())
+    expect(Object.keys(enHr.leave.tabs).sort()).toEqual(Object.keys(amHr.leave.tabs).sort())
+    expect(Object.keys(enHr.leave.columns).sort()).toEqual(Object.keys(amHr.leave.columns).sort())
+    expect(Object.keys(enHr.leave.statuses).sort()).toEqual(Object.keys(amHr.leave.statuses).sort())
+    expect(Object.keys(enHr.leave.weekdays).sort()).toEqual(Object.keys(amHr.leave.weekdays).sort())
+    expect(Object.keys(enHr.leave.modal).sort()).toEqual(Object.keys(amHr.leave.modal).sort())
+
+    expect(Object.keys(enHr.orgChart).sort()).toEqual(Object.keys(amHr.orgChart).sort())
+
+    expect(Object.keys(enHr.jobs).sort()).toEqual(Object.keys(amHr.jobs).sort())
+    expect(Object.keys(enHr.jobs.stats).sort()).toEqual(Object.keys(amHr.jobs.stats).sort())
+    expect(Object.keys(enHr.jobs.statusFilters).sort()).toEqual(Object.keys(amHr.jobs.statusFilters).sort())
+    expect(Object.keys(enHr.jobs.badges).sort()).toEqual(Object.keys(amHr.jobs.badges).sort())
   })
 
   it('has identical keys for sales in en and am', () => {

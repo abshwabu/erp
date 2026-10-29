@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -23,6 +24,7 @@ import {
   AlertCircle,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const activeTab = ref<'pending' | 'all' | 'calendar'>('pending')
 const searchQuery = ref('')
@@ -96,7 +98,7 @@ const submitLeaveMutation = useMutation({
 const rejectionNotes = ref<Record<string, string>>({})
 
 const employeeOptions = computed(() => [
-  { label: 'Select Employee', value: '' },
+  { label: t('hr.leave.modal.selectEmployee'), value: '' },
   ...(employees.value || []).map((e: any) => ({
     label: `${e.first_name} ${e.last_name} (${e.employee_number || 'No ID'})`,
     value: e.id,
@@ -104,11 +106,24 @@ const employeeOptions = computed(() => [
 ])
 
 const leaveTypeOptions = computed(() => [
-  { label: 'Select Leave Type', value: '' },
+  { label: t('hr.leave.modal.selectLeaveType'), value: '' },
   ...(leaveTypes.value || []).map((t: any) => ({
     label: `${t.name} (${t.max_days_per_year || 0} days/yr)`,
     value: t.id,
   })),
+])
+
+const departmentOptions = computed(() => [
+  { label: t('hr.leave.allDepartments'), value: '' },
+  ...(departments.value || []).map((d: any) => ({ label: d.name, value: d.id })),
+])
+
+const statusFilterOptions = computed(() => [
+  { label: t('hr.leave.allStatuses'), value: '' },
+  { label: t('hr.leave.statuses.approved'), value: 'approved' },
+  { label: t('hr.leave.statuses.rejected'), value: 'rejected' },
+  { label: t('hr.leave.statuses.pending'), value: 'pending' },
+  { label: t('hr.leave.statuses.cancelled'), value: 'cancelled' },
 ])
 
 const filteredLeaveRequests = computed(() => {
@@ -129,14 +144,14 @@ const filteredLeaveRequests = computed(() => {
   return list
 })
 
-const columns = [
-  { key: 'employee', label: 'Employee' },
-  { key: 'leave_type', label: 'Leave Type' },
-  { key: 'dates', label: 'Dates Requested' },
-  { key: 'days', label: 'Days' },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions', align: 'right' as const },
-]
+const columns = computed(() => [
+  { key: 'employee', label: t('hr.leave.columns.employee') },
+  { key: 'leave_type', label: t('hr.leave.columns.leaveType') },
+  { key: 'dates', label: t('hr.leave.columns.dates') },
+  { key: 'days', label: t('hr.leave.columns.days') },
+  { key: 'status', label: t('hr.leave.columns.status') },
+  { key: 'actions', label: t('hr.leave.columns.actions'), align: 'right' as const },
+])
 
 // Calendar Logic
 const currentMonth = ref(new Date())
@@ -211,15 +226,15 @@ const exportToCSV = () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Leave Management</h1>
-        <p class="text-slate-500">Review employee time-off requests, balances, and calendar schedules.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('hr.leave.title') }}</h1>
+        <p class="text-slate-500">{{ t('hr.leave.subtitle') }}</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="exportToCSV">
-          <Download class="h-4 w-4 mr-2" /> Export CSV
+          <Download class="h-4 w-4 mr-2" /> {{ t('hr.leave.exportCsv') }}
         </UiButton>
         <UiButton @click="isNewLeaveModalOpen = true">
-          <Plus class="h-4 w-4 mr-2" /> New Request
+          <Plus class="h-4 w-4 mr-2" /> {{ t('hr.leave.newRequest') }}
         </UiButton>
       </div>
     </div>
@@ -228,9 +243,9 @@ const exportToCSV = () => {
     <div class="flex border-b border-slate-200">
       <button
         v-for="tab in [
-          { id: 'pending', label: `Pending Requests (${pendingRequests.length})` },
-          { id: 'all', label: `All Requests (${leaveRequests?.length || 0})` },
-          { id: 'calendar', label: 'Leave Calendar' },
+          { id: 'pending', label: t('hr.leave.tabs.pending', { count: pendingRequests.length }) },
+          { id: 'all', label: t('hr.leave.tabs.all', { count: leaveRequests?.length || 0 }) },
+          { id: 'calendar', label: t('hr.leave.tabs.calendar') },
         ]"
         :key="tab.id"
         @click="activeTab = tab.id as any"
@@ -247,8 +262,8 @@ const exportToCSV = () => {
       <div v-if="activeTab === 'pending'" class="space-y-4">
         <div v-if="pendingRequests.length === 0" class="bg-white p-12 text-center rounded-2xl border border-dashed border-slate-300">
           <CheckCircle2 class="h-12 w-12 text-emerald-400 mx-auto mb-3" />
-          <h3 class="text-lg font-bold text-slate-900">All caught up!</h3>
-          <p class="text-slate-500 text-sm">There are no pending leave requests requiring review.</p>
+          <h3 class="text-lg font-bold text-slate-900">{{ t('hr.leave.pendingEmptyTitle') }}</h3>
+          <p class="text-slate-500 text-sm">{{ t('hr.leave.pendingEmptySubtitle') }}</p>
         </div>
 
         <div
@@ -267,7 +282,7 @@ const exportToCSV = () => {
               </p>
               <div class="flex items-center gap-2 mt-1">
                 <UiBadge variant="info">{{ request.leave_type?.name }}</UiBadge>
-                <span class="text-xs font-bold text-slate-700">{{ request.days_taken }} Day(s)</span>
+                <span class="text-xs font-bold text-slate-700">{{ t('hr.leave.daysCount', { count: request.days_taken }) }}</span>
               </div>
               <p class="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
                 <CalendarIcon class="w-3.5 h-3.5 text-slate-400" />
@@ -280,7 +295,7 @@ const exportToCSV = () => {
           </div>
 
           <div class="w-full md:w-80 space-y-2.5">
-            <UiInput v-model="rejectionNotes[request.id]" placeholder="Review notes (optional)" size="sm" />
+            <UiInput v-model="rejectionNotes[request.id]" :placeholder="t('hr.leave.reviewNotesPlaceholder')" size="sm" />
             <div class="flex gap-2">
               <UiButton
                 variant="outline"
@@ -288,14 +303,14 @@ const exportToCSV = () => {
                 size="sm"
                 @click="rejectMutation.mutate({ id: request.id, notes: rejectionNotes[request.id] })"
               >
-                <XCircle class="h-4 w-4 mr-1.5" /> Reject
+                <XCircle class="h-4 w-4 mr-1.5" /> {{ t('hr.leave.reject') }}
               </UiButton>
               <UiButton
                 class="flex-1"
                 size="sm"
                 @click="approveMutation.mutate({ id: request.id, notes: rejectionNotes[request.id] })"
               >
-                <CheckCircle class="h-4 w-4 mr-1.5" /> Approve
+                <CheckCircle class="h-4 w-4 mr-1.5" /> {{ t('hr.leave.approve') }}
               </UiButton>
             </div>
           </div>
@@ -305,24 +320,18 @@ const exportToCSV = () => {
       <!-- All Requests Tab -->
       <div v-if="activeTab === 'all'" class="space-y-4">
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-3">
-          <UiInput v-model="searchQuery" placeholder="Search employee or ID..." class="w-full max-w-xs" size="sm">
+          <UiInput v-model="searchQuery" :placeholder="t('hr.leave.searchPlaceholder')" class="w-full max-w-xs" size="sm">
             <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
           </UiInput>
           <UiSelect
             v-model="selectedDepartment"
-            :options="[{ label: 'All Departments', value: '' }, ...(departments?.map((d: any) => ({ label: d.name, value: d.id })) || [])]"
+            :options="departmentOptions"
             class="w-48"
             size="sm"
           />
           <UiSelect
             v-model="selectedStatus"
-            :options="[
-              { label: 'All Statuses', value: '' },
-              { label: 'Approved', value: 'approved' },
-              { label: 'Rejected', value: 'rejected' },
-              { label: 'Pending', value: 'pending' },
-              { label: 'Cancelled', value: 'cancelled' },
-            ]"
+            :options="statusFilterOptions"
             class="w-40"
             size="sm"
           />
@@ -352,14 +361,14 @@ const exportToCSV = () => {
 
           <template #cell(status)="{ item }">
             <UiBadge :variant="item.status === 'approved' ? 'success' : item.status === 'pending' ? 'warning' : 'danger'" class="capitalize font-bold">
-              {{ item.status }}
+              {{ t('hr.leave.statuses.' + item.status) || item.status }}
             </UiBadge>
           </template>
 
           <template #cell(actions)="{ item }">
             <div class="flex justify-end gap-1.5" v-if="item.status === 'pending'">
-              <UiButton size="sm" variant="outline" @click="approveMutation.mutate({ id: item.id })">Approve</UiButton>
-              <UiButton size="sm" variant="ghost" class="text-red-500" @click="rejectMutation.mutate({ id: item.id })">Reject</UiButton>
+              <UiButton size="sm" variant="outline" @click="approveMutation.mutate({ id: item.id })">{{ t('hr.leave.approve') }}</UiButton>
+              <UiButton size="sm" variant="ghost" class="text-red-500" @click="rejectMutation.mutate({ id: item.id })">{{ t('hr.leave.reject') }}</UiButton>
             </div>
             <span v-else class="text-xs text-slate-400">—</span>
           </template>
@@ -374,13 +383,25 @@ const exportToCSV = () => {
           </h3>
           <div class="flex items-center gap-2">
             <UiButton variant="ghost" size="sm" @click="prevMonth"><ChevronLeft class="h-4 w-4" /></UiButton>
-            <UiButton variant="ghost" size="sm" @click="currentMonth = new Date()">Today</UiButton>
+            <UiButton variant="ghost" size="sm" @click="currentMonth = new Date()">{{ t('hr.leave.today') }}</UiButton>
             <UiButton variant="ghost" size="sm" @click="nextMonth"><ChevronRight class="h-4 w-4" /></UiButton>
           </div>
         </div>
 
         <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
-          <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="p-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div
+            v-for="day in [
+              t('hr.leave.weekdays.sun'),
+              t('hr.leave.weekdays.mon'),
+              t('hr.leave.weekdays.tue'),
+              t('hr.leave.weekdays.wed'),
+              t('hr.leave.weekdays.thu'),
+              t('hr.leave.weekdays.fri'),
+              t('hr.leave.weekdays.sat'),
+            ]"
+            :key="day"
+            class="p-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider"
+          >
             {{ day }}
           </div>
         </div>
@@ -411,25 +432,25 @@ const exportToCSV = () => {
     </div>
 
     <!-- New Leave Request Modal -->
-    <UiModal v-model="isNewLeaveModalOpen" title="Submit Leave Request" size="md">
+    <UiModal v-model="isNewLeaveModalOpen" :title="t('hr.leave.modal.title')" size="md">
       <div class="space-y-4">
         <UiSelect
           v-model="newLeaveForm.employee_id"
-          label="Employee"
+          :label="t('hr.leave.modal.employee')"
           :options="employeeOptions"
-          placeholder="Select employee"
+          :placeholder="t('hr.leave.modal.selectEmployee')"
         />
 
         <UiSelect
           v-model="newLeaveForm.leave_type_id"
-          label="Leave Type"
+          :label="t('hr.leave.modal.leaveType')"
           :options="leaveTypeOptions"
-          placeholder="Select leave type"
+          :placeholder="t('hr.leave.modal.selectLeaveType')"
         />
 
         <div class="grid grid-cols-2 gap-4">
-          <UiInput v-model="newLeaveForm.start_date" type="date" label="Start Date" />
-          <UiInput v-model="newLeaveForm.end_date" type="date" label="End Date" />
+          <UiInput v-model="newLeaveForm.start_date" type="date" :label="t('hr.leave.modal.startDate')" />
+          <UiInput v-model="newLeaveForm.end_date" type="date" :label="t('hr.leave.modal.endDate')" />
         </div>
 
         <div class="flex items-center gap-2">
@@ -439,19 +460,19 @@ const exportToCSV = () => {
             v-model="newLeaveForm.half_day"
             class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
-          <label for="half_day" class="text-xs font-semibold text-slate-700">Half day request (0.5 day)</label>
+          <label for="half_day" class="text-xs font-semibold text-slate-700">{{ t('hr.leave.modal.halfDay') }}</label>
         </div>
 
-        <UiInput v-model="newLeaveForm.reason" label="Reason" placeholder="Purpose or details of time off" />
+        <UiInput v-model="newLeaveForm.reason" :label="t('hr.leave.modal.reason')" :placeholder="t('hr.leave.modal.reasonPlaceholder')" />
 
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" @click="isNewLeaveModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isNewLeaveModalOpen = false">{{ t('hr.leave.modal.cancel') }}</UiButton>
           <UiButton
             :loading="submitLeaveMutation.isPending.value"
             :disabled="!newLeaveForm.employee_id || !newLeaveForm.leave_type_id"
             @click="submitLeaveMutation.mutate(newLeaveForm)"
           >
-            Submit Request
+            {{ t('hr.leave.modal.submit') }}
           </UiButton>
         </div>
       </div>

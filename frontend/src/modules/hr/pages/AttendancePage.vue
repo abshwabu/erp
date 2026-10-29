@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { hrApi } from '@/api/hr'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -22,6 +23,7 @@ import {
   LogOut,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const viewMode = ref<'by-date' | 'by-employee'>('by-date')
 const dateRange = ref({
@@ -62,16 +64,23 @@ const { data: attendanceSummary } = useQuery({
 })
 
 const departmentOptions = computed(() => [
-  { label: 'All Departments', value: '' },
+  { label: t('hr.attendance.allDepartments'), value: '' },
   ...(departments.value || []).map((d: any) => ({ label: d.name, value: d.id })),
 ])
 
 const employeeOptions = computed(() => [
-  { label: 'Select Employee', value: '' },
+  { label: t('hr.attendance.modal.selectEmployee'), value: '' },
   ...(employees.value || []).map((e: any) => ({
     label: `${e.first_name} ${e.last_name} (${e.employee_number || 'No ID'})`,
     value: e.id,
   })),
+])
+
+const statusFilterOptions = computed(() => [
+  { label: t('hr.attendance.allStatuses'), value: '' },
+  { label: t('hr.attendance.statuses.present'), value: 'present' },
+  { label: t('hr.attendance.statuses.late'), value: 'late' },
+  { label: t('hr.attendance.statuses.absent'), value: 'absent' },
 ])
 
 // Mutations
@@ -109,13 +118,13 @@ const filteredAttendance = computed(() => {
 })
 
 const columns = computed(() => [
-  { key: 'employee', label: 'Employee' },
-  { key: 'date', label: 'Date' },
-  { key: 'clock_in', label: 'Clock In' },
-  { key: 'clock_out', label: 'Clock Out' },
-  { key: 'status', label: 'Status' },
-  { key: 'late_minutes', label: 'Late (Mins)' },
-  { key: 'total_hours', label: 'Total Hours' },
+  { key: 'employee', label: t('hr.attendance.columns.employee') },
+  { key: 'date', label: t('hr.attendance.columns.date') },
+  { key: 'clock_in', label: t('hr.attendance.columns.clockIn') },
+  { key: 'clock_out', label: t('hr.attendance.columns.clockOut') },
+  { key: 'status', label: t('hr.attendance.columns.status') },
+  { key: 'late_minutes', label: t('hr.attendance.columns.lateMinutes') },
+  { key: 'total_hours', label: t('hr.attendance.columns.totalHours') },
 ])
 
 const exportToCSV = () => {
@@ -150,15 +159,15 @@ const exportToCSV = () => {
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Attendance & Shifts</h1>
-        <p class="text-slate-500">Track and manage employee work hours, daily clock-ins, and late minutes.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('hr.attendance.title') }}</h1>
+        <p class="text-slate-500">{{ t('hr.attendance.subtitle') }}</p>
       </div>
       <div class="flex flex-wrap gap-2">
         <UiButton variant="outline" @click="exportToCSV">
-          <Download class="h-4 w-4 mr-2" /> Export CSV
+          <Download class="h-4 w-4 mr-2" /> {{ t('hr.attendance.exportCsv') }}
         </UiButton>
         <UiButton @click="isClockModalOpen = true">
-          <Clock class="h-4 w-4 mr-2" /> Record Clock In/Out
+          <Clock class="h-4 w-4 mr-2" /> {{ t('hr.attendance.recordClock') }}
         </UiButton>
       </div>
     </div>
@@ -167,7 +176,7 @@ const exportToCSV = () => {
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Workforce</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('hr.attendance.kpis.totalWorkforce') }}</p>
           <div class="p-2 rounded-xl bg-blue-50 text-blue-600">
             <Users class="w-4 h-4" />
           </div>
@@ -175,12 +184,12 @@ const exportToCSV = () => {
         <p class="mt-2 text-2xl font-black text-slate-900 font-mono">
           {{ attendanceSummary?.total_employees ?? employees?.length ?? 0 }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Active staff members</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('hr.attendance.kpis.totalWorkforceDesc') }}</p>
       </div>
 
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Present Today</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('hr.attendance.kpis.presentToday') }}</p>
           <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600">
             <CheckCircle2 class="w-4 h-4" />
           </div>
@@ -188,12 +197,12 @@ const exportToCSV = () => {
         <p class="mt-2 text-2xl font-black text-emerald-600 font-mono">
           {{ attendanceSummary?.present_today ?? 0 }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Clocked in today</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('hr.attendance.kpis.presentTodayDesc') }}</p>
       </div>
 
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">On Leave Today</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('hr.attendance.kpis.onLeaveToday') }}</p>
           <div class="p-2 rounded-xl bg-amber-50 text-amber-600">
             <Calendar class="w-4 h-4" />
           </div>
@@ -201,12 +210,12 @@ const exportToCSV = () => {
         <p class="mt-2 text-2xl font-black text-amber-600 font-mono">
           {{ attendanceSummary?.on_leave_today ?? 0 }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Approved time-off</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('hr.attendance.kpis.onLeaveTodayDesc') }}</p>
       </div>
 
       <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Absent / Not In</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ t('hr.attendance.kpis.absentToday') }}</p>
           <div class="p-2 rounded-xl bg-red-50 text-red-600">
             <AlertCircle class="w-4 h-4" />
           </div>
@@ -214,7 +223,7 @@ const exportToCSV = () => {
         <p class="mt-2 text-2xl font-black text-red-600 font-mono">
           {{ attendanceSummary?.absent_today ?? 0 }}
         </p>
-        <p class="text-xs text-slate-400 mt-1">Unrecorded presence</p>
+        <p class="text-xs text-slate-400 mt-1">{{ t('hr.attendance.kpis.absentTodayDesc') }}</p>
       </div>
     </div>
 
@@ -222,14 +231,14 @@ const exportToCSV = () => {
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-slate-500">From:</span>
+          <span class="text-xs font-semibold text-slate-500">{{ t('hr.attendance.from') }}</span>
           <UiInput v-model="dateRange.start" type="date" size="sm" class="w-36" />
-          <span class="text-xs font-semibold text-slate-500">To:</span>
+          <span class="text-xs font-semibold text-slate-500">{{ t('hr.attendance.to') }}</span>
           <UiInput v-model="dateRange.end" type="date" size="sm" class="w-36" />
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <UiInput v-model="searchQuery" placeholder="Search employee or ID..." size="sm" class="w-56">
+          <UiInput v-model="searchQuery" :placeholder="t('hr.attendance.searchPlaceholder')" size="sm" class="w-56">
             <template #prefix><Search class="h-4 w-4 text-slate-400" /></template>
           </UiInput>
           <UiSelect
@@ -241,12 +250,7 @@ const exportToCSV = () => {
           <UiSelect
             v-model="statusFilter"
             size="sm"
-            :options="[
-              { label: 'All Statuses', value: '' },
-              { label: 'Present', value: 'present' },
-              { label: 'Late', value: 'late' },
-              { label: 'Absent', value: 'absent' },
-            ]"
+            :options="statusFilterOptions"
             class="w-36"
           />
         </div>
@@ -262,7 +266,7 @@ const exportToCSV = () => {
           </div>
           <div>
             <span class="font-bold text-slate-900 text-sm">{{ item.employee?.first_name }} {{ item.employee?.last_name }}</span>
-            <p class="text-[11px] text-slate-400 font-mono">{{ item.employee?.employee_number }} • {{ item.employee?.department?.name || 'No Dept' }}</p>
+            <p class="text-[11px] text-slate-400 font-mono">{{ item.employee?.employee_number }} • {{ item.employee?.department?.name || t('hr.employees.unassigned') }}</p>
           </div>
         </div>
       </template>
@@ -285,7 +289,7 @@ const exportToCSV = () => {
 
       <template #cell(status)="{ item }">
         <UiBadge :variant="item.status === 'present' ? 'success' : item.status === 'late' ? 'warning' : 'danger'" class="capitalize font-bold">
-          {{ item.status }}
+          {{ t('hr.attendance.statuses.' + item.status) || item.status }}
         </UiBadge>
       </template>
 
@@ -301,17 +305,17 @@ const exportToCSV = () => {
     </UiTable>
 
     <!-- Clock In/Out Modal -->
-    <UiModal v-model="isClockModalOpen" title="Record Attendance Entry" size="md">
+    <UiModal v-model="isClockModalOpen" :title="t('hr.attendance.modal.title')" size="md">
       <div class="space-y-4">
         <UiSelect
           v-model="clockForm.employee_id"
-          label="Employee"
+          :label="t('hr.attendance.modal.employee')"
           :options="employeeOptions"
-          placeholder="Select employee"
+          :placeholder="t('hr.attendance.modal.selectEmployee')"
         />
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Action</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('hr.attendance.modal.action') }}</label>
           <div class="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -323,7 +327,7 @@ const exportToCSV = () => {
                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
               ]"
             >
-              <LogIn class="w-4 h-4" /> Clock In
+              <LogIn class="w-4 h-4" /> {{ t('hr.attendance.modal.clockIn') }}
             </button>
             <button
               type="button"
@@ -335,15 +339,15 @@ const exportToCSV = () => {
                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
               ]"
             >
-              <LogOut class="w-4 h-4" /> Clock Out
+              <LogOut class="w-4 h-4" /> {{ t('hr.attendance.modal.clockOut') }}
             </button>
           </div>
         </div>
 
-        <UiInput v-model="clockForm.notes" label="Notes" placeholder="Optional comments or location notes" />
+        <UiInput v-model="clockForm.notes" :label="t('hr.attendance.modal.notes')" :placeholder="t('hr.attendance.modal.notesPlaceholder')" />
 
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <UiButton variant="outline" @click="isClockModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" @click="isClockModalOpen = false">{{ t('hr.attendance.modal.cancel') }}</UiButton>
           <UiButton
             :loading="clockMutation.isPending.value"
             :disabled="!clockForm.employee_id"
@@ -354,7 +358,7 @@ const exportToCSV = () => {
               action: clockForm.action_type,
             })"
           >
-            Submit Entry
+            {{ t('hr.attendance.modal.submit') }}
           </UiButton>
         </div>
       </div>

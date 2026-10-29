@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { resolveImageUrl } from '@/utils/format'
 
 const props = defineProps({
@@ -7,6 +8,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['click'])
+const { t } = useI18n()
 </script>
 
 <template>
@@ -20,7 +22,7 @@ const emit = defineEmits(['click'])
         <span v-else>{{ node.first_name[0] }}{{ node.last_name[0] }}</span>
       </div>
       <div class="font-bold text-slate-900 text-sm truncate">{{ node.first_name }} {{ node.last_name }}</div>
-      <div class="text-xs text-slate-500 truncate">{{ node.position?.title || 'No Title' }}</div>
+      <div class="text-xs text-slate-500 truncate">{{ node.position?.title || t('hr.orgChart.noTitle') }}</div>
       <div class="mt-2 h-1 w-12 bg-primary-500 mx-auto rounded-full"></div>
     </div>
 

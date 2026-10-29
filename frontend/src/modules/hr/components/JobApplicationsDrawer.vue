@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { recruitmentApi } from '@/api/recruitment'
 import type { JobPosting, JobApplication, ApplicationStatus } from '@/types/recruitment'
@@ -34,6 +35,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:modelValue'])
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -65,6 +67,16 @@ const filteredApplications = computed(() => {
   return list
 })
 
+const filterButtons = computed(() => [
+  { key: 'all', label: t('hr.jobApplications.filters.all', { count: applications.value?.length || 0 }) },
+  { key: 'new', label: t('hr.jobApplications.filters.new') },
+  { key: 'shortlisted', label: t('hr.jobApplications.filters.shortlisted') },
+  { key: 'interviewing', label: t('hr.jobApplications.filters.interviewing') },
+  { key: 'offered', label: t('hr.jobApplications.filters.offered') },
+  { key: 'hired', label: t('hr.jobApplications.filters.hired') },
+  { key: 'rejected', label: t('hr.jobApplications.filters.rejected') },
+])
+
 const updateMutation = useMutation({
   mutationFn: ({ appId, payload }: { appId: string; payload: any }) =>
     recruitmentApi.updateApplication(props.job!.id, appId, payload),
@@ -74,10 +86,10 @@ const updateMutation = useMutation({
     if (selectedApplication.value?.id === res.data.id) {
       selectedApplication.value = res.data
     }
-    toast.success('Candidate status updated')
+    toast.success(t('hr.jobApplications.statusUpdated'))
   },
   onError: () => {
-    toast.error('Failed to update candidate status')
+    toast.error(t('hr.jobApplications.statusError'))
   },
 })
 
@@ -87,7 +99,7 @@ const deleteMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['hr', 'jobs'] })
     refetch()
     isDetailModalOpen.value = false
-    toast.success('Application deleted')
+    toast.success(t('hr.jobApplications.deleted'))
   },
 })
 
@@ -111,17 +123,17 @@ const viewDetails = (app: JobApplication) => {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'new':
-      return { label: 'New Application', variant: 'info' as const }
+      return { label: t('hr.jobApplications.badges.new'), variant: 'info' as const }
     case 'shortlisted':
-      return { label: 'Shortlisted', variant: 'purple' as const }
+      return { label: t('hr.jobApplications.badges.shortlisted'), variant: 'purple' as const }
     case 'interviewing':
-      return { label: 'Interviewing', variant: 'warning' as const }
+      return { label: t('hr.jobApplications.badges.interviewing'), variant: 'warning' as const }
     case 'offered':
-      return { label: 'Job Offered', variant: 'info' as const }
+      return { label: t('hr.jobApplications.badges.offered'), variant: 'info' as const }
     case 'hired':
-      return { label: 'Hired 🎉', variant: 'success' as const }
+      return { label: t('hr.jobApplications.badges.hired'), variant: 'success' as const }
     case 'rejected':
-      return { label: 'Rejected', variant: 'danger' as const }
+      return { label: t('hr.jobApplications.badges.rejected'), variant: 'danger' as const }
     default:
       return { label: status, variant: 'default' as const }
   }
@@ -132,7 +144,7 @@ const getStatusBadge = (status: string) => {
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    :title="`Applications: ${job?.title || 'Job Opening'}`"
+    :title="t('hr.jobApplications.title', { title: job?.title || '' })"
     size="xl"
   >
     <div class="space-y-5">
@@ -140,20 +152,20 @@ const getStatusBadge = (status: string) => {
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
           <button
-            v-for="st in ['all', 'new', 'shortlisted', 'interviewing', 'offered', 'hired', 'rejected']"
-            :key="st"
+            v-for="st in filterButtons"
+            :key="st.key"
             type="button"
-            @click="selectedStatus = st"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
-            :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
+            @click="selectedStatus = st.key"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            :class="selectedStatus === st.key ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            {{ st === 'all' ? `All (${applications?.length || 0})` : st }}
+            {{ st.label }}
           </button>
         </div>
 
         <UiInput
           v-model="searchQuery"
-          placeholder="Search applicants..."
+          :placeholder="t('hr.jobApplications.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-48"
         >
@@ -196,7 +208,7 @@ const getStatusBadge = (status: string) => {
                   <Phone class="w-3 h-3 text-slate-400" />
                   {{ app.applicant_phone }}
                 </span>
-                <span class="text-slate-400">• Applied {{ new Date(app.submitted_at).toLocaleDateString() }}</span>
+                <span class="text-slate-400">{{ t('hr.jobApplications.appliedAt', { date: new Date(app.submitted_at).toLocaleDateString() }) }}</span>
               </div>
 
               <!-- Rating Stars -->
@@ -207,7 +219,7 @@ const getStatusBadge = (status: string) => {
                   type="button"
                   @click="setRating(app, star)"
                   class="p-0.5 transition-transform hover:scale-110 cursor-pointer"
-                  :title="`Rate ${star} Stars`"
+                  :title="t('hr.jobApplications.rateTooltip', { star })"
                 >
                   <Star
                     class="w-3.5 h-3.5"
@@ -226,13 +238,13 @@ const getStatusBadge = (status: string) => {
               target="_blank"
               download
               class="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 inline-flex items-center gap-1 transition-colors"
-              title="Download Resume / CV"
+              :title="t('hr.jobApplications.resumeTooltip')"
             >
-              <Download class="w-3.5 h-3.5 text-primary-600" /> Resume
+              <Download class="w-3.5 h-3.5 text-primary-600" /> {{ t('hr.jobApplications.resume') }}
             </a>
 
             <UiButton size="sm" variant="outline" @click="viewDetails(app)">
-              View Responses
+              {{ t('hr.jobApplications.viewResponses') }}
             </UiButton>
 
             <!-- Quick Status Change Dropdown -->
@@ -241,13 +253,13 @@ const getStatusBadge = (status: string) => {
               @change="setStatus(app, ($event.target as HTMLSelectElement).value as any)"
               class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
             >
-              <option value="new">New</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="shortlisted">Shortlisted</option>
-              <option value="interviewing">Interviewing</option>
-              <option value="offered">Offered</option>
-              <option value="hired">Hired</option>
-              <option value="rejected">Rejected</option>
+              <option value="new">{{ t('hr.jobApplications.filters.new') }}</option>
+              <option value="reviewed">{{ t('hr.jobApplications.filters.shortlisted') }}</option>
+              <option value="shortlisted">{{ t('hr.jobApplications.filters.shortlisted') }}</option>
+              <option value="interviewing">{{ t('hr.jobApplications.filters.interviewing') }}</option>
+              <option value="offered">{{ t('hr.jobApplications.filters.offered') }}</option>
+              <option value="hired">{{ t('hr.jobApplications.filters.hired') }}</option>
+              <option value="rejected">{{ t('hr.jobApplications.filters.rejected') }}</option>
             </select>
           </div>
         </div>
@@ -256,19 +268,19 @@ const getStatusBadge = (status: string) => {
       <!-- Empty State -->
       <div v-else class="p-12 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 space-y-2">
         <Users class="w-10 h-10 mx-auto text-slate-300" />
-        <h4 class="font-bold text-slate-700 text-sm">No applications found</h4>
+        <h4 class="font-bold text-slate-700 text-sm">{{ t('hr.jobApplications.emptyTitle') }}</h4>
         <p class="text-xs text-slate-400 max-w-sm mx-auto">
-          Share the public job link to start receiving candidate submissions.
+          {{ t('hr.jobApplications.emptySubtitle') }}
         </p>
       </div>
 
       <div class="flex justify-end pt-4 border-t border-slate-100">
-        <UiButton variant="outline" @click="emit('update:modelValue', false)">Close</UiButton>
+        <UiButton variant="outline" @click="emit('update:modelValue', false)">{{ t('hr.jobApplications.close') }}</UiButton>
       </div>
     </div>
 
     <!-- Candidate Detailed Application Modal -->
-    <UiModal v-model="isDetailModalOpen" title="Candidate Profile & Questionnaire Answers" size="lg">
+    <UiModal v-model="isDetailModalOpen" :title="t('hr.jobApplications.detail.title')" size="lg">
       <div v-if="selectedApplication" class="space-y-5">
         <!-- Header Info -->
         <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
@@ -279,7 +291,7 @@ const getStatusBadge = (status: string) => {
             </div>
             <div>
               <h3 class="font-black text-slate-900 text-base">{{ selectedApplication.applicant_name }}</h3>
-              <p class="text-xs text-slate-500 font-mono">{{ selectedApplication.applicant_email }} • {{ selectedApplication.applicant_phone || 'No phone' }}</p>
+              <p class="text-xs text-slate-500 font-mono">{{ selectedApplication.applicant_email }} • {{ selectedApplication.applicant_phone || t('hr.jobApplications.detail.noPhone') }}</p>
             </div>
           </div>
 
@@ -290,14 +302,14 @@ const getStatusBadge = (status: string) => {
 
         <!-- Cover Letter -->
         <div v-if="selectedApplication.cover_letter" class="p-4 bg-white rounded-xl border border-slate-200 space-y-1.5">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Cover Letter</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('hr.jobApplications.detail.coverLetter') }}</span>
           <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{{ selectedApplication.cover_letter }}</p>
         </div>
 
         <!-- Custom Questionnaire Responses -->
         <div class="space-y-3">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2">
-            Questionnaire & Form Submissions
+            {{ t('hr.jobApplications.detail.questionnaireHeading') }}
           </h4>
 
           <div
@@ -319,22 +331,22 @@ const getStatusBadge = (status: string) => {
                 target="_blank"
                 class="text-xs font-bold text-primary-600 hover:underline inline-flex items-center gap-1"
               >
-                View Attachment <ExternalLink class="w-3 h-3" />
+                {{ t('hr.jobApplications.detail.viewAttachment') }} <ExternalLink class="w-3 h-3" />
               </a>
               <p v-else class="text-xs font-semibold text-slate-900">{{ val || '—' }}</p>
             </div>
           </div>
-          <p v-else class="text-xs text-slate-400 italic">No custom questionnaire responses recorded.</p>
+          <p v-else class="text-xs text-slate-400 italic">{{ t('hr.jobApplications.detail.noCustomResponses') }}</p>
         </div>
 
         <!-- Recruiter Internal Notes -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Internal Recruiter Notes</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('hr.jobApplications.detail.notesLabel') }}</label>
           <textarea
             :value="selectedApplication.notes || ''"
             @change="saveNotes(selectedApplication, ($event.target as HTMLTextAreaElement).value)"
             rows="3"
-            placeholder="Add confidential interview feedback, technical ratings, or salary notes..."
+            :placeholder="t('hr.jobApplications.detail.notesPlaceholder')"
             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
@@ -346,9 +358,9 @@ const getStatusBadge = (status: string) => {
             @click="deleteMutation.mutate(selectedApplication.id)"
             class="text-xs text-red-500 hover:text-red-700 font-bold inline-flex items-center gap-1 hover:underline cursor-pointer"
           >
-            <Trash2 class="w-3.5 h-3.5" /> Delete Application
+            <Trash2 class="w-3.5 h-3.5" /> {{ t('hr.jobApplications.detail.deleteBtn') }}
           </button>
-          <UiButton size="sm" @click="isDetailModalOpen = false">Close</UiButton>
+          <UiButton size="sm" @click="isDetailModalOpen = false">{{ t('hr.jobApplications.close') }}</UiButton>
         </div>
       </div>
     </UiModal>
