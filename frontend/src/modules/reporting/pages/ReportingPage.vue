@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { accountingApi } from '@/api/accounting'
 import { hrApi } from '@/api/hr'
 import apiClient from '@/api/client'
 import { BarChart2, Package, Calculator, Users } from '@lucide/vue'
 
+const { t } = useI18n()
 const loading = ref(true)
 const stockValuation = ref<number | null>(null)
 const trialBalanceRows = ref(0)
@@ -58,32 +60,32 @@ const formatMoney = (cents: number | null) => {
 
 const cards = computed(() => [
   {
-    title: 'Stock Valuation',
+    title: t('reporting.cards.stockValuation'),
     value: formatMoney(stockValuation.value),
     icon: Package,
     to: '/inventory/stock',
-    hint: 'Inventory on-hand value',
+    hint: t('reporting.cards.stockHint'),
   },
   {
-    title: 'Trial Balance Lines',
+    title: t('reporting.cards.trialBalanceLines'),
     value: String(trialBalanceRows.value || '—'),
     icon: Calculator,
     to: '/accounting/trial-balance',
-    hint: 'Accounting period summary',
+    hint: t('reporting.cards.trialBalanceHint'),
   },
   {
-    title: 'Chart of Accounts',
+    title: t('reporting.cards.chartOfAccounts'),
     value: String(accountCount.value || '—'),
     icon: BarChart2,
     to: '/accounting/chart-of-accounts',
-    hint: 'Active GL accounts',
+    hint: t('reporting.cards.chartOfAccountsHint'),
   },
   {
-    title: 'Employees',
+    title: t('reporting.cards.employees'),
     value: String(employeeCount.value || '—'),
     icon: Users,
     to: '/hr/employees',
-    hint: 'Workforce headcount',
+    hint: t('reporting.cards.employeesHint'),
   },
 ])
 </script>
@@ -91,11 +93,11 @@ const cards = computed(() => [
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900">Reporting</h1>
-      <p class="text-slate-500">Key metrics from Inventory, Accounting, and HR.</p>
+      <h1 class="text-2xl font-bold text-slate-900">{{ t('reporting.title') }}</h1>
+      <p class="text-slate-500">{{ t('reporting.subtitle') }}</p>
     </div>
 
-    <div v-if="loading" class="text-slate-500">Loading metrics...</div>
+    <div v-if="loading" class="text-slate-500">{{ t('reporting.loading') }}</div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <RouterLink
@@ -118,13 +120,13 @@ const cards = computed(() => [
     </div>
 
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-      <h2 class="font-semibold text-slate-900 mb-2">Quick links</h2>
+      <h2 class="font-semibold text-slate-900 mb-2">{{ t('reporting.quickLinks.title') }}</h2>
       <div class="flex flex-wrap gap-3 text-sm">
-        <RouterLink class="text-primary-600 hover:underline" to="/accounting/trial-balance">Trial Balance</RouterLink>
-        <RouterLink class="text-primary-600 hover:underline" to="/accounting/profit-loss">Profit &amp; Loss</RouterLink>
-        <RouterLink class="text-primary-600 hover:underline" to="/accounting/balance-sheet">Balance Sheet</RouterLink>
-        <RouterLink class="text-primary-600 hover:underline" to="/inventory/stock">Stock Levels</RouterLink>
-        <RouterLink class="text-primary-600 hover:underline" to="/inventory/low-stock">Low Stock</RouterLink>
+        <RouterLink class="text-primary-600 hover:underline" to="/accounting/trial-balance">{{ t('reporting.quickLinks.trialBalance') }}</RouterLink>
+        <RouterLink class="text-primary-600 hover:underline" to="/accounting/profit-loss">{{ t('reporting.quickLinks.profitLoss') }}</RouterLink>
+        <RouterLink class="text-primary-600 hover:underline" to="/accounting/balance-sheet">{{ t('reporting.quickLinks.balanceSheet') }}</RouterLink>
+        <RouterLink class="text-primary-600 hover:underline" to="/inventory/stock">{{ t('reporting.quickLinks.stockLevels') }}</RouterLink>
+        <RouterLink class="text-primary-600 hover:underline" to="/inventory/low-stock">{{ t('reporting.quickLinks.lowStock') }}</RouterLink>
       </div>
     </div>
   </div>

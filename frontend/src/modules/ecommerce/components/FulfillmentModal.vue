@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import {
@@ -43,6 +44,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'fulfilled'])
 
 const toast = useToast()
+const { t } = useI18n()
 const submitting = ref(false)
 
 const form = reactive({
@@ -54,12 +56,12 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 
-const statusOptions = [
-  { value: 'unfulfilled', label: 'Unfulfilled', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
-  { value: 'shipped', label: 'Shipped', icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-  { value: 'fulfilled', label: 'Fulfilled / Delivered', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-  { value: 'cancelled', label: 'Cancelled', icon: XCircle, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-]
+const statusOptions = computed(() => [
+  { value: 'unfulfilled', label: t('ecommerce.fulfillmentModal.statusUnfulfilled'), icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
+  { value: 'shipped', label: t('ecommerce.fulfillmentModal.statusShipped'), icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+  { value: 'fulfilled', label: t('ecommerce.fulfillmentModal.statusFulfilled'), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+  { value: 'cancelled', label: t('ecommerce.fulfillmentModal.statusCancelled'), icon: XCircle, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+])
 
 const carrierOptions = [
   'DHL',
@@ -111,8 +113,8 @@ async function handleSubmit() {
       notes: form.notes || null,
     })
 
-    const statusLabel = statusOptions.find((s) => s.value === form.fulfillment_status)?.label || form.fulfillment_status
-    toast.success(`Order ${props.order.order_number} updated to "${statusLabel}"`)
+    const statusLabel = statusOptions.value.find((s) => s.value === form.fulfillment_status)?.label || form.fulfillment_status
+    toast.success(t('ecommerce.messages.orderFulfilledSuccess'))
     emit('fulfilled')
     emit('update:modelValue', false)
   } catch (e: any) {
@@ -121,21 +123,21 @@ async function handleSubmit() {
         errors[key] = Array.isArray(msgs) ? msgs[0] : msgs
       })
     } else {
-      toast.error(e?.response?.data?.message || 'Failed to update fulfillment status')
+      toast.error(e?.response?.data?.message || t('ecommerce.messages.failedFulfill'))
     }
   } finally {
     submitting.value = false
   }
 }
 
-const selectedStatusOption = computed(() => statusOptions.find((s) => s.value === form.fulfillment_status))
+const selectedStatusOption = computed(() => statusOptions.value.find((s) => s.value === form.fulfillment_status))
 </script>
 
 <template>
   <UiModal
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Update Fulfillment"
+    :title="t('ecommerce.fulfillmentModal.title')"
     size="lg"
   >
     <div v-if="order" class="space-y-5">
@@ -152,14 +154,14 @@ const selectedStatusOption = computed(() => statusOptions.find((s) => s.value ==
         </div>
         <div class="flex items-center justify-between text-xs text-slate-500">
           <span>{{ order.customer_name }} · {{ order.customer_email }}</span>
-          <span class="font-mono">{{ order.channel?.name ?? 'Storefront' }}</span>
+          <span class="font-mono">{{ order.channel?.name ?? t('ecommerce.ordersTab.storefrontDefault') }}</span>
         </div>
       </div>
 
       <!-- Fulfillment Status Cards -->
       <div class="space-y-1.5">
         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-          Fulfillment Status <span class="text-red-500">*</span>
+          {{ t('ecommerce.fulfillmentModal.updateFulfillmentStatus') }} <span class="text-red-500">*</span>
         </label>
         <div class="grid grid-cols-2 gap-2.5">
           <button
@@ -196,18 +198,18 @@ const selectedStatusOption = computed(() => statusOptions.find((s) => s.value ==
       >
         <div class="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
           <Truck class="w-4 h-4 text-blue-500" />
-          <span>Shipping Details</span>
+          <span>{{ t('ecommerce.fulfillmentModal.shippingCarrier') }}</span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- Shipping Carrier -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Carrier</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('ecommerce.fulfillmentModal.shippingCarrier') }}</label>
             <select
               v-model="form.shipping_carrier"
               class="block w-full appearance-none rounded-xl border border-slate-200 bg-white text-sm py-2.5 pl-3.5 pr-10 font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
             >
-              <option value="">Select carrier…</option>
+              <option value="">{{ t('ecommerce.fulfillmentModal.selectCarrier') }}</option>
               <option v-for="carrier in carrierOptions" :key="carrier" :value="carrier">
                 {{ carrier }}
               </option>
@@ -217,20 +219,20 @@ const selectedStatusOption = computed(() => statusOptions.find((s) => s.value ==
           <!-- Tracking Number -->
           <UiInput
             v-model="form.tracking_number"
-            label="Tracking Number"
-            placeholder="e.g. 1Z999AA10123456784"
+            :label="t('ecommerce.fulfillmentModal.trackingNumber')"
+            :placeholder="t('ecommerce.fulfillmentModal.trackingPlaceholder')"
           />
         </div>
       </div>
 
       <!-- Notes -->
       <div class="space-y-1.5">
-        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Notes</label>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('ecommerce.fulfillmentModal.fulfillmentNotes') }}</label>
         <textarea
           v-model="form.notes"
           rows="2"
           class="block w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm p-3 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs font-medium text-slate-900 placeholder:text-slate-400"
-          placeholder="Optional internal notes about this fulfillment…"
+          :placeholder="t('ecommerce.fulfillmentModal.notesPlaceholder')"
         ></textarea>
       </div>
 
@@ -238,21 +240,21 @@ const selectedStatusOption = computed(() => statusOptions.find((s) => s.value ==
       <div v-if="selectedStatusOption" class="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
         <component :is="selectedStatusOption.icon" :class="['w-4 h-4', selectedStatusOption.color]" />
         <span class="text-xs text-slate-600">
-          Order <span class="font-bold text-slate-900">{{ order.order_number }}</span> will be marked as
-          <span class="font-bold" :class="selectedStatusOption.color">{{ selectedStatusOption.label }}</span>
+          Order <span class="font-bold text-slate-900">{{ order.order_number }}</span>:
+          <span class="font-bold ml-1" :class="selectedStatusOption.color">{{ selectedStatusOption.label }}</span>
         </span>
       </div>
     </div>
 
     <template #footer>
       <div class="flex items-center justify-end gap-2.5">
-        <UiButton variant="ghost" @click="emit('update:modelValue', false)">Cancel</UiButton>
+        <UiButton variant="ghost" @click="emit('update:modelValue', false)">{{ t('ecommerce.fulfillmentModal.cancel') }}</UiButton>
         <UiButton
           :loading="submitting"
           @click="handleSubmit"
         >
           <Truck class="w-4 h-4 mr-1.5" />
-          Update Fulfillment
+          {{ t('ecommerce.fulfillmentModal.save') }}
         </UiButton>
       </div>
     </template>

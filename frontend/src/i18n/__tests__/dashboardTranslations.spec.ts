@@ -35,11 +35,23 @@ import enAssets from '../locales/en/assets'
 import amAssets from '../locales/am/assets'
 import enSettings from '../locales/en/settings'
 import amSettings from '../locales/am/settings'
+import enRoles from '../locales/en/roles'
+import amRoles from '../locales/am/roles'
+import enNotifications from '../locales/en/notifications'
+import amNotifications from '../locales/am/notifications'
+import enIntegrations from '../locales/en/integrations'
+import amIntegrations from '../locales/am/integrations'
+import enReporting from '../locales/en/reporting'
+import amReporting from '../locales/am/reporting'
+import enSuperadmin from '../locales/en/superadmin'
+import amSuperadmin from '../locales/am/superadmin'
+import enEcommerce from '../locales/en/ecommerce'
+import amEcommerce from '../locales/am/ecommerce'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, support, finance, accounting, assets, and settings in index modules for both en and am', () => {
+  it('registers all modules in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -76,6 +88,85 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.assets).toBeDefined()
     expect(en.settings).toBeDefined()
     expect(am.settings).toBeDefined()
+    expect(en.roles).toBeDefined()
+    expect(am.roles).toBeDefined()
+    expect(en.notifications).toBeDefined()
+    expect(am.notifications).toBeDefined()
+    expect(en.integrations).toBeDefined()
+    expect(am.integrations).toBeDefined()
+    expect(en.reporting).toBeDefined()
+    expect(am.reporting).toBeDefined()
+    expect(en.superadmin).toBeDefined()
+    expect(am.superadmin).toBeDefined()
+    expect(en.ecommerce).toBeDefined()
+    expect(am.ecommerce).toBeDefined()
+  })
+
+  it('has identical keys for roles in en and am', () => {
+    expect(Object.keys(enRoles).sort()).toEqual(Object.keys(amRoles).sort())
+    expect(Object.keys(enRoles.tabs).sort()).toEqual(Object.keys(amRoles.tabs).sort())
+    expect(Object.keys(enRoles.stats).sort()).toEqual(Object.keys(amRoles.stats).sort())
+    expect(Object.keys(enRoles.filters).sort()).toEqual(Object.keys(amRoles.filters).sort())
+    expect(Object.keys(enRoles.table).sort()).toEqual(Object.keys(amRoles.table).sort())
+    expect(Object.keys(enRoles.rolesGrid).sort()).toEqual(Object.keys(amRoles.rolesGrid).sort())
+    expect(Object.keys(enRoles.userModal).sort()).toEqual(Object.keys(amRoles.userModal).sort())
+    expect(Object.keys(enRoles.roleModal).sort()).toEqual(Object.keys(amRoles.roleModal).sort())
+    expect(Object.keys(enRoles.deleteUserModal).sort()).toEqual(Object.keys(amRoles.deleteUserModal).sort())
+    expect(Object.keys(enRoles.deleteRoleModal).sort()).toEqual(Object.keys(amRoles.deleteRoleModal).sort())
+    expect(Object.keys(enRoles.messages).sort()).toEqual(Object.keys(amRoles.messages).sort())
+  })
+
+  it('has identical keys for notifications in en and am', () => {
+    expect(Object.keys(enNotifications).sort()).toEqual(Object.keys(amNotifications).sort())
+    expect(Object.keys(enNotifications.headerMenu).sort()).toEqual(Object.keys(amNotifications.headerMenu).sort())
+  })
+
+  it('has identical keys for integrations in en and am', () => {
+    expect(Object.keys(enIntegrations).sort()).toEqual(Object.keys(amIntegrations).sort())
+    expect(Object.keys(enIntegrations.stats).sort()).toEqual(Object.keys(amIntegrations.stats).sort())
+    expect(Object.keys(enIntegrations.tabs).sort()).toEqual(Object.keys(amIntegrations.tabs).sort())
+    expect(Object.keys(enIntegrations.active).sort()).toEqual(Object.keys(amIntegrations.active).sort())
+    expect(Object.keys(enIntegrations.marketplaceView).sort()).toEqual(Object.keys(amIntegrations.marketplaceView).sort())
+    expect(Object.keys(enIntegrations.logsView).sort()).toEqual(Object.keys(amIntegrations.logsView).sort())
+    expect(Object.keys(enIntegrations.connectModal).sort()).toEqual(Object.keys(amIntegrations.connectModal).sort())
+    expect(Object.keys(enIntegrations.testEventModal).sort()).toEqual(Object.keys(amIntegrations.testEventModal).sort())
+    expect(Object.keys(enIntegrations.payloadModal).sort()).toEqual(Object.keys(amIntegrations.payloadModal).sort())
+    expect(Object.keys(enIntegrations.deleteModal).sort()).toEqual(Object.keys(amIntegrations.deleteModal).sort())
+    expect(Object.keys(enIntegrations.messages).sort()).toEqual(Object.keys(amIntegrations.messages).sort())
+  })
+
+  it('has identical keys for reporting in en and am', () => {
+    expect(Object.keys(enReporting).sort()).toEqual(Object.keys(amReporting).sort())
+    expect(Object.keys(enReporting.cards).sort()).toEqual(Object.keys(amReporting.cards).sort())
+    expect(Object.keys(enReporting.quickLinks).sort()).toEqual(Object.keys(amReporting.quickLinks).sort())
+  })
+
+  it('has identical keys for superadmin in en and am', () => {
+    expect(Object.keys(enSuperadmin).sort()).toEqual(Object.keys(amSuperadmin).sort())
+    expect(Object.keys(enSuperadmin.header).sort()).toEqual(Object.keys(amSuperadmin.header).sort())
+    expect(Object.keys(enSuperadmin.stats).sort()).toEqual(Object.keys(amSuperadmin.stats).sort())
+    expect(Object.keys(enSuperadmin.tabs).sort()).toEqual(Object.keys(amSuperadmin.tabs).sort())
+    expect(Object.keys(enSuperadmin.filters).sort()).toEqual(Object.keys(amSuperadmin.filters).sort())
+    expect(Object.keys(enSuperadmin.table).sort()).toEqual(Object.keys(amSuperadmin.table).sort())
+    expect(Object.keys(enSuperadmin.plansTab).sort()).toEqual(Object.keys(amSuperadmin.plansTab).sort())
+    expect(Object.keys(enSuperadmin.credentialsTab).sort()).toEqual(Object.keys(amSuperadmin.credentialsTab).sort())
+    expect(Object.keys(enSuperadmin.createModal).sort()).toEqual(Object.keys(amSuperadmin.createModal).sort())
+    expect(Object.keys(enSuperadmin.editModal).sort()).toEqual(Object.keys(amSuperadmin.editModal).sort())
+    expect(Object.keys(enSuperadmin.deleteModal).sort()).toEqual(Object.keys(amSuperadmin.deleteModal).sort())
+    expect(Object.keys(enSuperadmin.messages).sort()).toEqual(Object.keys(amSuperadmin.messages).sort())
+  })
+
+  it('has identical keys for ecommerce in en and am', () => {
+    expect(Object.keys(enEcommerce).sort()).toEqual(Object.keys(amEcommerce).sort())
+    expect(Object.keys(enEcommerce.tabs).sort()).toEqual(Object.keys(amEcommerce.tabs).sort())
+    expect(Object.keys(enEcommerce.storefrontsTab).sort()).toEqual(Object.keys(amEcommerce.storefrontsTab).sort())
+    expect(Object.keys(enEcommerce.ordersTab).sort()).toEqual(Object.keys(amEcommerce.ordersTab).sort())
+    expect(Object.keys(enEcommerce.channelsTab).sort()).toEqual(Object.keys(amEcommerce.channelsTab).sort())
+    expect(Object.keys(enEcommerce.createStoreModal).sort()).toEqual(Object.keys(amEcommerce.createStoreModal).sort())
+    expect(Object.keys(enEcommerce.connectChannelModal).sort()).toEqual(Object.keys(amEcommerce.connectChannelModal).sort())
+    expect(Object.keys(enEcommerce.fulfillmentModal).sort()).toEqual(Object.keys(amEcommerce.fulfillmentModal).sort())
+    expect(Object.keys(enEcommerce.builder).sort()).toEqual(Object.keys(amEcommerce.builder).sort())
+    expect(Object.keys(enEcommerce.messages).sort()).toEqual(Object.keys(amEcommerce.messages).sort())
   })
 
   it('has identical keys for settings in en and am', () => {

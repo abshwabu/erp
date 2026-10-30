@@ -22,5 +22,10 @@ export default {
   done: 'ጨርስ',
   optional: 'አማራጭ',
   switchShop: 'ሱቅ ቀይር',
-  logout: 'ውጣ'
+  logout: 'ውጣ',
+  profile: 'መገለጫ',
+  settings: 'ማስተካከያዎች',
+  subscriptionPlans: 'የደንበኝነት ምዝገባ እና እቅዶች',
+  freeTrialDaysLeft: 'የነጻ ሙከራ: {count} ቀናት ቀርተዋል',
+  choosePlan: 'እቅድ ይምረጡ',
 }

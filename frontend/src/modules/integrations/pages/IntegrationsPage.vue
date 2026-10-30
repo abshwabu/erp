@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import {
   integrationsApi,
@@ -51,6 +52,7 @@ import { useToast } from '@/composables/useToast'
 
 const queryClient = useQueryClient()
 const toast = useToast()
+const { t } = useI18n()
 
 const activeTab = ref<'active' | 'catalog' | 'logs'>('active')
 const selectedCategory = ref<string>('all')
@@ -176,23 +178,23 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Connected Gateways',
+      label: t('integrations.stats.connectedGateways'),
       value: connected,
       icon: markRaw(Plug),
     },
     {
-      label: 'Supported Integrations',
+      label: t('integrations.stats.supportedIntegrations'),
       value: catalog.value?.length || 12,
       icon: markRaw(Layers),
     },
     {
-      label: 'Total Processed Events',
+      label: t('integrations.stats.totalProcessedEvents'),
       value: totalEvents,
       icon: markRaw(Activity),
     },
     {
-      label: 'Webhook Health',
-      value: connected > 0 ? '100% Operational' : 'Ready to Connect',
+      label: t('integrations.stats.webhookHealth'),
+      value: connected > 0 ? t('integrations.stats.operational') : t('integrations.stats.readyToConnect'),
       icon: markRaw(ShieldCheck),
     },
   ]
@@ -204,11 +206,11 @@ const connectMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['integrations', 'list'] })
     isConnectModalOpen.value = false
-    toast.success('Connector initialized and connected successfully')
+    toast.success(t('integrations.messages.initializedSuccess'))
     activeTab.value = 'active'
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to connect integration')
+    toast.error(err?.response?.data?.message || t('integrations.messages.failedDelete'))
   },
 })
 
@@ -216,10 +218,10 @@ const testConnectionMutation = useMutation({
   mutationFn: (id: string) => integrationsApi.testConnection(id),
   onSuccess: (res) => {
     queryClient.invalidateQueries({ queryKey: ['integrations', 'list'] })
-    toast.success(res.data.data?.message || 'Connection ping verified!')
+    toast.success(res.data.data?.message || t('integrations.messages.pingVerified'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Diagnostic ping failed')
+    toast.error(err?.response?.data?.message || t('integrations.messages.diagnosticFailed'))
   },
 })
 
@@ -228,10 +230,10 @@ const sendTestEventMutation = useMutation({
   onSuccess: (res) => {
     queryClient.invalidateQueries({ queryKey: ['integrations', 'list'] })
     isTestEventModalOpen.value = false
-    toast.success(res.data.data?.message || 'Test event dispatched')
+    toast.success(res.data.data?.message || t('integrations.messages.eventDispatched'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to dispatch test event')
+    toast.error(err?.response?.data?.message || t('integrations.messages.eventFailed'))
   },
 })
 
@@ -241,10 +243,10 @@ const deleteMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['integrations', 'list'] })
     isDeleteModalOpen.value = false
     integrationToDelete.value = null
-    toast.success('Connector disconnected and removed')
+    toast.success(t('integrations.messages.disconnectedSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to delete integration')
+    toast.error(err?.response?.data?.message || t('integrations.messages.failedDelete'))
   },
 })
 
@@ -264,7 +266,7 @@ function openConnectModal(catalogItem: ConnectorCatalogItem) {
 
 function handleConnectSubmit() {
   if (!connectForm.value.name) {
-    toast.error('Connector display name is required')
+    toast.error(t('integrations.messages.nameRequired'))
     return
   }
 
@@ -326,18 +328,18 @@ function copyToClipboard(text: string) {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <div class="flex items-center space-x-2">
-          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Integrations & Connectors</h1>
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ t('integrations.title') }}</h1>
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
-            {{ activeIntegrations.length }} Connected
+            {{ t('integrations.connectedCount', { count: activeIntegrations.length }) }}
           </span>
         </div>
         <p class="text-slate-500 text-xs sm:text-sm mt-1">
-          Connect payment gateways, accounting software, messaging bots, and custom webhooks.
+          {{ t('integrations.subtitle') }}
         </p>
       </div>
 
       <UiButton @click="activeTab = 'catalog'">
-        <Plus class="w-4 h-4 mr-1.5" /> Explore Catalog
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('integrations.exploreCatalog') }}
       </UiButton>
     </div>
 
@@ -360,7 +362,7 @@ function copyToClipboard(text: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'active' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Plug class="w-3.5 h-3.5" /> Active Connectors ({{ activeIntegrations.length }})
+        <Plug class="w-3.5 h-3.5" /> {{ t('integrations.tabs.activeConnectors') }} ({{ activeIntegrations.length }})
       </button>
 
       <button
@@ -369,7 +371,7 @@ function copyToClipboard(text: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'catalog' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Layers class="w-3.5 h-3.5" /> Connector Marketplace ({{ catalog?.length || 12 }})
+        <Layers class="w-3.5 h-3.5" /> {{ t('integrations.tabs.marketplace') }} ({{ catalog?.length || 12 }})
       </button>
 
       <button
@@ -378,7 +380,7 @@ function copyToClipboard(text: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'logs' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Terminal class="w-3.5 h-3.5" /> Webhook Activity Logs ({{ allLogs.length }})
+        <Terminal class="w-3.5 h-3.5" /> {{ t('integrations.tabs.logs') }} ({{ allLogs.length }})
       </button>
     </div>
 
@@ -393,13 +395,13 @@ function copyToClipboard(text: string) {
           <Plug class="w-8 h-8" />
         </div>
         <div class="space-y-1">
-          <h3 class="text-base font-bold text-slate-900">No Integrations Connected Yet</h3>
+          <h3 class="text-base font-bold text-slate-900">{{ t('integrations.active.emptyTitle') }}</h3>
           <p class="text-xs text-slate-500 max-w-md mx-auto">
-            Connect payment processors (Stripe, Chapa), accounting apps (QuickBooks, Xero), or messaging bots (Slack, Telegram) to automate your business.
+            {{ t('integrations.active.emptyDescription') }}
           </p>
         </div>
         <UiButton @click="activeTab = 'catalog'">
-          <Plus class="w-4 h-4 mr-1.5" /> Browse Connectors
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('integrations.active.browseConnectors') }}
         </UiButton>
       </div>
 
@@ -427,7 +429,7 @@ function copyToClipboard(text: string) {
 
               <span class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Connected
+                {{ t('integrations.active.connectedStatus') }}
               </span>
             </div>
 
@@ -468,11 +470,11 @@ function copyToClipboard(text: string) {
                   :loading="testConnectionMutation.isPending.value"
                   @click="testConnectionMutation.mutate(selectedIntegration.id)"
                 >
-                  <RefreshCw class="w-3.5 h-3.5 mr-1" /> Ping Diagnostic
+                  <RefreshCw class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.active.pingDiagnostic') }}
                 </UiButton>
 
                 <UiButton size="sm" @click="openTestEventModal(selectedIntegration)">
-                  <Send class="w-3.5 h-3.5 mr-1" /> Trigger Event
+                  <Send class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.active.triggerEvent') }}
                 </UiButton>
               </div>
             </div>
@@ -480,23 +482,23 @@ function copyToClipboard(text: string) {
             <!-- Parameters Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                <span class="text-slate-500 font-bold uppercase text-[10px]">Connection Status</span>
+                <span class="text-slate-500 font-bold uppercase text-[10px]">{{ t('integrations.active.connectionStatus') }}</span>
                 <div class="flex items-center gap-2 text-emerald-700 font-bold">
-                  <CheckCircle2 class="w-4 h-4 text-emerald-500" /> Operational & Synced
+                  <CheckCircle2 class="w-4 h-4 text-emerald-500" /> {{ t('integrations.active.operationalSynced') }}
                 </div>
               </div>
 
               <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                <span class="text-slate-500 font-bold uppercase text-[10px]">Last Diagnostic</span>
+                <span class="text-slate-500 font-bold uppercase text-[10px]">{{ t('integrations.active.lastDiagnostic') }}</span>
                 <div class="text-slate-700 font-mono">
-                  {{ selectedIntegration.last_tested_at ? new Date(selectedIntegration.last_tested_at).toLocaleString() : 'Not verified yet' }}
+                  {{ selectedIntegration.last_tested_at ? new Date(selectedIntegration.last_tested_at).toLocaleString() : t('integrations.active.notVerified') }}
                 </div>
               </div>
             </div>
 
             <!-- Webhook URL Box -->
             <div v-if="selectedIntegration.webhook_url" class="space-y-1.5">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Inbound / Outbound Webhook URL</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('integrations.active.webhookUrl') }}</label>
               <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
                 <span class="font-mono text-xs text-slate-700 truncate flex-1">{{ selectedIntegration.webhook_url }}</span>
                 <button
@@ -513,7 +515,7 @@ function copyToClipboard(text: string) {
 
             <!-- Subscribed Events -->
             <div v-if="selectedIntegration.settings?.events?.length" class="space-y-2">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Subscribed Event Topics</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('integrations.active.subscribedTopics') }}</label>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="ev in selectedIntegration.settings.events"
@@ -529,13 +531,13 @@ function copyToClipboard(text: string) {
             <div class="space-y-3 pt-2">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Terminal class="w-4 h-4 text-slate-500" /> Recent Activity Stream
+                  <Terminal class="w-4 h-4 text-slate-500" /> {{ t('integrations.active.recentActivity') }}
                 </h3>
-                <span class="text-xs text-slate-400 font-mono">{{ selectedIntegration.logs?.length || 0 }} logged</span>
+                <span class="text-xs text-slate-400 font-mono">{{ t('integrations.active.loggedEvents', { count: selectedIntegration.logs?.length || 0 }) }}</span>
               </div>
 
               <div v-if="!selectedIntegration.logs?.length" class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-400">
-                No recent event logs. Click <strong>Trigger Event</strong> or <strong>Ping Diagnostic</strong> above to simulate a dispatch.
+                {{ t('integrations.active.noLogs') }}
               </div>
 
               <div v-else class="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
@@ -553,7 +555,7 @@ function copyToClipboard(text: string) {
                       </span>
                     </div>
                     <p class="text-[10px] text-slate-400 font-mono">
-                      {{ new Date(log.created_at).toLocaleTimeString() }} • Click to inspect payload
+                      {{ new Date(log.created_at).toLocaleTimeString() }} • {{ t('integrations.active.clickInspect') }}
                     </p>
                   </div>
 
@@ -572,9 +574,9 @@ function copyToClipboard(text: string) {
 
             <!-- Footer Actions -->
             <div class="flex justify-between items-center pt-4 border-t border-slate-100">
-              <span class="text-xs text-slate-400">UUID: {{ selectedIntegration.id }}</span>
+              <span class="text-xs text-slate-400">{{ t('integrations.active.uuid', { id: selectedIntegration.id }) }}</span>
               <UiButton variant="danger" size="sm" @click="openDeleteConfirm(selectedIntegration)">
-                <Trash2 class="w-3.5 h-3.5 mr-1" /> Disconnect Integration
+                <Trash2 class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.active.disconnectIntegration') }}
               </UiButton>
             </div>
           </div>
@@ -593,7 +595,7 @@ function copyToClipboard(text: string) {
             class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
             :class="selectedCategory === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            All Categories
+            {{ t('integrations.marketplaceView.allCategories') }}
           </button>
           <button
             v-for="cat in ['Payments & Billing', 'Accounting & ERP', 'Communication & Alerts', 'Automation & Custom Hooks', 'E-Commerce & Retail']"
@@ -609,7 +611,7 @@ function copyToClipboard(text: string) {
 
         <UiInput
           v-model="catalogSearchQuery"
-          placeholder="Search connectors..."
+          :placeholder="t('integrations.marketplaceView.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-60"
         >
@@ -645,7 +647,7 @@ function copyToClipboard(text: string) {
             </div>
 
             <div class="pt-2 border-t border-slate-100">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Supported Events</span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">{{ t('integrations.marketplaceView.supportedEvents') }}</span>
               <div class="flex flex-wrap gap-1">
                 <span
                   v-for="ev in item.supported_events.slice(0, 3)"
@@ -663,7 +665,7 @@ function copyToClipboard(text: string) {
 
           <div class="pt-3 border-t border-slate-100">
             <UiButton class="w-full" size="sm" @click="openConnectModal(item)">
-              <Plus class="w-3.5 h-3.5 mr-1" /> Connect Gateway
+              <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.marketplaceView.connectGateway') }}
             </UiButton>
           </div>
         </div>
@@ -675,26 +677,26 @@ function copyToClipboard(text: string) {
       <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h3 class="text-sm font-bold text-slate-900">System Webhook & API Logs</h3>
-            <p class="text-xs text-slate-500">Live stream of all dispatched and received integration event payloads.</p>
+            <h3 class="text-sm font-bold text-slate-900">{{ t('integrations.logsView.title') }}</h3>
+            <p class="text-xs text-slate-500">{{ t('integrations.logsView.subtitle') }}</p>
           </div>
-          <span class="text-xs font-mono font-bold text-slate-600">{{ allLogs.length }} Total Events</span>
+          <span class="text-xs font-mono font-bold text-slate-600">{{ t('integrations.logsView.totalEvents', { count: allLogs.length }) }}</span>
         </div>
 
         <div v-if="!allLogs.length" class="p-16 text-center text-slate-400 text-xs">
-          No logs available across connected integrations.
+          {{ t('integrations.logsView.noLogs') }}
         </div>
 
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-100 text-xs">
             <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
               <tr>
-                <th class="px-4 py-3 text-left">Timestamp</th>
-                <th class="px-4 py-3 text-left">Gateway / Connector</th>
-                <th class="px-4 py-3 text-left">Event Topic</th>
-                <th class="px-4 py-3 text-center">Direction</th>
-                <th class="px-4 py-3 text-center">Status</th>
-                <th class="px-4 py-3 text-right">Payload</th>
+                <th class="px-4 py-3 text-left">{{ t('integrations.logsView.timestamp') }}</th>
+                <th class="px-4 py-3 text-left">{{ t('integrations.logsView.gatewayConnector') }}</th>
+                <th class="px-4 py-3 text-left">{{ t('integrations.logsView.eventTopic') }}</th>
+                <th class="px-4 py-3 text-center">{{ t('integrations.logsView.direction') }}</th>
+                <th class="px-4 py-3 text-center">{{ t('integrations.logsView.status') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('integrations.logsView.payload') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -731,7 +733,7 @@ function copyToClipboard(text: string) {
                 </td>
                 <td class="px-4 py-3 text-right">
                   <span class="inline-flex items-center gap-1 font-bold text-primary-600 hover:text-primary-800 text-xs">
-                    Inspect <Code class="w-3 h-3" />
+                    {{ t('integrations.logsView.inspect') }} <Code class="w-3 h-3" />
                   </span>
                 </td>
               </tr>
@@ -744,7 +746,7 @@ function copyToClipboard(text: string) {
     <!-- Modal: Connect Gateway -->
     <UiModal
       v-model="isConnectModalOpen"
-      :title="selectedCatalogItem ? `Connect ${selectedCatalogItem.name}` : 'Connect Integration'"
+      :title="selectedCatalogItem ? t('integrations.connectModal.title', { name: selectedCatalogItem.name }) : t('integrations.connectModal.defaultTitle')"
       size="lg"
     >
       <div v-if="selectedCatalogItem" class="space-y-4">
@@ -755,8 +757,8 @@ function copyToClipboard(text: string) {
 
         <UiInput
           v-model="connectForm.name"
-          label="Connector Display Name"
-          placeholder="e.g. Primary Production Stripe"
+          :label="t('integrations.connectModal.displayName')"
+          :placeholder="t('integrations.connectModal.displayNamePlaceholder')"
           required
         />
 
@@ -787,7 +789,7 @@ function copyToClipboard(text: string) {
 
         <!-- Event Topic Selection -->
         <div class="space-y-2">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Subscribed Event Triggers</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('integrations.connectModal.subscribedTriggers') }}</label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-36 overflow-y-auto">
             <label
               v-for="ev in selectedCatalogItem.supported_events"
@@ -806,25 +808,25 @@ function copyToClipboard(text: string) {
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isConnectModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isConnectModalOpen = false">{{ t('integrations.connectModal.cancel') }}</UiButton>
           <UiButton :loading="connectMutation.isPending.value" @click="handleConnectSubmit">
-            Complete & Authorize
+            {{ t('integrations.connectModal.completeAuthorize') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Modal: Send Test Event -->
-    <UiModal v-model="isTestEventModalOpen" title="Dispatch Diagnostic Webhook Event" size="md">
+    <UiModal v-model="isTestEventModalOpen" :title="t('integrations.testEventModal.title')" size="md">
       <div v-if="selectedIntegration" class="space-y-4">
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
-          <span class="text-slate-500 uppercase text-[10px] font-bold">Target Gateway</span>
+          <span class="text-slate-500 uppercase text-[10px] font-bold">{{ t('integrations.testEventModal.targetGateway') }}</span>
           <p class="font-bold text-slate-900">{{ selectedIntegration.name }} ({{ selectedIntegration.provider }})</p>
         </div>
 
         <UiSelect
           v-model="testEventForm.event"
-          label="Select Event Topic to Simulate"
+          :label="t('integrations.testEventModal.selectEvent')"
           :options="[
             { label: 'invoice.paid (Sales & Billing)', value: 'invoice.paid' },
             { label: 'lead.captured (CRM Prospect)', value: 'lead.captured' },
@@ -834,20 +836,20 @@ function copyToClipboard(text: string) {
         />
 
         <p class="text-xs text-slate-500 leading-relaxed">
-          This action will generate a standardized JSON webhook payload, transmit it through the connector pipeline, and log the response.
+          {{ t('integrations.testEventModal.hint') }}
         </p>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isTestEventModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isTestEventModalOpen = false">{{ t('integrations.testEventModal.cancel') }}</UiButton>
           <UiButton :loading="sendTestEventMutation.isPending.value" @click="handleSendTestEvent">
-            <Send class="w-3.5 h-3.5 mr-1" /> Transmit Payload
+            <Send class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.testEventModal.transmitPayload') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Modal: Payload Inspector -->
-    <UiModal v-model="isPayloadModalOpen" title="Webhook Payload Inspector" size="lg">
+    <UiModal v-model="isPayloadModalOpen" :title="t('integrations.payloadModal.title')" size="lg">
       <div v-if="selectedLogForPayload" class="space-y-4">
         <div class="flex items-center justify-between text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl">
           <div>
@@ -863,45 +865,45 @@ function copyToClipboard(text: string) {
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Request Body / Payload</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('integrations.payloadModal.requestBody') }}</label>
           <pre class="p-4 bg-slate-950 text-emerald-400 rounded-xl text-xs font-mono overflow-x-auto max-h-60 custom-scrollbar">{{ JSON.stringify(selectedLogForPayload.payload, null, 2) }}</pre>
         </div>
 
         <div v-if="selectedLogForPayload.response" class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Gateway Response Body</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('integrations.payloadModal.responseBody') }}</label>
           <pre class="p-4 bg-slate-900 text-slate-200 rounded-xl text-xs font-mono overflow-x-auto max-h-40 custom-scrollbar">{{ JSON.stringify(selectedLogForPayload.response, null, 2) }}</pre>
         </div>
 
         <div class="flex justify-end pt-2">
-          <UiButton variant="outline" size="sm" @click="isPayloadModalOpen = false">Close Inspector</UiButton>
+          <UiButton variant="outline" size="sm" @click="isPayloadModalOpen = false">{{ t('integrations.payloadModal.close') }}</UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Modal: Delete Confirmation -->
-    <UiModal v-model="isDeleteModalOpen" title="Disconnect Integration" size="sm">
+    <UiModal v-model="isDeleteModalOpen" :title="t('integrations.deleteModal.title')" size="sm">
       <div v-if="integrationToDelete" class="space-y-4">
         <div class="flex items-start gap-3.5 p-3.5 bg-red-50 border border-red-200 rounded-2xl">
           <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
             <Trash2 class="w-5 h-5" />
           </div>
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-red-950">Disconnect {{ integrationToDelete.name }}</h4>
+            <h4 class="text-sm font-bold text-red-950">{{ t('integrations.deleteModal.confirmTitle', { name: integrationToDelete.name }) }}</h4>
             <p class="text-xs text-red-800 leading-relaxed">
-              Are you sure you want to disconnect and delete this connector? Outbound webhook transmissions to this provider will cease immediately.
+              {{ t('integrations.deleteModal.confirmMessage') }}
             </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">{{ t('integrations.deleteModal.cancel') }}</UiButton>
           <UiButton
             variant="danger"
             size="sm"
             :loading="deleteMutation.isPending.value"
             @click="deleteMutation.mutate(integrationToDelete.id)"
           >
-            <Trash2 class="w-3.5 h-3.5 mr-1" /> Disconnect
+            <Trash2 class="w-3.5 h-3.5 mr-1" /> {{ t('integrations.deleteModal.disconnect') }}
           </UiButton>
         </div>
       </div>

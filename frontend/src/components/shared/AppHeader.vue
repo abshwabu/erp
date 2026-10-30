@@ -13,7 +13,8 @@ import {
   ChevronRight,
   CreditCard,
 } from '@lucide/vue'
-import { markRaw, ref } from 'vue'
+import { markRaw, ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import UiDropdown from '@/components/ui/UiDropdown.vue'
 import NavClockWidget from './NavClockWidget.vue'
 import OfflineStatusWidget from './OfflineStatusWidget.vue'
@@ -21,6 +22,7 @@ import PlanSelectionModal from './PlanSelectionModal.vue'
 import OnboardingHelper from './OnboardingHelper.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 
+const { t } = useI18n()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -32,12 +34,12 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const userMenuItems = [
-  { label: 'Profile', icon: markRaw(User), to: '/profile' },
-  { label: 'Settings', icon: markRaw(Settings), to: '/settings' },
-  { label: 'Subscription & Plans', icon: markRaw(CreditCard), action: () => { isPlanModalOpen.value = true } },
-  { label: 'Logout', icon: markRaw(LogOut), action: handleLogout, variant: 'danger' as const },
-]
+const userMenuItems = computed(() => [
+  { label: t('common.profile'), icon: markRaw(User), to: '/profile' },
+  { label: t('common.settings'), icon: markRaw(Settings), to: '/settings' },
+  { label: t('common.subscriptionPlans'), icon: markRaw(CreditCard), action: () => { isPlanModalOpen.value = true } },
+  { label: t('common.logout'), icon: markRaw(LogOut), action: handleLogout, variant: 'danger' as const },
+])
 </script>
 
 <template>
@@ -68,7 +70,7 @@ const userMenuItems = [
         </span>
         <input
           type="text"
-          placeholder="Search..."
+          :placeholder="t('common.search')"
           class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-md leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-all"
         />
       </div>
@@ -83,14 +85,14 @@ const userMenuItems = [
           <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
         </span>
         <span class="font-bold text-amber-900">
-          Free Trial: {{ authStore.trialDaysLeft }} days left
+          {{ t('common.freeTrialDaysLeft', { count: authStore.trialDaysLeft }) }}
         </span>
         <button
           type="button"
           @click="isPlanModalOpen = true"
           class="ml-1 text-[11px] font-extrabold text-white bg-amber-600 hover:bg-amber-700 px-2 py-0.5 rounded-lg transition-colors cursor-pointer shadow-xs"
         >
-          Choose Plan
+          {{ t('common.choosePlan') }}
         </button>
       </div>
 
@@ -109,7 +111,7 @@ const userMenuItems = [
       <!-- Notifications -->
       <UiDropdown align="right">
         <template #trigger>
-          <button class="p-2 hover:bg-slate-100 rounded-full relative transition-colors" title="Notifications">
+          <button class="p-2 hover:bg-slate-100 rounded-full relative transition-colors" :title="t('notifications.title')">
             <Bell :size="20" class="text-slate-600" />
             <span 
               v-if="notificationStore.notifications.length > 0"
@@ -119,11 +121,11 @@ const userMenuItems = [
         </template>
         <div class="w-80 max-h-96 overflow-y-auto">
           <div class="px-4 py-2 font-semibold text-sm border-b border-slate-100 flex justify-between items-center">
-            Notifications
-            <button class="text-xs text-primary-600 hover:underline">Mark all read</button>
+            {{ t('notifications.headerMenu.title') }}
+            <button class="text-xs text-primary-600 hover:underline">{{ t('notifications.markAllRead') }}</button>
           </div>
           <div v-if="notificationStore.notifications.length === 0" class="p-8 text-center text-sm text-slate-500">
-            No new notifications
+            {{ t('notifications.headerMenu.noNew') }}
           </div>
           <div v-else class="divide-y divide-slate-100">
             <div 

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
 import { Bell, CheckCheck, Trash2, Info, CheckCircle, AlertTriangle, AlertCircle } from '@lucide/vue'
+
+const { t } = useI18n()
 
 interface AppNotification {
   id: string
@@ -93,12 +96,12 @@ onMounted(fetchNotifications)
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <Bell class="w-7 h-7 text-gray-700" />
-        <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('notifications.title') }}</h1>
         <span
           v-if="unreadCount > 0"
           class="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full"
         >
-          {{ unreadCount }} new
+          {{ t('notifications.newCount', { count: unreadCount }) }}
         </span>
       </div>
       <div class="flex items-center space-x-3">
@@ -106,7 +109,7 @@ onMounted(fetchNotifications)
           @click="filterUnread = !filterUnread; fetchNotifications()"
           :class="[filterUnread ? 'bg-primary-50 text-primary-700 border-primary-300' : 'bg-white text-gray-700 border-gray-300', 'px-3 py-1.5 text-sm border rounded-md font-medium hover:bg-gray-50']"
         >
-          {{ filterUnread ? 'Showing Unread' : 'Filter Unread' }}
+          {{ filterUnread ? t('notifications.showingUnread') : t('notifications.filterUnread') }}
         </button>
         <button
           v-if="unreadCount > 0"
@@ -114,17 +117,17 @@ onMounted(fetchNotifications)
           class="inline-flex items-center px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md font-medium text-gray-700 hover:bg-gray-50 space-x-1.5"
         >
           <CheckCheck class="w-4 h-4 text-green-600" />
-          <span>Mark all read</span>
+          <span>{{ t('notifications.markAllRead') }}</span>
         </button>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-gray-500">Loading notifications…</div>
+    <div v-if="loading" class="text-center py-12 text-gray-500">{{ t('notifications.loading') }}</div>
 
     <div v-else-if="notifications.length === 0" class="text-center py-16 bg-white rounded-lg border border-gray-200">
       <Bell class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500 font-medium">No notifications to display</p>
-      <p class="text-sm text-gray-400 mt-1">You're all caught up!</p>
+      <p class="text-gray-500 font-medium">{{ t('notifications.emptyTitle') }}</p>
+      <p class="text-sm text-gray-400 mt-1">{{ t('notifications.emptySubtitle') }}</p>
     </div>
 
     <div v-else class="space-y-3">
@@ -156,14 +159,14 @@ onMounted(fetchNotifications)
             v-if="!item.read_at"
             @click="markAsRead(item.id)"
             class="text-xs text-primary-600 hover:text-primary-800 font-medium px-2 py-1 rounded hover:bg-primary-50"
-            title="Mark as read"
+            :title="t('notifications.markRead')"
           >
-            Mark read
+            {{ t('notifications.markRead') }}
           </button>
           <button
             @click="deleteNotification(item.id)"
             class="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-gray-100"
-            title="Delete notification"
+            :title="t('notifications.deleteNotification')"
           >
             <Trash2 class="w-4 h-4" />
           </button>

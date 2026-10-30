@@ -19,6 +19,12 @@ import finance from './finance'
 import accounting from './accounting'
 import assets from './assets'
 import settings from './settings'
+import roles from './roles'
+import notifications from './notifications'
+import integrations from './integrations'
+import reporting from './reporting'
+import superadmin from './superadmin'
+import ecommerce from './ecommerce'
 
 export default {
   common,
@@ -41,5 +47,11 @@ export default {
   finance,
   accounting,
   assets,
-  settings
+  settings,
+  roles,
+  notifications,
+  integrations,
+  reporting,
+  superadmin,
+  ecommerce
 }

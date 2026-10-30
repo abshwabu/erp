@@ -22,5 +22,10 @@ export default {
   done: 'Done',
   optional: 'Optional',
   switchShop: 'Switch Shop',
-  logout: 'Logout'
+  logout: 'Logout',
+  profile: 'Profile',
+  settings: 'Settings',
+  subscriptionPlans: 'Subscription & Plans',
+  freeTrialDaysLeft: 'Free Trial: {count} days left',
+  choosePlan: 'Choose Plan',
 }

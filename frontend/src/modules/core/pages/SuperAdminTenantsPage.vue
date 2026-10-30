@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import {
   superAdminApi,
@@ -49,6 +50,7 @@ import { useAuthStore } from '@/stores/auth'
 const queryClient = useQueryClient()
 const toast = useToast()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const activeTab = ref<'tenants' | 'plans' | 'superadmins'>('tenants')
 const searchQuery = ref('')
@@ -152,22 +154,22 @@ const statCards = computed(() => {
 
   return [
     {
-      label: 'Total Platform Tenants',
+      label: t('superadmin.stats.totalTenants'),
       value: m?.total_tenants || tenants.value?.length || 0,
       icon: markRaw(Building2),
     },
     {
-      label: 'Active Subscriptions',
+      label: t('superadmin.stats.activeSubscriptions'),
       value: m?.active_tenants || 0,
       icon: markRaw(ShieldCheck),
     },
     {
-      label: 'Monthly Recurring (MRR)',
+      label: t('superadmin.stats.mrr'),
       value: mrrFormatted,
       icon: markRaw(CreditCard),
     },
     {
-      label: 'Trial Workspaces',
+      label: t('superadmin.stats.trialWorkspaces'),
       value: m?.trial_tenants || 0,
       icon: markRaw(Clock),
     },
@@ -180,10 +182,10 @@ const createTenantMutation = useMutation({
   onSuccess: (res) => {
     queryClient.invalidateQueries({ queryKey: ['super-admin'] })
     isCreateModalOpen.value = false
-    toast.success(res.data.data?.message || 'New tenant provisioned successfully!')
+    toast.success(res.data.data?.message || t('superadmin.messages.provisionSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to provision tenant')
+    toast.error(err?.response?.data?.message || t('superadmin.messages.failedProvision'))
   },
 })
 
@@ -192,10 +194,10 @@ const updateTenantMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['super-admin'] })
     isEditModalOpen.value = false
-    toast.success('Tenant settings and subscription updated')
+    toast.success(t('superadmin.messages.updateSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to update tenant')
+    toast.error(err?.response?.data?.message || t('superadmin.messages.failedUpdate'))
   },
 })
 
@@ -203,10 +205,10 @@ const updateStatusMutation = useMutation({
   mutationFn: ({ id, status }: { id: string; status: string }) => superAdminApi.updateTenantStatus(id, status),
   onSuccess: (res) => {
     queryClient.invalidateQueries({ queryKey: ['super-admin'] })
-    toast.success(res.data.data?.message || 'Tenant status updated')
+    toast.success(res.data.data?.message || t('superadmin.messages.statusSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to update status')
+    toast.error(err?.response?.data?.message || t('superadmin.messages.failedStatus'))
   },
 })
 
@@ -221,19 +223,19 @@ const impersonateMutation = useMutation({
           name: data.tenant_name,
           domain: data.tenant_slug,
         })
-        toast.success(`Switched context to ${data.tenant_name}`)
+        toast.success(t('superadmin.messages.switchedContext', { name: data.tenant_name }))
         setTimeout(() => {
           window.location.href = '/'
         }, 300)
       } else {
-        toast.error('Impersonation token missing from server response')
+        toast.error(t('superadmin.messages.tokenMissing'))
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to switch workspace context')
+      toast.error(err?.response?.data?.message || err?.message || t('superadmin.messages.impersonationFailed'))
     }
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || err?.message || 'Impersonation request failed')
+    toast.error(err?.response?.data?.message || err?.message || t('superadmin.messages.impersonationFailed'))
   },
 })
 
@@ -243,10 +245,10 @@ const deleteTenantMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['super-admin'] })
     isDeleteModalOpen.value = false
     tenantToDelete.value = null
-    toast.success(res.data.data?.message || 'Tenant decommissioned')
+    toast.success(res.data.data?.message || t('superadmin.messages.decommissionSuccess'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to delete tenant')
+    toast.error(err?.response?.data?.message || t('superadmin.messages.failedDecommission'))
   },
 })
 
@@ -277,7 +279,7 @@ function handleNameInput(name: string) {
 
 function handleCreateSubmit() {
   if (!createForm.value.name || !createForm.value.admin_email || !createForm.value.admin_password) {
-    toast.error('Tenant name, admin email, and password are required')
+    toast.error(t('superadmin.messages.requiredFields'))
     return
   }
 
@@ -332,19 +334,19 @@ function copyDomain(text: string, id: string) {
       <div class="space-y-1">
         <div class="flex items-center gap-2">
           <Crown class="w-6 h-6 text-amber-400" />
-          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Super Admin Platform Manager</h1>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">{{ t('superadmin.header.title') }}</h1>
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-            Multi-Tenant Central
+            {{ t('superadmin.header.badge') }}
           </span>
         </div>
         <p class="text-xs sm:text-sm text-slate-300">
-          Provision tenant database schemas, assign subscription plans, switch workspaces, and monitor platform ARR.
+          {{ t('superadmin.header.subtitle') }}
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <UiButton variant="primary" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black" @click="openCreateModal">
-          <Plus class="w-4 h-4 mr-1.5" /> Provision New Tenant
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('superadmin.header.provisionButton') }}
         </UiButton>
       </div>
     </div>
@@ -368,7 +370,7 @@ function copyDomain(text: string, id: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'tenants' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Building2 class="w-3.5 h-3.5" /> Tenant Organizations ({{ tenants?.length || 0 }})
+        <Building2 class="w-3.5 h-3.5" /> {{ t('superadmin.tabs.tenants') }} ({{ tenants?.length || 0 }})
       </button>
 
       <button
@@ -377,7 +379,7 @@ function copyDomain(text: string, id: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'plans' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <CreditCard class="w-3.5 h-3.5" /> Subscription Plans ({{ plans?.length || 3 }})
+        <CreditCard class="w-3.5 h-3.5" /> {{ t('superadmin.tabs.plans') }} ({{ plans?.length || 3 }})
       </button>
 
       <button
@@ -386,7 +388,7 @@ function copyDomain(text: string, id: string) {
         class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
         :class="activeTab === 'superadmins' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <ShieldAlert class="w-3.5 h-3.5" /> Super Admin Credentials
+        <ShieldAlert class="w-3.5 h-3.5" /> {{ t('superadmin.tabs.superadmins') }}
       </button>
     </div>
 
@@ -405,7 +407,7 @@ function copyDomain(text: string, id: string) {
               class="px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer"
               :class="selectedStatusFilter === st ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
             >
-              {{ st === 'all' ? 'All Status' : st }}
+              {{ st === 'all' ? t('superadmin.filters.allStatus') : st }}
             </button>
           </div>
 
@@ -415,7 +417,7 @@ function copyDomain(text: string, id: string) {
             size="sm"
             class="w-44"
             :options="[
-              { label: 'All Plans', value: 'all' },
+              { label: t('superadmin.filters.allPlans'), value: 'all' },
               ...(plans || []).map(p => ({ label: p.name + ' Plan', value: p.id }))
             ]"
           />
@@ -423,7 +425,7 @@ function copyDomain(text: string, id: string) {
 
         <UiInput
           v-model="searchQuery"
-          placeholder="Search by company, slug, or domain..."
+          :placeholder="t('superadmin.filters.searchPlaceholder')"
           size="sm"
           class="w-full lg:w-72"
         >
@@ -441,13 +443,13 @@ function copyDomain(text: string, id: string) {
           <table class="min-w-full divide-y divide-slate-100 text-xs">
             <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
               <tr>
-                <th class="px-4 py-3 text-left">Tenant Organization</th>
-                <th class="px-4 py-3 text-left">Subdomain & Domain</th>
-                <th class="px-4 py-3 text-left">Subscription Plan</th>
-                <th class="px-4 py-3 text-center">Status</th>
-                <th class="px-4 py-3 text-center">Members</th>
-                <th class="px-4 py-3 text-right">Created Date</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th class="px-4 py-3 text-left">{{ t('superadmin.table.tenantOrg') }}</th>
+                <th class="px-4 py-3 text-left">{{ t('superadmin.table.subdomain') }}</th>
+                <th class="px-4 py-3 text-left">{{ t('superadmin.table.plan') }}</th>
+                <th class="px-4 py-3 text-center">{{ t('superadmin.table.status') }}</th>
+                <th class="px-4 py-3 text-center">{{ t('superadmin.table.members') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('superadmin.table.createdDate') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('superadmin.table.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -461,7 +463,7 @@ function copyDomain(text: string, id: string) {
                       <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                         {{ tenant.name }}
                         <span v-if="tenant.slug === 'demo'" class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded font-bold border border-indigo-100">
-                          Primary Demo
+                          {{ t('superadmin.table.primaryDemo') }}
                         </span>
                       </div>
                       <div class="text-[11px] text-slate-400 font-mono mt-0.5">
@@ -516,7 +518,7 @@ function copyDomain(text: string, id: string) {
                       tenant.status === 'trial' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                       'bg-red-50 text-red-700 border border-red-200'
                     ]"
-                    :title="'Click to toggle status'"
+                    :title="t('superadmin.table.clickToggleStatus')"
                   >
                     <span class="w-1.5 h-1.5 rounded-full" :class="tenant.status === 'active' ? 'bg-emerald-500' : tenant.status === 'trial' ? 'bg-blue-500' : 'bg-red-500'"></span>
                     <span class="capitalize">{{ tenant.status }}</span>
@@ -525,7 +527,7 @@ function copyDomain(text: string, id: string) {
 
                 <td class="px-4 py-3.5 text-center">
                   <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-xs">
-                    {{ tenant.users_count || 1 }} Users
+                    {{ t('superadmin.table.usersCount', { count: tenant.users_count || 1 }) }}
                   </span>
                 </td>
 
@@ -542,7 +544,7 @@ function copyDomain(text: string, id: string) {
                     @click="impersonateMutation.mutate(tenant.id)"
                     title="Switch / Impersonate into Workspace"
                   >
-                    <LogIn class="w-3.5 h-3.5 mr-1" /> Switch
+                    <LogIn class="w-3.5 h-3.5 mr-1" /> {{ t('superadmin.table.switch') }}
                   </UiButton>
 
                   <UiButton variant="ghost" size="sm" @click="openEditModal(tenant)" title="Edit Tenant">
@@ -565,7 +567,7 @@ function copyDomain(text: string, id: string) {
           </table>
         </div>
         <div v-else class="p-12 text-center text-slate-400 text-xs">
-          No tenant organizations found matching the selected filters.
+          {{ t('superadmin.table.noTenants') }}
         </div>
       </div>
     </div>
@@ -603,7 +605,7 @@ function copyDomain(text: string, id: string) {
                 <Crown v-if="plan.slug === 'enterprise'" class="w-5 h-5 text-amber-500" />
                 <Zap v-else-if="plan.slug === 'professional'" class="w-5 h-5 text-blue-500" />
                 <Layers v-else class="w-5 h-5 text-slate-500" />
-                <h3 class="text-xl font-black text-slate-900">{{ plan.name }} Tier</h3>
+                <h3 class="text-xl font-black text-slate-900">{{ plan.name }} {{ t('superadmin.plansTab.tier') }}</h3>
               </div>
               <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">{{ plan.tagline || plan.description }}</p>
             </div>
@@ -613,12 +615,12 @@ function copyDomain(text: string, id: string) {
               <div class="flex items-baseline gap-1.5">
                 <span class="text-3xl font-black text-slate-900">{{ (plan.price_monthly / 100).toLocaleString() }}</span>
                 <span class="text-sm font-bold text-slate-700">Birr</span>
-                <span class="text-xs text-slate-500 font-medium">/ month</span>
+                <span class="text-xs text-slate-500 font-medium">{{ t('superadmin.plansTab.perMonth') }}</span>
               </div>
               <div class="text-[11px] text-slate-400 font-medium flex items-center justify-between">
-                <span>or {{ (plan.price_annually / 100).toLocaleString() }} Birr / year</span>
+                <span>{{ t('superadmin.plansTab.orYearly', { amount: (plan.price_annually / 100).toLocaleString() }) }}</span>
                 <span class="font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                  {{ plan.tenants_count || 0 }} Active Tenants
+                  {{ t('superadmin.plansTab.activeTenantsCount', { count: plan.tenants_count || 0 }) }}
                 </span>
               </div>
             </div>
@@ -626,15 +628,15 @@ function copyDomain(text: string, id: string) {
             <!-- Capacity Highlights -->
             <div class="grid grid-cols-2 gap-2 text-[11px]">
               <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col">
-                <span class="text-slate-400 font-semibold text-[10px] uppercase">User Capacity</span>
+                <span class="text-slate-400 font-semibold text-[10px] uppercase">{{ t('superadmin.plansTab.userCapacity') }}</span>
                 <span class="font-bold text-slate-800">
-                  {{ (plan.limits?.users_limit === -1 || plan.slug === 'enterprise') ? 'Unlimited Users' : (plan.limits?.users_limit || 5) + ' User Seats' }}
+                  {{ (plan.limits?.users_limit === -1 || plan.slug === 'enterprise') ? t('superadmin.plansTab.unlimitedUsers') : t('superadmin.plansTab.userSeats', { count: plan.limits?.users_limit || 5 }) }}
                 </span>
               </div>
               <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col">
-                <span class="text-slate-400 font-semibold text-[10px] uppercase">File Storage</span>
+                <span class="text-slate-400 font-semibold text-[10px] uppercase">{{ t('superadmin.plansTab.fileStorage') }}</span>
                 <span class="font-bold text-slate-800">
-                  {{ plan.limits?.storage_gb || (plan.slug === 'enterprise' ? 500 : plan.slug === 'professional' ? 50 : 5) }} GB Cloud Storage
+                  {{ t('superadmin.plansTab.cloudStorage', { count: plan.limits?.storage_gb || (plan.slug === 'enterprise' ? 500 : plan.slug === 'professional' ? 50 : 5) }) }}
                 </span>
               </div>
             </div>
@@ -642,14 +644,14 @@ function copyDomain(text: string, id: string) {
             <!-- Module Access Pills -->
             <div class="space-y-2 pt-2 border-t border-slate-100">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Module Entitlements ({{ plan.allowed_modules?.includes('*') ? 'All 15 Modules' : (plan.allowed_modules?.length || 5) + ' Modules' }})
+                {{ t('superadmin.plansTab.moduleEntitlements', { count: plan.allowed_modules?.includes('*') ? 15 : (plan.allowed_modules?.length || 5) }) }}
               </span>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-if="plan.allowed_modules?.includes('*')"
                   class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1"
                 >
-                  <Sparkles class="w-3 h-3 text-purple-600" /> All 15 Enterprise Modules Unlocked
+                  <Sparkles class="w-3 h-3 text-purple-600" /> {{ t('superadmin.plansTab.allModulesUnlocked') }}
                 </span>
                 <template v-else>
                   <span
@@ -665,7 +667,7 @@ function copyDomain(text: string, id: string) {
 
             <!-- Perks Checklist -->
             <div class="space-y-2 pt-2 border-t border-slate-100">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Exclusive Plan Perks</span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{{ t('superadmin.plansTab.exclusivePerks') }}</span>
               <ul class="space-y-1.5 text-xs text-slate-700">
                 <li
                   v-for="(perk, i) in plan.perks"
@@ -681,7 +683,7 @@ function copyDomain(text: string, id: string) {
 
           <div class="pt-4 border-t border-slate-100">
             <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
-              <span>SLA Level:</span>
+              <span>{{ t('superadmin.plansTab.slaLevel') }}</span>
               <span class="font-bold text-slate-800">{{ plan.limits?.support_sla || (plan.slug === 'enterprise' ? '24/7 1h SLA' : plan.slug === 'professional' ? '12h Business SLA' : '48h Standard') }}</span>
             </div>
           </div>
@@ -693,14 +695,14 @@ function copyDomain(text: string, id: string) {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Layers class="w-4 h-4 text-indigo-600" /> Complete Feature & Module Access Matrix
+              <Layers class="w-4 h-4 text-indigo-600" /> {{ t('superadmin.plansTab.matrixTitle') }}
             </h3>
             <p class="text-xs text-slate-500 mt-0.5">
-              Comparison of included operations, finance, and system capabilities across each subscription tier.
+              {{ t('superadmin.plansTab.matrixSubtitle') }}
             </p>
           </div>
           <span class="text-xs font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-            15 Modules Evaluated
+            {{ t('superadmin.plansTab.modulesEvaluated') }}
           </span>
         </div>
 
@@ -708,8 +710,8 @@ function copyDomain(text: string, id: string) {
           <table class="min-w-full divide-y divide-slate-100 text-xs">
             <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
               <tr>
-                <th class="px-4 py-3 text-left w-1/4">Module / ERP Capability</th>
-                <th class="px-4 py-3 text-left w-1/6">Category</th>
+                <th class="px-4 py-3 text-left w-1/4">{{ t('superadmin.plansTab.tableModule') }}</th>
+                <th class="px-4 py-3 text-left w-1/6">{{ t('superadmin.plansTab.tableCategory') }}</th>
                 <th class="px-4 py-3 text-center w-1/6">
                   <div class="font-bold text-slate-800">Basic</div>
                   <div class="text-[9px] text-slate-400 font-normal lowercase">1,000 Birr/month</div>
@@ -724,7 +726,7 @@ function copyDomain(text: string, id: string) {
                   </div>
                   <div class="text-[9px] text-slate-400 font-normal lowercase">5,000 Birr/month</div>
                 </th>
-                <th class="px-4 py-3 text-left">Perk & Limit Differences</th>
+                <th class="px-4 py-3 text-left">{{ t('superadmin.plansTab.tableDifferences') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -748,7 +750,7 @@ function copyDomain(text: string, id: string) {
                   <div v-if="row.basic" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-600">
                     <CheckCircle2 class="w-4 h-4" />
                   </div>
-                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" title="Locked on Basic Plan">
+                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" :title="t('superadmin.plansTab.lockedBasic')">
                     <Lock class="w-3 h-3 text-slate-400" />
                   </div>
                 </td>
@@ -758,7 +760,7 @@ function copyDomain(text: string, id: string) {
                   <div v-if="row.pro" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-600">
                     <CheckCircle2 class="w-4 h-4" />
                   </div>
-                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" title="Locked on Professional Plan">
+                  <div v-else class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400" :title="t('superadmin.plansTab.lockedPro')">
                     <Lock class="w-3 h-3 text-slate-400" />
                   </div>
                 </td>
@@ -787,33 +789,33 @@ function copyDomain(text: string, id: string) {
         <div class="space-y-1 border-b border-slate-100 pb-4">
           <div class="flex items-center gap-2">
             <ShieldAlert class="w-5 h-5 text-amber-500" />
-            <h2 class="text-base font-bold text-slate-900">Platform Super Administrator Account</h2>
+            <h2 class="text-base font-bold text-slate-900">{{ t('superadmin.credentialsTab.title') }}</h2>
           </div>
           <p class="text-xs text-slate-500">
-            Super Administrator accounts possess root-level authorization across the central registry and can switch into any tenant workspace.
+            {{ t('superadmin.credentialsTab.subtitle') }}
           </p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Super Admin Login Email</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('superadmin.credentialsTab.loginEmail') }}</span>
             <p class="font-mono text-slate-900 font-bold text-sm">superadmin@erp.local</p>
-            <p class="text-slate-500 text-[11px]">Primary platform owner credential.</p>
+            <p class="text-slate-500 text-[11px]">{{ t('superadmin.credentialsTab.primaryOwner') }}</p>
           </div>
 
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Seeded Password</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('superadmin.credentialsTab.seededPassword') }}</span>
             <p class="font-mono text-slate-900 font-bold text-sm">password123</p>
-            <p class="text-slate-500 text-[11px]">Can be updated under Account Settings.</p>
+            <p class="text-slate-500 text-[11px]">{{ t('superadmin.credentialsTab.passwordNote') }}</p>
           </div>
         </div>
 
         <div class="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
           <Database class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
           <div class="text-xs text-blue-900 space-y-1">
-            <h4 class="font-bold">Multi-Tenant PostgreSQL Architecture</h4>
+            <h4 class="font-bold">{{ t('superadmin.credentialsTab.dbArchitectureTitle') }}</h4>
             <p class="leading-relaxed">
-              Every provisioned organization receives an isolated PostgreSQL schema with automatic migration synchronization, dedicated ledger tables, and encrypted API credential secrets.
+              {{ t('superadmin.credentialsTab.dbArchitectureDesc') }}
             </p>
           </div>
         </div>
@@ -821,12 +823,12 @@ function copyDomain(text: string, id: string) {
     </div>
 
     <!-- Modal: Provision New Tenant -->
-    <UiModal v-model="isCreateModalOpen" title="Provision New Tenant Organization" size="lg">
+    <UiModal v-model="isCreateModalOpen" :title="t('superadmin.createModal.title')" size="lg">
       <div class="space-y-5">
         <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
           <Building2 class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
           <p class="text-xs text-blue-900 leading-relaxed">
-            Provisioning a tenant generates an isolated database schema, runs database migrations, and initializes the root administrative user account.
+            {{ t('superadmin.createModal.description') }}
           </p>
         </div>
 
@@ -834,15 +836,15 @@ function copyDomain(text: string, id: string) {
           <UiInput
             :model-value="createForm.name"
             @update:model-value="handleNameInput"
-            label="Organization Name"
-            placeholder="e.g. Acme Global Logistics"
+            :label="t('superadmin.createModal.orgName')"
+            :placeholder="t('superadmin.createModal.orgNamePlaceholder')"
             required
           />
 
           <UiInput
             v-model="createForm.slug"
-            label="Subdomain Identifier (Slug)"
-            placeholder="e.g. acme-global"
+            :label="t('superadmin.createModal.slug')"
+            :placeholder="t('superadmin.createModal.slugPlaceholder')"
             required
           />
         </div>
@@ -850,109 +852,109 @@ function copyDomain(text: string, id: string) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiInput
             v-model="createForm.custom_domain"
-            label="Custom Domain (Optional)"
-            placeholder="e.g. erp.acmeglobal.com"
+            :label="t('superadmin.createModal.customDomain')"
+            :placeholder="t('superadmin.createModal.customDomainPlaceholder')"
           />
 
           <UiSelect
             v-model="createForm.plan_id"
-            label="Subscription Plan"
+            :label="t('superadmin.createModal.plan')"
             :options="(plans || []).map(p => ({ label: `${p.name} (${(p.price_monthly / 100).toLocaleString()} Birr/mo)`, value: p.id }))"
           />
         </div>
 
         <div class="border-t border-slate-100 pt-4 space-y-3">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-800 block">Initial Tenant Administrator</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-800 block">{{ t('superadmin.createModal.adminSection') }}</span>
           
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <UiInput
               v-model="createForm.admin_name"
-              label="Admin Full Name"
-              placeholder="e.g. Sarah Jenkins"
+              :label="t('superadmin.createModal.adminName')"
+              :placeholder="t('superadmin.createModal.adminNamePlaceholder')"
               required
             />
             <UiInput
               v-model="createForm.admin_email"
-              label="Admin Email"
+              :label="t('superadmin.createModal.adminEmail')"
               type="email"
-              placeholder="sarah@acme.com"
+              :placeholder="t('superadmin.createModal.adminEmailPlaceholder')"
               required
             />
             <UiInput
               v-model="createForm.admin_password"
-              label="Initial Password"
+              :label="t('superadmin.createModal.adminPassword')"
               type="password"
-              placeholder="Min. 8 characters"
+              :placeholder="t('superadmin.createModal.adminPasswordPlaceholder')"
               required
             />
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">{{ t('superadmin.createModal.cancel') }}</UiButton>
           <UiButton :loading="createTenantMutation.isPending.value" @click="handleCreateSubmit">
-            Provision Tenant & Database
+            {{ t('superadmin.createModal.submit') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Modal: Edit Tenant -->
-    <UiModal v-model="isEditModalOpen" title="Edit Tenant Organization & Plan" size="md">
+    <UiModal v-model="isEditModalOpen" :title="t('superadmin.editModal.title')" size="md">
       <div v-if="editingTenant" class="space-y-4">
-        <UiInput v-model="editForm.name" label="Organization Name" required />
-        <UiInput v-model="editForm.slug" label="Subdomain Slug" required />
-        <UiInput v-model="editForm.custom_domain" label="Custom Domain" placeholder="e.g. mycompany.com" />
+        <UiInput v-model="editForm.name" :label="t('superadmin.editModal.orgName')" required />
+        <UiInput v-model="editForm.slug" :label="t('superadmin.editModal.slug')" required />
+        <UiInput v-model="editForm.custom_domain" :label="t('superadmin.editModal.customDomain')" :placeholder="t('superadmin.editModal.customDomainPlaceholder')" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <UiSelect
             v-model="editForm.plan_id"
-            label="Subscription Plan"
+            :label="t('superadmin.editModal.plan')"
             :options="(plans || []).map(p => ({ label: p.name, value: p.id }))"
           />
 
           <UiSelect
             v-model="editForm.status"
-            label="Account Status"
+            :label="t('superadmin.editModal.status')"
             :options="[
-              { label: 'Active', value: 'active' },
-              { label: 'Trial', value: 'trial' },
-              { label: 'Suspended', value: 'suspended' },
+              { label: t('superadmin.editModal.statusActive'), value: 'active' },
+              { label: t('superadmin.editModal.statusTrial'), value: 'trial' },
+              { label: t('superadmin.editModal.statusSuspended'), value: 'suspended' },
             ]"
           />
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isEditModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isEditModalOpen = false">{{ t('superadmin.editModal.cancel') }}</UiButton>
           <UiButton :loading="updateTenantMutation.isPending.value" @click="handleEditSubmit">
-            Save Changes
+            {{ t('superadmin.editModal.submit') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Modal: Delete / Decommission Tenant -->
-    <UiModal v-model="isDeleteModalOpen" title="Decommission Tenant Organization" size="sm">
+    <UiModal v-model="isDeleteModalOpen" :title="t('superadmin.deleteModal.title')" size="sm">
       <div v-if="tenantToDelete" class="space-y-4">
         <div class="p-3.5 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
           <Trash2 class="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
           <div class="space-y-1 text-xs text-red-900">
-            <h4 class="font-bold">Permanent Database Decommission</h4>
+            <h4 class="font-bold">{{ t('superadmin.deleteModal.confirmTitle') }}</h4>
             <p class="leading-relaxed">
-              Are you sure you want to decommission <strong class="font-bold">{{ tenantToDelete.name }}</strong> (`{{ tenantToDelete.slug }}`)? All isolated records will be dropped.
+              {{ t('superadmin.deleteModal.confirmMessage', { name: tenantToDelete.name, slug: tenantToDelete.slug }) }}
             </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">{{ t('superadmin.deleteModal.cancel') }}</UiButton>
           <UiButton
             variant="danger"
             size="sm"
             :loading="deleteTenantMutation.isPending.value"
             @click="handleDeleteSubmit"
           >
-            <Trash2 class="w-3.5 h-3.5 mr-1" /> Decommission Tenant
+            <Trash2 class="w-3.5 h-3.5 mr-1" /> {{ t('superadmin.deleteModal.submit') }}
           </UiButton>
         </div>
       </div>

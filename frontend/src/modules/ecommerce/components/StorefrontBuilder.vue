@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import {
@@ -62,6 +63,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 const activePage = ref<StorefrontPage | null>(null)
 const sections = ref<Section[]>([])
 const selectedSectionId = ref<string | null>(null)
@@ -84,44 +86,44 @@ const catalogProducts = ref([
   { id: '4', name: 'Ceramic Pour-Over Coffee Dripper', sku: 'COF-04', price_cents: 2800, category: 'Home' },
 ])
 
-const availableBlockTypes = [
+const availableBlockTypes = computed(() => [
   {
     type: 'hero' as const,
-    label: 'Hero Banner',
-    description: 'Prominent headline, subtext, and call-to-action button.',
+    label: t('ecommerce.builder.blockHero'),
+    description: t('ecommerce.builder.blockHeroDesc'),
     icon: Sparkles,
   },
   {
     type: 'product_grid' as const,
-    label: 'Product Catalog Grid',
-    description: 'Showcase store products with live add-to-cart buttons.',
+    label: t('ecommerce.builder.blockProductGrid'),
+    description: t('ecommerce.builder.blockProductGridDesc'),
     icon: ShoppingBag,
   },
   {
     type: 'features' as const,
-    label: 'Value Props & Perks',
-    description: 'Highlight fast shipping, money-back guarantees, etc.',
+    label: t('ecommerce.builder.blockFeatures'),
+    description: t('ecommerce.builder.blockFeaturesDesc'),
     icon: ShieldCheck,
   },
   {
     type: 'promo_banner' as const,
-    label: 'Promo & Discount Banner',
-    description: 'Highlight sales, discount codes, or special promotions.',
+    label: t('ecommerce.builder.blockPromoBanner'),
+    description: t('ecommerce.builder.blockPromoBannerDesc'),
     icon: Palette,
   },
   {
     type: 'testimonials' as const,
-    label: 'Customer Reviews',
-    description: 'Social proof cards with customer ratings and quotes.',
+    label: t('ecommerce.builder.blockTestimonials'),
+    description: t('ecommerce.builder.blockTestimonialsDesc'),
     icon: Star,
   },
   {
     type: 'footer' as const,
-    label: 'Store Footer',
-    description: 'Store contact details, copyright, and brand tagline.',
+    label: t('ecommerce.builder.blockFooter'),
+    description: t('ecommerce.builder.blockFooterDesc'),
     icon: Layers,
   },
-]
+])
 
 const selectedSection = computed(() => {
   return sections.value.find(s => s.id === selectedSectionId.value) || null
@@ -262,9 +264,9 @@ async function togglePublish() {
     })
     isPublished.value = nextState
     props.storefront.is_published = nextState
-    toast.success(nextState ? 'Storefront is now Published LIVE!' : 'Storefront changed to Draft.')
+    toast.success(nextState ? t('ecommerce.messages.builderPublishedLive') : t('ecommerce.messages.builderDraftStatus'))
   } catch (e: any) {
-    toast.error('Failed to change publish status.')
+    toast.error(t('ecommerce.messages.builderFailedStatus'))
   }
 }
 
@@ -288,9 +290,9 @@ async function saveAndPublish() {
 
     isPublished.value = true
     props.storefront.is_published = true
-    toast.success(`Published live! Your store is live at /store/${props.storefront.slug}`)
+    toast.success(t('ecommerce.messages.builderPublishLiveSuccess', { slug: props.storefront.slug }))
   } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Failed to save and publish.')
+    toast.error(e?.response?.data?.message || t('ecommerce.messages.builderFailedPublish'))
   } finally {
     isSaving.value = false
   }
@@ -310,7 +312,7 @@ function formatCents(cents: number) {
           @click="emit('close')"
           class="text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors shrink-0"
         >
-          <span class="hidden sm:inline">&larr; Dashboard</span>
+          <span class="hidden sm:inline">&larr; {{ t('ecommerce.builder.dashboard') }}</span>
           <span class="sm:hidden">&larr;</span>
         </button>
         <div class="min-w-0">
@@ -323,7 +325,7 @@ function formatCents(cents: number) {
                 isPublished ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
               ]"
             >
-              {{ isPublished ? '● Live' : '○ Draft' }}
+              {{ isPublished ? t('ecommerce.storefrontsTab.live') : t('ecommerce.storefrontsTab.draft') }}
             </button>
           </div>
           <p class="text-[10px] font-mono text-slate-400 truncate hidden xs:block">
@@ -337,21 +339,21 @@ function formatCents(cents: number) {
         <button
           @click="viewMode = 'desktop'"
           :class="[viewMode === 'desktop' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white', 'p-1.5 rounded transition-colors']"
-          title="Desktop View"
+          :title="t('ecommerce.builder.desktopView')"
         >
           <Monitor class="w-4 h-4" />
         </button>
         <button
           @click="viewMode = 'tablet'"
           :class="[viewMode === 'tablet' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white', 'p-1.5 rounded transition-colors']"
-          title="Tablet View"
+          :title="t('ecommerce.builder.tabletView')"
         >
           <Tablet class="w-4 h-4" />
         </button>
         <button
           @click="viewMode = 'mobile'"
           :class="[viewMode === 'mobile' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white', 'p-1.5 rounded transition-colors']"
-          title="Mobile View"
+          :title="t('ecommerce.builder.mobileView')"
         >
           <Smartphone class="w-4 h-4" />
         </button>
@@ -363,10 +365,10 @@ function formatCents(cents: number) {
           :to="`/store/${storefront.slug}`"
           target="_blank"
           class="p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 inline-flex items-center space-x-1.5 transition-colors"
-          title="Open live store"
+          :title="t('ecommerce.builder.openLiveStore')"
         >
           <ExternalLink class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline">Live Store</span>
+          <span class="hidden sm:inline">{{ t('ecommerce.builder.liveStore') }}</span>
         </router-link>
 
         <button
@@ -375,7 +377,7 @@ function formatCents(cents: number) {
           class="px-2.5 sm:px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/30 inline-flex items-center space-x-1.5 transition-colors disabled:opacity-50"
         >
           <Save class="w-3.5 h-3.5" />
-          <span>{{ isSaving ? 'Saving...' : 'Publish' }}</span>
+          <span>{{ isSaving ? t('ecommerce.builder.saving') : t('ecommerce.builder.publish') }}</span>
         </button>
       </div>
     </header>
@@ -390,13 +392,13 @@ function formatCents(cents: number) {
         ]"
       >
         <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Page Blocks ({{ sections.length }})</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ t('ecommerce.builder.pageBlocks', { count: sections.length }) }}</span>
           <button
             @click="isAddingSection = true"
             class="text-xs px-2 py-1 rounded bg-primary-600 hover:bg-primary-500 text-white flex items-center space-x-1 font-medium"
           >
             <Plus class="w-3 h-3" />
-            <span>Add Block</span>
+            <span>{{ t('ecommerce.builder.addBlock') }}</span>
           </button>
         </div>
 
@@ -424,7 +426,7 @@ function formatCents(cents: number) {
                 @click.stop="moveUp(idx)"
                 :disabled="idx === 0"
                 class="p-1 hover:bg-slate-800 rounded disabled:opacity-20"
-                title="Move up"
+                :title="t('ecommerce.builder.moveUp')"
               >
                 <ArrowUp class="w-3 h-3" />
               </button>
@@ -432,21 +434,21 @@ function formatCents(cents: number) {
                 @click.stop="moveDown(idx)"
                 :disabled="idx === sections.length - 1"
                 class="p-1 hover:bg-slate-800 rounded disabled:opacity-20"
-                title="Move down"
+                :title="t('ecommerce.builder.moveDown')"
               >
                 <ArrowDown class="w-3 h-3" />
               </button>
               <button
                 @click.stop="duplicateSection(idx)"
                 class="p-1 hover:bg-slate-800 rounded hidden xs:inline-block"
-                title="Duplicate"
+                :title="t('ecommerce.builder.duplicate')"
               >
                 <Copy class="w-3 h-3" />
               </button>
               <button
                 @click.stop="deleteSection(sec.id)"
                 class="p-1 hover:bg-red-900/50 hover:text-red-400 rounded"
-                title="Delete"
+                :title="t('ecommerce.builder.delete')"
               >
                 <Trash2 class="w-3 h-3" />
               </button>
@@ -496,7 +498,7 @@ function formatCents(cents: number) {
               <p class="text-xs sm:text-sm max-w-xl mx-auto opacity-90 leading-relaxed">{{ sec.props.subheadline }}</p>
               <div class="pt-2">
                 <span class="inline-block px-5 py-2 rounded-full font-semibold text-xs sm:text-sm bg-primary-600 text-white shadow">
-                  {{ sec.props.button_text || 'Shop Now' }}
+                  {{ sec.props.button_text || t('ecommerce.builder.shopNow') }}
                 </span>
               </div>
             </section>
@@ -539,7 +541,7 @@ function formatCents(cents: number) {
                   </div>
                   <div class="flex items-center justify-between pt-1">
                     <span class="font-bold text-xs sm:text-sm text-slate-900">{{ formatCents(prod.price_cents) }}</span>
-                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-900 text-white">Add</span>
+                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-900 text-white">{{ t('ecommerce.builder.add') }}</span>
                   </div>
                 </div>
               </div>
@@ -581,7 +583,7 @@ function formatCents(cents: number) {
             <footer v-else-if="sec.type === 'footer'" class="py-6 sm:py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-center text-xs space-y-1.5">
               <p class="font-bold text-white text-sm">{{ sec.props.store_name }}</p>
               <p class="text-xs">{{ sec.props.tagline }}</p>
-              <p class="pt-2 text-[10px] text-slate-500">&copy; 2026 {{ sec.props.store_name }}. All rights reserved.</p>
+              <p class="pt-2 text-[10px] text-slate-500">&copy; 2026 {{ sec.props.store_name }}. {{ t('ecommerce.builder.allRightsReserved') }}</p>
             </footer>
           </div>
         </div>
@@ -595,39 +597,39 @@ function formatCents(cents: number) {
         ]"
       >
         <div v-if="!selectedSection" class="text-center py-16 text-slate-500 text-xs">
-          Select any block from the left outline or center preview to customize its settings.
+          {{ t('ecommerce.builder.emptyInspector') }}
         </div>
 
         <div v-else class="space-y-4">
           <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
             <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-primary-400">Block Settings</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-primary-400">{{ t('ecommerce.builder.blockSettings') }}</span>
               <h3 class="text-sm font-bold text-white capitalize">{{ selectedSection.type.replace('_', ' ') }}</h3>
             </div>
             <button
               @click="mobileTab = 'canvas'"
               class="lg:hidden text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 font-semibold"
             >
-              Done
+              {{ t('ecommerce.builder.done') }}
             </button>
           </div>
 
           <!-- Hero Inspector -->
           <div v-if="selectedSection.type === 'hero'" class="space-y-3 text-xs">
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Headline</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.headline') }}</label>
               <input v-model="selectedSection.props.headline" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Subheadline</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.subheadline') }}</label>
               <textarea v-model="selectedSection.props.subheadline" rows="2" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs"></textarea>
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Button Text</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.buttonText') }}</label>
               <input v-model="selectedSection.props.button_text" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Background Color</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.backgroundColor') }}</label>
               <input v-model="selectedSection.props.background_color" type="color" class="w-full h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer" />
             </div>
           </div>
@@ -635,19 +637,19 @@ function formatCents(cents: number) {
           <!-- Product Grid Inspector -->
           <div v-else-if="selectedSection.type === 'product_grid'" class="space-y-3 text-xs">
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Section Title</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.sectionTitle') }}</label>
               <input v-model="selectedSection.props.title" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Subtitle</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.subtitle') }}</label>
               <input v-model="selectedSection.props.subtitle" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Grid Columns</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.gridColumns') }}</label>
               <select v-model.number="selectedSection.props.columns" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs">
-                <option :value="2">2 Columns</option>
-                <option :value="3">3 Columns</option>
-                <option :value="4">4 Columns</option>
+                <option :value="2">{{ t('ecommerce.builder.cols2') }}</option>
+                <option :value="3">{{ t('ecommerce.builder.cols3') }}</option>
+                <option :value="4">{{ t('ecommerce.builder.cols4') }}</option>
               </select>
             </div>
           </div>
@@ -655,15 +657,15 @@ function formatCents(cents: number) {
           <!-- Promo Banner Inspector -->
           <div v-else-if="selectedSection.type === 'promo_banner'" class="space-y-3 text-xs">
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Headline</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.headline') }}</label>
               <input v-model="selectedSection.props.headline" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Coupon Code</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.couponCode') }}</label>
               <input v-model="selectedSection.props.code" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs font-mono uppercase" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Background Color</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.backgroundColor') }}</label>
               <input v-model="selectedSection.props.background_color" type="color" class="w-full h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer" />
             </div>
           </div>
@@ -671,11 +673,11 @@ function formatCents(cents: number) {
           <!-- Footer Inspector -->
           <div v-else-if="selectedSection.type === 'footer'" class="space-y-3 text-xs">
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Store Name</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.storeName') }}</label>
               <input v-model="selectedSection.props.store_name" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
             <div class="space-y-1">
-              <label class="font-semibold text-slate-300">Brand Tagline</label>
+              <label class="font-semibold text-slate-300">{{ t('ecommerce.builder.brandTagline') }}</label>
               <input v-model="selectedSection.props.tagline" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs" />
             </div>
           </div>
@@ -690,7 +692,7 @@ function formatCents(cents: number) {
         :class="[mobileTab === 'structure' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
       >
         <Layers class="w-4 h-4" />
-        <span>Blocks</span>
+        <span>{{ t('ecommerce.builder.blocks') }}</span>
       </button>
 
       <button
@@ -698,7 +700,7 @@ function formatCents(cents: number) {
         :class="[mobileTab === 'canvas' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
       >
         <Eye class="w-4 h-4" />
-        <span>Preview</span>
+        <span>{{ t('ecommerce.builder.preview') }}</span>
       </button>
 
       <button
@@ -706,7 +708,7 @@ function formatCents(cents: number) {
         :class="[mobileTab === 'inspector' ? 'text-primary-400 font-bold' : 'text-slate-400', 'flex flex-col items-center justify-center space-y-0.5 text-[10px]']"
       >
         <Sliders class="w-4 h-4" />
-        <span>Settings</span>
+        <span>{{ t('ecommerce.builder.settings') }}</span>
       </button>
     </div>
 
@@ -717,7 +719,7 @@ function formatCents(cents: number) {
     >
       <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="text-sm sm:text-base font-bold text-white">Add Page Block</h3>
+          <h3 class="text-sm sm:text-base font-bold text-white">{{ t('ecommerce.builder.addPageBlock') }}</h3>
           <button @click="isAddingSection = false" class="text-slate-400 hover:text-white text-xs font-bold p-1">✕</button>
         </div>
 

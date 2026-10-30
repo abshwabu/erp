@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { rolesApi, usersApi, type Role, type AppUser } from '@/api/roles'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -32,6 +33,7 @@ import { useToast } from '@/composables/useToast'
 
 const queryClient = useQueryClient()
 const toast = useToast()
+const { t } = useI18n()
 
 const activeTab = ref<'users' | 'roles'>('users')
 
@@ -84,22 +86,22 @@ const userStats = computed(() => {
 
   return [
     {
-      label: 'Team Members',
+      label: t('roles.stats.teamMembers'),
       value: list.length,
       icon: markRaw(Users),
     },
     {
-      label: 'Active Accounts',
+      label: t('roles.stats.activeAccounts'),
       value: active,
       icon: markRaw(UserCheck),
     },
     {
-      label: 'Suspended Accounts',
+      label: t('roles.stats.suspendedAccounts'),
       value: suspended,
       icon: markRaw(UserX),
     },
     {
-      label: 'Defined Roles',
+      label: t('roles.stats.definedRoles'),
       value: totalRoles,
       icon: markRaw(Shield),
     },
@@ -153,10 +155,10 @@ const saveUserMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['core', 'users'] })
     isUserModalOpen.value = false
-    toast.success(editingUser.value ? 'User account updated' : 'New user created')
+    toast.success(editingUser.value ? t('roles.messages.userUpdated') : t('roles.messages.userCreated'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save user')
+    toast.error(err?.response?.data?.message || t('roles.messages.failedSaveUser'))
   },
 })
 
@@ -164,10 +166,10 @@ const toggleUserStatusMutation = useMutation({
   mutationFn: (id: string) => usersApi.toggleStatus(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['core', 'users'] })
-    toast.success('User status updated')
+    toast.success(t('roles.messages.statusUpdated'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to toggle status')
+    toast.error(err?.response?.data?.message || t('roles.messages.failedToggleStatus'))
   },
 })
 
@@ -177,10 +179,10 @@ const deleteUserMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['core', 'users'] })
     isDeleteUserModalOpen.value = false
     userToDelete.value = null
-    toast.success('User deleted')
+    toast.success(t('roles.messages.userDeleted'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to delete user')
+    toast.error(err?.response?.data?.message || t('roles.messages.failedDeleteUser'))
   },
 })
 
@@ -201,10 +203,10 @@ const saveRoleMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['core', 'roles'] })
     isRoleModalOpen.value = false
-    toast.success(editingRole.value ? 'Role updated' : 'Role created')
+    toast.success(editingRole.value ? t('roles.messages.roleUpdated') : t('roles.messages.roleCreated'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save role')
+    toast.error(err?.response?.data?.message || t('roles.messages.failedSaveRole'))
   },
 })
 
@@ -214,10 +216,10 @@ const deleteRoleMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['core', 'roles'] })
     isDeleteRoleModalOpen.value = false
     roleToDelete.value = null
-    toast.success('Role deleted')
+    toast.success(t('roles.messages.roleDeleted'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to delete role')
+    toast.error(err?.response?.data?.message || t('roles.messages.failedDeleteRole'))
   },
 })
 
@@ -253,11 +255,11 @@ function openDeleteUserConfirm(user: AppUser) {
 
 function handleSaveUser() {
   if (!userForm.value.name || !userForm.value.email) {
-    toast.error('Name and email are required')
+    toast.error(t('roles.messages.nameEmailRequired'))
     return
   }
   if (!editingUser.value && !userForm.value.password) {
-    toast.error('Password is required for new accounts')
+    toast.error(t('roles.messages.passwordRequired'))
     return
   }
 
@@ -326,16 +328,16 @@ function clearAllPermissions() {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Users & Access Control</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Manage organization team members, assign access privileges, and configure role-based permissions.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('roles.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('roles.subtitle') }}</p>
       </div>
 
       <div class="flex items-center gap-2">
         <UiButton v-if="activeTab === 'users'" @click="openCreateUser">
-          <Plus class="w-4 h-4 mr-1.5" /> Add Team Member
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('roles.addMember') }}
         </UiButton>
         <UiButton v-else @click="openCreateRole">
-          <Plus class="w-4 h-4 mr-1.5" /> Create Role
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('roles.createRole') }}
         </UiButton>
       </div>
     </div>
@@ -359,7 +361,7 @@ function clearAllPermissions() {
         class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
         :class="activeTab === 'users' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Users class="w-3.5 h-3.5" /> Team Members ({{ users?.length || 0 }})
+        <Users class="w-3.5 h-3.5" /> {{ t('roles.tabs.teamMembers') }} ({{ users?.length || 0 }})
       </button>
 
       <button
@@ -368,7 +370,7 @@ function clearAllPermissions() {
         class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
         :class="activeTab === 'roles' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
       >
-        <Shield class="w-3.5 h-3.5" /> Roles & Permissions ({{ roles?.length || 0 }})
+        <Shield class="w-3.5 h-3.5" /> {{ t('roles.tabs.rolesPermissions') }} ({{ roles?.length || 0 }})
       </button>
     </div>
 
@@ -383,7 +385,7 @@ function clearAllPermissions() {
             class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
             :class="selectedRoleFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
           >
-            All Roles
+            {{ t('roles.filters.allRoles') }}
           </button>
           <button
             v-for="r in roles"
@@ -399,7 +401,7 @@ function clearAllPermissions() {
 
         <UiInput
           v-model="userSearchQuery"
-          placeholder="Search by name, email..."
+          :placeholder="t('roles.filters.searchPlaceholder')"
           size="sm"
           class="w-full sm:w-64"
         >
@@ -417,11 +419,11 @@ function clearAllPermissions() {
           <table class="min-w-full divide-y divide-slate-100 text-xs">
             <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
               <tr>
-                <th class="px-4 py-3 text-left">Member Profile</th>
-                <th class="px-4 py-3 text-left">Assigned Roles</th>
-                <th class="px-4 py-3 text-center">Account Status</th>
-                <th class="px-4 py-3 text-right">Created Date</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th class="px-4 py-3 text-left">{{ t('roles.table.memberProfile') }}</th>
+                <th class="px-4 py-3 text-left">{{ t('roles.table.assignedRoles') }}</th>
+                <th class="px-4 py-3 text-center">{{ t('roles.table.accountStatus') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('roles.table.createdDate') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('roles.table.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -440,7 +442,7 @@ function clearAllPermissions() {
                     >
                       {{ r }}
                     </span>
-                    <span v-if="!user.roles?.length" class="text-xs text-slate-400 italic">No roles assigned</span>
+                    <span v-if="!user.roles?.length" class="text-xs text-slate-400 italic">{{ t('roles.table.noRoles') }}</span>
                   </div>
                 </td>
 
@@ -450,10 +452,10 @@ function clearAllPermissions() {
                     @click="toggleUserStatusMutation.mutate(user.id)"
                     class="cursor-pointer inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-full transition-all"
                     :class="user.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'"
-                    :title="user.is_active ? 'Click to deactivate' : 'Click to activate'"
+                    :title="user.is_active ? t('roles.table.clickDeactivate') : t('roles.table.clickActivate')"
                   >
                     <span class="w-1.5 h-1.5 rounded-full" :class="user.is_active ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                    {{ user.is_active ? 'Active' : 'Suspended' }}
+                    {{ user.is_active ? t('roles.table.active') : t('roles.table.suspended') }}
                   </button>
                 </td>
 
@@ -474,7 +476,7 @@ function clearAllPermissions() {
           </table>
         </div>
         <div v-else class="p-12 text-center text-slate-400 text-xs">
-          No team members found matching your search.
+          {{ t('roles.table.noUsersFound') }}
         </div>
       </div>
     </div>
@@ -498,12 +500,12 @@ function clearAllPermissions() {
                 <h3 class="font-bold text-slate-900 text-base capitalize">{{ role.name }}</h3>
               </div>
               <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                {{ role.permissions.length }} permissions
+                {{ t('roles.rolesGrid.permissionsCount', { count: role.permissions.length }) }}
               </span>
             </div>
 
             <p class="text-xs text-slate-500">
-              Grants authorization across specific enterprise modules and APIs.
+              {{ t('roles.rolesGrid.grantsDesc') }}
             </p>
 
             <div class="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto pr-1">
@@ -515,14 +517,14 @@ function clearAllPermissions() {
                 {{ p }}
               </span>
               <span v-if="role.permissions.length > 8" class="text-[9px] font-bold text-slate-400 self-center">
-                +{{ role.permissions.length - 8 }} more
+                {{ t('roles.rolesGrid.morePermissions', { count: role.permissions.length - 8 }) }}
               </span>
             </div>
           </div>
 
           <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
             <UiButton variant="outline" size="sm" @click="openEditRole(role)">
-              <Pencil class="w-3.5 h-3.5 mr-1" /> Configure Permissions
+              <Pencil class="w-3.5 h-3.5 mr-1" /> {{ t('roles.rolesGrid.configurePermissions') }}
             </UiButton>
             <UiButton variant="ghost" size="sm" class="text-red-500 hover:text-red-700" @click="openDeleteRoleConfirm(role)">
               <Trash2 class="w-3.5 h-3.5" />
@@ -533,21 +535,21 @@ function clearAllPermissions() {
     </div>
 
     <!-- Create / Edit User Modal -->
-    <UiModal v-model="isUserModalOpen" :title="editingUser ? 'Edit User Profile' : 'Add Team Member'" size="md">
+    <UiModal v-model="isUserModalOpen" :title="editingUser ? t('roles.userModal.editTitle') : t('roles.userModal.createTitle')" size="md">
       <div class="space-y-4">
-        <UiInput v-model="userForm.name" label="Full Name" placeholder="e.g. Sarah Connor" required />
-        <UiInput v-model="userForm.email" label="Email Address" type="email" placeholder="sarah@company.com" required />
+        <UiInput v-model="userForm.name" :label="t('roles.userModal.fullName')" :placeholder="t('roles.userModal.fullNamePlaceholder')" required />
+        <UiInput v-model="userForm.email" :label="t('roles.userModal.email')" type="email" :placeholder="t('roles.userModal.emailPlaceholder')" required />
 
         <UiInput
           v-model="userForm.password"
-          label="Account Password"
+          :label="t('roles.userModal.password')"
           type="password"
-          :placeholder="editingUser ? 'Leave blank to keep existing password' : 'Min. 8 characters'"
+          :placeholder="editingUser ? t('roles.userModal.passwordEditPlaceholder') : t('roles.userModal.passwordCreatePlaceholder')"
           :required="!editingUser"
         />
 
         <div class="space-y-2">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Assign Roles</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('roles.userModal.assignRoles') }}</label>
           <div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 max-h-40 overflow-y-auto">
             <label
               v-for="r in roles"
@@ -573,36 +575,36 @@ function clearAllPermissions() {
             class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
           />
           <label for="user_active_checkbox" class="text-xs text-slate-700 font-semibold cursor-pointer">
-            User account is active & authorized to login
+            {{ t('roles.userModal.isActiveLabel') }}
           </label>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isUserModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isUserModalOpen = false">{{ t('roles.userModal.cancel') }}</UiButton>
           <UiButton :loading="saveUserMutation.isPending.value" @click="handleSaveUser">
-            {{ editingUser ? 'Save User' : 'Create User' }}
+            {{ editingUser ? t('roles.userModal.saveUser') : t('roles.userModal.createUser') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Create / Edit Role Modal -->
-    <UiModal v-model="isRoleModalOpen" :title="editingRole ? `Configure Role: ${editingRole.name}` : 'Create Role'" size="xl">
+    <UiModal v-model="isRoleModalOpen" :title="editingRole ? t('roles.roleModal.editTitle', { name: editingRole.name }) : t('roles.roleModal.createTitle')" size="xl">
       <div class="space-y-4">
-        <UiInput v-model="roleName" label="Role Name" placeholder="e.g. Operations Manager" required />
+        <UiInput v-model="roleName" :label="t('roles.roleModal.roleName')" :placeholder="t('roles.roleModal.roleNamePlaceholder')" required />
 
         <div>
           <div class="flex items-center justify-between mb-2">
             <p class="text-xs font-bold uppercase tracking-wider text-slate-700">
-              Module Permissions ({{ selectedPermissions.length }} of {{ allPermissions.length }} selected)
+              {{ t('roles.roleModal.modulePermissions', { selected: selectedPermissions.length, total: allPermissions.length }) }}
             </p>
             <div class="flex items-center gap-2 text-xs">
               <button type="button" @click="selectAllPermissions" class="font-bold text-primary-600 hover:text-primary-800 cursor-pointer">
-                Select All
+                {{ t('roles.roleModal.selectAll') }}
               </button>
               <span class="text-slate-300">•</span>
               <button type="button" @click="clearAllPermissions" class="font-bold text-slate-500 hover:text-slate-700 cursor-pointer">
-                Clear All
+                {{ t('roles.roleModal.clearAll') }}
               </button>
             </div>
           </div>
@@ -618,7 +620,7 @@ function clearAllPermissions() {
                   @click="toggleModulePermissions(moduleName)"
                   class="text-[11px] font-bold text-primary-600 hover:text-primary-800 cursor-pointer"
                 >
-                  Toggle All
+                  {{ t('roles.roleModal.toggleAll') }}
                 </button>
               </div>
 
@@ -642,67 +644,67 @@ function clearAllPermissions() {
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isRoleModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isRoleModalOpen = false">{{ t('roles.roleModal.cancel') }}</UiButton>
           <UiButton :loading="saveRoleMutation.isPending.value" @click="saveRoleMutation.mutate()">
-            {{ editingRole ? 'Save Permissions' : 'Create Role' }}
+            {{ editingRole ? t('roles.roleModal.savePermissions') : t('roles.roleModal.createRole') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Custom Delete User Modal -->
-    <UiModal v-model="isDeleteUserModalOpen" title="Delete User Account" size="sm">
+    <UiModal v-model="isDeleteUserModalOpen" :title="t('roles.deleteUserModal.title')" size="sm">
       <div v-if="userToDelete" class="space-y-4">
         <div class="flex items-start gap-3.5 p-3.5 bg-red-50 border border-red-200 rounded-2xl">
           <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
             <Trash2 class="w-5 h-5" />
           </div>
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-red-950">Confirm User Removal</h4>
+            <h4 class="text-sm font-bold text-red-950">{{ t('roles.deleteUserModal.confirmTitle') }}</h4>
             <p class="text-xs text-red-800 leading-relaxed">
-              Are you sure you want to remove <strong class="font-bold">{{ userToDelete.name }}</strong> ({{ userToDelete.email }})?
+              {{ t('roles.deleteUserModal.confirmMessage', { name: userToDelete.name, email: userToDelete.email }) }}
             </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" size="sm" type="button" @click="isDeleteUserModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteUserModalOpen = false">{{ t('roles.deleteUserModal.cancel') }}</UiButton>
           <UiButton
             variant="danger"
             size="sm"
             :loading="deleteUserMutation.isPending.value"
             @click="deleteUserMutation.mutate(userToDelete.id)"
           >
-            <Trash2 class="w-3.5 h-3.5 mr-1" /> Delete User
+            <Trash2 class="w-3.5 h-3.5 mr-1" /> {{ t('roles.deleteUserModal.deleteButton') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Custom Delete Role Modal -->
-    <UiModal v-model="isDeleteRoleModalOpen" title="Delete Role" size="sm">
+    <UiModal v-model="isDeleteRoleModalOpen" :title="t('roles.deleteRoleModal.title')" size="sm">
       <div v-if="roleToDelete" class="space-y-4">
         <div class="flex items-start gap-3.5 p-3.5 bg-red-50 border border-red-200 rounded-2xl">
           <div class="p-2 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
             <Trash2 class="w-5 h-5" />
           </div>
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-red-950">Delete Role</h4>
+            <h4 class="text-sm font-bold text-red-950">{{ t('roles.deleteRoleModal.confirmTitle') }}</h4>
             <p class="text-xs text-red-800 leading-relaxed">
-              Are you sure you want to delete the role <strong class="capitalize font-bold">{{ roleToDelete.name }}</strong>?
+              {{ t('roles.deleteRoleModal.confirmMessage', { name: roleToDelete.name }) }}
             </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" size="sm" type="button" @click="isDeleteRoleModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" size="sm" type="button" @click="isDeleteRoleModalOpen = false">{{ t('roles.deleteRoleModal.cancel') }}</UiButton>
           <UiButton
             variant="danger"
             size="sm"
             :loading="deleteRoleMutation.isPending.value"
             @click="deleteRoleMutation.mutate(roleToDelete.id)"
           >
-            <Trash2 class="w-3.5 h-3.5 mr-1" /> Delete Role
+            <Trash2 class="w-3.5 h-3.5 mr-1" /> {{ t('roles.deleteRoleModal.deleteButton') }}
           </UiButton>
         </div>
       </div>

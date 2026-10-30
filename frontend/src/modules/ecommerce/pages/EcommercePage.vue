@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import StorefrontBuilder from '../components/StorefrontBuilder.vue'
@@ -60,6 +61,7 @@ interface Storefront {
 }
 
 const toast = useToast()
+const { t } = useI18n()
 const channels = ref<EcommerceChannel[]>([])
 const orders = ref<EcommerceOrder[]>([])
 const storefronts = ref<Storefront[]>([])
@@ -138,7 +140,7 @@ async function createStorefront() {
       name: newStoreName.value,
       title: newStoreTitle.value || newStoreName.value,
     })
-    toast.success('Storefront site created!')
+    toast.success(t('ecommerce.messages.siteCreated'))
     newStoreName.value = ''
     newStoreTitle.value = ''
     isCreateModalOpen.value = false
@@ -148,7 +150,7 @@ async function createStorefront() {
       activeBuildingStorefront.value = created
     }
   } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Failed to create storefront.')
+    toast.error(e?.response?.data?.message || t('ecommerce.messages.failedCreateStore'))
   } finally {
     isCreatingStore.value = false
   }
@@ -160,30 +162,30 @@ async function togglePublish(store: Storefront) {
       is_published: !store.is_published,
     })
     store.is_published = !store.is_published
-    toast.success(store.is_published ? 'Store published live!' : 'Store unpublished.')
+    toast.success(store.is_published ? t('ecommerce.messages.sitePublished') : t('ecommerce.messages.siteUnpublished'))
   } catch (e: any) {
-    toast.error('Failed to update storefront status.')
+    toast.error(t('ecommerce.messages.failedUpdateStatus'))
   }
 }
 
 async function deleteStorefront(id: string) {
-  if (!confirm('Are you sure you want to delete this storefront website?')) return
+  if (!confirm(t('ecommerce.messages.confirmDeleteStore'))) return
   try {
     await api.delete(`/ecommerce/storefronts/${id}`)
-    toast.success('Storefront deleted.')
+    toast.success(t('ecommerce.messages.siteDeleted'))
     await fetchData()
   } catch (e: any) {
-    toast.error('Failed to delete storefront.')
+    toast.error(t('ecommerce.messages.failedDeleteStore'))
   }
 }
 
 async function triggerSync(id: string) {
   try {
     await api.post(`/ecommerce/channels/${id}/sync`)
-    toast.success('Order sync triggered successfully')
+    toast.success(t('ecommerce.messages.syncTriggered'))
     await fetchData()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Sync failed')
+    toast.error(e?.response?.data?.message || t('ecommerce.messages.syncFailed'))
   }
 }
 
@@ -192,12 +194,12 @@ async function connectChannel() {
   isConnecting.value = true
   try {
     await api.post('/ecommerce/channels', newChannel.value)
-    toast.success('Channel connected successfully')
+    toast.success(t('ecommerce.messages.channelConnected'))
     isConnectModalOpen.value = false
     newChannel.value = { name: '', platform: 'shopify', store_url: '', api_key: '', api_secret: '' }
     await fetchData()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message || 'Failed to connect channel')
+    toast.error(e?.response?.data?.message || t('ecommerce.messages.failedConnectChannel'))
   } finally {
     isConnecting.value = false
   }
@@ -225,9 +227,9 @@ onMounted(fetchData)
     <!-- Header Section (Mobile Responsive) -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">E-Commerce & Storefronts</h1>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ t('ecommerce.title') }}</h1>
         <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-          Build drag-and-drop customer websites, manage multi-channel orders, and sync integrations.
+          {{ t('ecommerce.subtitle') }}
         </p>
       </div>
 
@@ -238,7 +240,7 @@ onMounted(fetchData)
           class="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2"
         >
           <Plus class="w-4 h-4" />
-          <span>New Storefront Site</span>
+          <span>{{ t('ecommerce.newStorefront') }}</span>
         </button>
 
         <button
@@ -247,7 +249,7 @@ onMounted(fetchData)
           class="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2"
         >
           <Plus class="w-4 h-4" />
-          <span>Connect Channel</span>
+          <span>{{ t('ecommerce.connectChannel') }}</span>
         </button>
       </div>
     </div>
@@ -260,7 +262,7 @@ onMounted(fetchData)
           :class="[activeTab === 'storefronts' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
           <Sparkles class="w-4 h-4" />
-          <span>My Storefront Sites ({{ storefronts.length }})</span>
+          <span>{{ t('ecommerce.tabs.storefronts') }} ({{ storefronts.length }})</span>
         </button>
 
         <button
@@ -268,7 +270,7 @@ onMounted(fetchData)
           :class="[activeTab === 'orders' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
           <ShoppingCart class="w-4 h-4" />
-          <span>Orders ({{ orders.length }})</span>
+          <span>{{ t('ecommerce.tabs.orders') }} ({{ orders.length }})</span>
         </button>
 
         <button
@@ -276,7 +278,7 @@ onMounted(fetchData)
           :class="[activeTab === 'channels' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700', 'whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-semibold text-xs sm:text-sm flex items-center space-x-2']"
         >
           <Globe class="w-4 h-4" />
-          <span>External Connectors ({{ channels.length }})</span>
+          <span>{{ t('ecommerce.tabs.channels') }} ({{ channels.length }})</span>
         </button>
       </nav>
     </div>
@@ -290,9 +292,9 @@ onMounted(fetchData)
           <Sparkles class="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
         <div class="space-y-1">
-          <h3 class="text-base sm:text-lg font-bold text-gray-900">Build Your First Online Store</h3>
+          <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ t('ecommerce.storefrontsTab.emptyTitle') }}</h3>
           <p class="text-xs sm:text-sm text-gray-500 max-w-md mx-auto">
-            Design a public e-commerce store with drag-and-drop editable blocks (Hero banners, product grids, promo deals, testimonials).
+            {{ t('ecommerce.storefrontsTab.emptyDescription') }}
           </p>
         </div>
         <button
@@ -300,7 +302,7 @@ onMounted(fetchData)
           class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-primary-600/30 transition-all inline-flex items-center space-x-2"
         >
           <Plus class="w-4 h-4" />
-          <span>Launch Drag-and-Drop Storefront</span>
+          <span>{{ t('ecommerce.storefrontsTab.launchBuilder') }}</span>
         </button>
       </div>
 
@@ -326,21 +328,21 @@ onMounted(fetchData)
                   store.is_published ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
                 ]"
               >
-                {{ store.is_published ? '● Live' : '○ Draft' }}
+                {{ store.is_published ? t('ecommerce.storefrontsTab.live') : t('ecommerce.storefrontsTab.draft') }}
               </button>
             </div>
 
             <p class="text-xs text-gray-500 line-clamp-2">
-              {{ store.description || 'Custom drag-and-drop online storefront for catalog products.' }}
+              {{ store.description || t('ecommerce.storefrontsTab.defaultDescription') }}
             </p>
 
             <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-600">
               <div class="flex items-center justify-between">
-                <span class="text-slate-400">Pages:</span>
-                <span class="font-bold">{{ store.pages?.length || 1 }} (Home)</span>
+                <span class="text-slate-400">{{ t('ecommerce.storefrontsTab.pagesCount') }}</span>
+                <span class="font-bold">{{ t('ecommerce.storefrontsTab.homePage', { count: store.pages?.length || 1 }) }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-slate-400">Theme:</span>
+                <span class="text-slate-400">{{ t('ecommerce.storefrontsTab.theme') }}</span>
                 <span class="font-mono text-xs">{{ store.theme_config?.primary_color || '#4f46e5' }}</span>
               </div>
             </div>
@@ -353,7 +355,7 @@ onMounted(fetchData)
               class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-sm transition-colors"
             >
               <Layout class="w-3.5 h-3.5" />
-              <span>Edit Pages (Builder)</span>
+              <span>{{ t('ecommerce.storefrontsTab.editPages') }}</span>
             </button>
 
             <div class="flex items-center space-x-1.5 sm:space-x-2">
@@ -361,7 +363,7 @@ onMounted(fetchData)
                 :to="`/store/${store.slug}`"
                 target="_blank"
                 class="p-2 rounded-lg border border-gray-200 hover:bg-white text-gray-600 hover:text-gray-900 transition-colors"
-                title="View live store"
+                :title="t('ecommerce.storefrontsTab.viewLiveStore')"
               >
                 <ExternalLink class="w-4 h-4" />
               </router-link>
@@ -369,7 +371,7 @@ onMounted(fetchData)
               <button
                 @click="deleteStorefront(store.id)"
                 class="p-2 rounded-lg border border-gray-200 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                title="Delete"
+                :title="t('ecommerce.storefrontsTab.delete')"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
@@ -383,8 +385,8 @@ onMounted(fetchData)
     <div v-else-if="activeTab === 'orders'">
       <div v-if="orders.length === 0" class="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-200 p-6">
         <ShoppingCart class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-600 font-medium text-sm">No online orders placed yet</p>
-        <p class="text-xs text-gray-400 mt-1">Orders placed through your public storefronts will appear here automatically.</p>
+        <p class="text-gray-600 font-medium text-sm">{{ t('ecommerce.ordersTab.emptyTitle') }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ t('ecommerce.ordersTab.emptySubtitle') }}</p>
       </div>
 
       <!-- Mobile Card List (< md) -->
@@ -421,7 +423,7 @@ onMounted(fetchData)
               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold transition-colors"
             >
               <Truck class="w-3 h-3" />
-              Fulfill
+              {{ t('ecommerce.ordersTab.fulfill') }}
             </button>
           </div>
         </div>
@@ -432,14 +434,14 @@ onMounted(fetchData)
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Channel / Store</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fulfillment</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.orderNumber') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.channelStore') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.customer') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.total') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.payment') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.fulfillment') }}</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.date') }}</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ t('ecommerce.ordersTab.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 text-sm">
@@ -447,7 +449,7 @@ onMounted(fetchData)
               <td class="px-6 py-4 font-mono font-medium text-gray-900">{{ ord.order_number }}</td>
               <td class="px-6 py-4 text-gray-600">
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 font-medium">
-                  {{ ord.channel?.name ?? 'Storefront' }}
+                  {{ ord.channel?.name ?? t('ecommerce.ordersTab.storefrontDefault') }}
                 </span>
               </td>
               <td class="px-6 py-4">
@@ -482,7 +484,7 @@ onMounted(fetchData)
                   ]"
                 >
                   <Truck class="w-3.5 h-3.5" />
-                  {{ ord.fulfillment_status === 'fulfilled' ? 'Update' : 'Fulfill' }}
+                  {{ ord.fulfillment_status === 'fulfilled' ? t('ecommerce.ordersTab.updateFulfillment') : t('ecommerce.ordersTab.fulfill') }}
                 </button>
               </td>
             </tr>
@@ -495,13 +497,13 @@ onMounted(fetchData)
     <div v-else-if="activeTab === 'channels'">
       <div v-if="channels.length === 0" class="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-200 p-6">
         <Globe class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p class="text-gray-600 font-medium text-sm">No external marketplace channels connected</p>
-        <p class="text-xs text-gray-400 mt-1 mb-4">Connect external channels like Shopify, WooCommerce, or Amazon to sync inventory & orders.</p>
+        <p class="text-gray-600 font-medium text-sm">{{ t('ecommerce.channelsTab.emptyTitle') }}</p>
+        <p class="text-xs text-gray-400 mt-1 mb-4">{{ t('ecommerce.channelsTab.emptySubtitle') }}</p>
         <button
           @click="isConnectModalOpen = true"
           class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-medium text-xs rounded-xl shadow transition-colors"
         >
-          Connect Shopify or WooCommerce
+          {{ t('ecommerce.channelsTab.connectShopifyWoo') }}
         </button>
       </div>
 
@@ -517,12 +519,12 @@ onMounted(fetchData)
               <span
                 :class="[ch.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600', 'px-2 py-0.5 rounded-full text-[10px] font-bold']"
               >
-                {{ ch.is_active ? 'Active' : 'Inactive' }}
+                {{ ch.is_active ? t('ecommerce.channelsTab.active') : t('ecommerce.channelsTab.inactive') }}
               </span>
             </div>
             <h3 class="text-base font-bold text-gray-900">{{ ch.name }}</h3>
             <p class="text-xs text-gray-400">
-              Last synced: {{ ch.last_sync_at ? new Date(ch.last_sync_at).toLocaleString() : 'Never' }}
+              {{ t('ecommerce.channelsTab.lastSynced', { time: ch.last_sync_at ? new Date(ch.last_sync_at).toLocaleString() : t('ecommerce.channelsTab.never') }) }}
             </p>
           </div>
 
@@ -532,7 +534,7 @@ onMounted(fetchData)
               class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold"
             >
               <RefreshCw class="w-3.5 h-3.5" />
-              <span>Sync Orders</span>
+              <span>{{ t('ecommerce.channelsTab.syncOrders') }}</span>
             </button>
           </div>
         </div>
@@ -546,26 +548,26 @@ onMounted(fetchData)
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h3 class="text-base font-bold text-gray-900">Create New Storefront</h3>
+          <h3 class="text-base font-bold text-gray-900">{{ t('ecommerce.createStoreModal.title') }}</h3>
           <button @click="isCreateModalOpen = false" class="text-gray-400 hover:text-gray-700 p-1">✕</button>
         </div>
 
         <form @submit.prevent="createStorefront" class="space-y-3.5 text-xs sm:text-sm">
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Storefront Brand Name *</label>
+            <label class="font-semibold text-gray-700">{{ t('ecommerce.createStoreModal.brandName') }}</label>
             <input
               v-model="newStoreName"
               required
-              placeholder="e.g. Apex Apparel Store"
+              :placeholder="t('ecommerce.createStoreModal.brandNamePlaceholder')"
               class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/20 text-xs sm:text-sm"
             />
           </div>
 
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Headline Title</label>
+            <label class="font-semibold text-gray-700">{{ t('ecommerce.createStoreModal.headlineTitle') }}</label>
             <input
               v-model="newStoreTitle"
-              placeholder="e.g. Premium Sustainable Clothing"
+              :placeholder="t('ecommerce.createStoreModal.headlineTitlePlaceholder')"
               class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500/20 text-xs sm:text-sm"
             />
           </div>
@@ -575,7 +577,7 @@ onMounted(fetchData)
             :disabled="isCreatingStore"
             class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all disabled:opacity-50"
           >
-            {{ isCreatingStore ? 'Creating Storefront...' : 'Create & Open Visual Builder' }}
+            {{ isCreatingStore ? t('ecommerce.createStoreModal.creating') : t('ecommerce.createStoreModal.submit') }}
           </button>
         </form>
       </div>
@@ -588,13 +590,13 @@ onMounted(fetchData)
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h3 class="text-base font-bold text-gray-900">Connect Marketplace Channel</h3>
+          <h3 class="text-base font-bold text-gray-900">{{ t('ecommerce.connectChannelModal.title') }}</h3>
           <button @click="isConnectModalOpen = false" class="text-gray-400 hover:text-gray-700 p-1">✕</button>
         </div>
 
         <form @submit.prevent="connectChannel" class="space-y-3 text-xs sm:text-sm">
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Platform</label>
+            <label class="font-semibold text-gray-700">{{ t('ecommerce.connectChannelModal.platform') }}</label>
             <select v-model="newChannel.platform" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm">
               <option value="shopify">Shopify</option>
               <option value="woocommerce">WooCommerce</option>
@@ -604,13 +606,13 @@ onMounted(fetchData)
           </div>
 
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Channel Name *</label>
-            <input v-model="newChannel.name" required placeholder="e.g. US Shopify Store" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
+            <label class="font-semibold text-gray-700">{{ t('ecommerce.connectChannelModal.channelName') }}</label>
+            <input v-model="newChannel.name" required :placeholder="t('ecommerce.connectChannelModal.channelNamePlaceholder')" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
           </div>
 
           <div class="space-y-1">
-            <label class="font-semibold text-gray-700">Store URL</label>
-            <input v-model="newChannel.store_url" placeholder="https://store.myshopify.com" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
+            <label class="font-semibold text-gray-700">{{ t('ecommerce.connectChannelModal.storeUrl') }}</label>
+            <input v-model="newChannel.store_url" :placeholder="t('ecommerce.connectChannelModal.storeUrlPlaceholder')" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm" />
           </div>
 
           <button
@@ -618,7 +620,7 @@ onMounted(fetchData)
             :disabled="isConnecting"
             class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all disabled:opacity-50"
           >
-            {{ isConnecting ? 'Connecting...' : 'Save & Connect Channel' }}
+            {{ isConnecting ? t('ecommerce.connectChannelModal.connecting') : t('ecommerce.connectChannelModal.submit') }}
           </button>
         </form>
       </div>
