@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
-import { Headphones, Send, Clock, User, Mail } from '@lucide/vue'
+import { Headphones, Send } from '@lucide/vue'
+
+const { t } = useI18n()
 
 interface TicketMessage {
   id: string
@@ -48,6 +51,14 @@ const priorityColors: Record<string, string> = {
   urgent: 'text-red-600 font-bold',
 }
 
+function getStatusLabel(status: string) {
+  return t(`support.common.statuses.${status}`) || status
+}
+
+function getPriorityLabel(priority: string) {
+  return t(`support.common.priorities.${priority}`) || priority
+}
+
 async function fetchTickets() {
   loading.value = true
   try {
@@ -60,9 +71,9 @@ async function fetchTickets() {
   }
 }
 
-async function selectTicket(t: Ticket) {
+async function selectTicket(tItem: Ticket) {
   try {
-    const res = await api.get(`/support/tickets/${t.id}`)
+    const res = await api.get(`/support/tickets/${tItem.id}`)
     selectedTicket.value = res.data?.data ?? res.data
   } catch (e) {
     console.error('Failed to load ticket details', e)
@@ -93,16 +104,16 @@ onMounted(fetchTickets)
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <Headphones class="w-7 h-7 text-gray-700" />
-        <h1 class="text-2xl font-bold text-gray-900">Support Desk</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('support.common.title') }}</h1>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-gray-500">Loading support tickets…</div>
+    <div v-if="loading" class="text-center py-12 text-gray-500">{{ t('support.common.loading') }}</div>
 
     <div v-else-if="tickets.length === 0" class="text-center py-16 bg-white rounded-lg border border-gray-200">
       <Headphones class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500 font-medium">No tickets opened</p>
-      <p class="text-sm text-gray-400 mt-1">Customer support inquiries and requests will appear here.</p>
+      <p class="text-gray-500 font-medium">{{ t('support.common.noData') }}</p>
+      <p class="text-sm text-gray-400 mt-1">{{ t('support.common.noDataSubtitle') }}</p>
     </div>
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -120,13 +131,13 @@ onMounted(fetchTickets)
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-mono font-medium text-gray-500">{{ item.ticket_number }}</span>
             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border" :class="statusColors[item.status] ?? 'bg-gray-100'">
-              {{ item.status }}
+              {{ getStatusLabel(item.status) }}
             </span>
           </div>
           <h3 class="text-sm font-semibold text-gray-900 line-clamp-1">{{ item.subject }}</h3>
           <div class="flex items-center justify-between text-xs text-gray-500 mt-3 pt-2 border-t border-gray-100">
-            <span>{{ item.contact_name || item.contact_email || 'Customer' }}</span>
-            <span :class="priorityColors[item.priority]">{{ item.priority }}</span>
+            <span>{{ item.contact_name || item.contact_email || t('support.tickets.thread.customerFallback') }}</span>
+            <span :class="priorityColors[item.priority]">{{ getPriorityLabel(item.priority) }}</span>
           </div>
         </div>
       </div>
@@ -134,17 +145,17 @@ onMounted(fetchTickets)
       <!-- Ticket thread detail -->
       <div class="lg:col-span-2">
         <div v-if="!selectedTicket" class="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-400">
-          Select a ticket to view the conversation history and reply.
+          {{ t('support.common.selectTicketToView') }}
         </div>
         <div v-else class="bg-white rounded-lg border border-gray-200 p-6 space-y-6 flex flex-col h-[600px]">
           <div class="border-b border-gray-200 pb-4 flex items-start justify-between shrink-0">
             <div>
               <span class="text-xs font-mono text-gray-500">{{ selectedTicket.ticket_number }}</span>
               <h2 class="text-lg font-bold text-gray-900">{{ selectedTicket.subject }}</h2>
-              <p class="text-xs text-gray-500 mt-0.5">From: {{ selectedTicket.contact_name }} ({{ selectedTicket.contact_email }})</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ t('support.common.from') }}: {{ selectedTicket.contact_name }} ({{ selectedTicket.contact_email }})</p>
             </div>
             <span class="inline-flex px-3 py-1 rounded-full text-xs font-medium border" :class="statusColors[selectedTicket.status] ?? 'bg-gray-100'">
-              {{ selectedTicket.status }}
+              {{ getStatusLabel(selectedTicket.status) }}
             </span>
           </div>
 
@@ -160,7 +171,7 @@ onMounted(fetchTickets)
             >
               <div class="flex items-center justify-between text-xs font-medium text-gray-600 mb-1">
                 <span :class="msg.is_internal ? 'text-amber-800 font-bold' : ''">
-                  {{ msg.sender_name }} {{ msg.is_internal ? '(Internal Note)' : '' }}
+                  {{ msg.sender_name }} {{ msg.is_internal ? `(${t('support.tickets.thread.internalNoteBadge')})` : '' }}
                 </span>
                 <span class="text-gray-400">{{ msg.created_at?.substring(0, 16).replace('T', ' ') }}</span>
               </div>
@@ -173,14 +184,14 @@ onMounted(fetchTickets)
             <div class="flex items-center justify-between">
               <label class="flex items-center space-x-2 text-xs text-gray-600 cursor-pointer">
                 <input type="checkbox" v-model="isInternalNote" class="rounded text-amber-600 focus:ring-amber-500" />
-                <span>Internal note (hidden from customer)</span>
+                <span>{{ t('support.common.internalNoteCheckbox') }}</span>
               </label>
             </div>
             <div class="flex space-x-2">
               <textarea
                 v-model="replyText"
                 rows="2"
-                placeholder="Type your response or internal note…"
+                :placeholder="t('support.common.replyPlaceholder')"
                 class="flex-1 text-sm border border-gray-300 rounded-md p-2.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
               ></textarea>
               <button

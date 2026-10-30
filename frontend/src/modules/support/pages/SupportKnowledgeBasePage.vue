@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { supportApi } from '@/api/support'
 import type { SupportKnowledgeArticle, ArticleCategory } from '@/types/support'
@@ -28,6 +29,7 @@ import {
   Tag,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -52,14 +54,14 @@ const { data: articles, isLoading } = useQuery({
   queryFn: () => supportApi.getArticles().then((r) => r.data.data),
 })
 
-const categories: Array<{ key: string; label: string; icon: any }> = [
-  { key: 'all', label: 'All Articles', icon: markRaw(BookOpen) },
-  { key: 'general', label: 'General', icon: markRaw(FileText) },
-  { key: 'billing', label: 'Billing & Invoices', icon: markRaw(CreditCard) },
-  { key: 'technical', label: 'Technical Guides', icon: markRaw(Wrench) },
-  { key: 'account', label: 'Account & Security', icon: markRaw(ShieldCheck) },
-  { key: 'faq', label: 'Common FAQs', icon: markRaw(HelpCircle) },
-]
+const categories = computed<Array<{ key: string; label: string; icon: any }>>(() => [
+  { key: 'all', label: t('support.common.categories.all'), icon: markRaw(BookOpen) },
+  { key: 'general', label: t('support.common.categories.general'), icon: markRaw(FileText) },
+  { key: 'billing', label: t('support.common.categories.billing'), icon: markRaw(CreditCard) },
+  { key: 'technical', label: t('support.common.categories.technical'), icon: markRaw(Wrench) },
+  { key: 'account', label: t('support.common.categories.account'), icon: markRaw(ShieldCheck) },
+  { key: 'faq', label: t('support.common.categories.faq'), icon: markRaw(HelpCircle) },
+])
 
 const filteredArticles = computed(() => {
   let list = articles.value || []
@@ -86,22 +88,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Published Articles',
+      label: t('support.knowledgeBase.kpis.publishedArticles'),
       value: published,
       icon: markRaw(BookOpen),
     },
     {
-      label: 'Article Categories',
+      label: t('support.knowledgeBase.kpis.articleCategories'),
       value: 5,
       icon: markRaw(Tag),
     },
     {
-      label: 'Total Resource Views',
+      label: t('support.knowledgeBase.kpis.totalResourceViews'),
       value: totalViews,
       icon: markRaw(Eye),
     },
     {
-      label: 'Resolution Effectiveness',
+      label: t('support.knowledgeBase.kpis.resolutionEffectiveness'),
       value: '94%',
       icon: markRaw(CheckCircle2),
     },
@@ -119,10 +121,10 @@ const saveArticleMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['support', 'articles'] })
     isCreateModalOpen.value = false
-    toast.success(editingArticle.value ? 'Article updated' : 'Article published')
+    toast.success(editingArticle.value ? t('support.knowledgeBase.messages.updated') : t('support.knowledgeBase.messages.published'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save article')
+    toast.error(err?.response?.data?.message || t('support.knowledgeBase.messages.failedSave'))
   },
 })
 
@@ -130,7 +132,7 @@ const deleteArticleMutation = useMutation({
   mutationFn: (id: string) => supportApi.deleteArticle(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['support', 'articles'] })
-    toast.success('Article removed')
+    toast.success(t('support.knowledgeBase.messages.deleted'))
   },
 })
 
@@ -170,7 +172,7 @@ const viewArticle = async (a: SupportKnowledgeArticle) => {
 
 const handleSave = () => {
   if (!articleForm.value.title || !articleForm.value.content) {
-    toast.error('Article title and content are required')
+    toast.error(t('support.knowledgeBase.messages.requiredFields'))
     return
   }
   saveArticleMutation.mutate(articleForm.value)
@@ -178,11 +180,11 @@ const handleSave = () => {
 
 const getCategoryBadge = (cat: string) => {
   switch (cat) {
-    case 'billing': return { label: 'Billing & Invoicing', variant: 'warning' as const }
-    case 'technical': return { label: 'Technical Guide', variant: 'info' as const }
-    case 'account': return { label: 'Account & Security', variant: 'purple' as const }
-    case 'faq': return { label: 'FAQ', variant: 'success' as const }
-    default: return { label: 'General', variant: 'default' as const }
+    case 'billing': return { label: t('support.common.categories.billing'), variant: 'warning' as const }
+    case 'technical': return { label: t('support.common.categories.technical'), variant: 'info' as const }
+    case 'account': return { label: t('support.common.categories.account'), variant: 'purple' as const }
+    case 'faq': return { label: t('support.common.categories.faq'), variant: 'success' as const }
+    default: return { label: t('support.common.categories.general'), variant: 'default' as const }
   }
 }
 </script>
@@ -192,11 +194,11 @@ const getCategoryBadge = (cat: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Knowledge Base & FAQ Library</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Standard operating guidelines, troubleshooting documentation, and customer self-service runbooks.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('support.knowledgeBase.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('support.knowledgeBase.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Write Article
+        <Plus class="w-4 h-4 mr-2" /> {{ t('support.knowledgeBase.writeArticle') }}
       </UiButton>
     </div>
 
@@ -229,7 +231,7 @@ const getCategoryBadge = (cat: string) => {
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Search articles & FAQs..."
+        :placeholder="t('support.knowledgeBase.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -256,7 +258,7 @@ const getCategoryBadge = (cat: string) => {
               {{ getCategoryBadge(article.category).label }}
             </UiBadge>
             <span class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-              <Eye class="w-3 h-3" /> {{ article.views_count }} views
+              <Eye class="w-3 h-3" /> {{ article.views_count }} {{ t('support.knowledgeBase.views') }}
             </span>
           </div>
 
@@ -275,7 +277,7 @@ const getCategoryBadge = (cat: string) => {
         <!-- Footer Meta -->
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400" @click.stop>
           <span class="truncate font-semibold text-slate-600">
-            By {{ article.author?.name || 'Support Team' }}
+            {{ t('support.knowledgeBase.byAuthor') }} {{ article.author?.name || t('support.knowledgeBase.defaultAuthor') }}
           </span>
 
           <div class="flex items-center gap-1">
@@ -294,65 +296,65 @@ const getCategoryBadge = (cat: string) => {
     <div v-else class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-4">
       <BookOpen class="w-12 h-12 mx-auto text-slate-300" />
       <div>
-        <h3 class="font-bold text-slate-900 text-base">No knowledge base articles found</h3>
+        <h3 class="font-bold text-slate-900 text-base">{{ t('support.knowledgeBase.emptyTitle') }}</h3>
         <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-          Create help guides, FAQs, and technical troubleshooting articles for your team and clients.
+          {{ t('support.knowledgeBase.emptyText') }}
         </p>
       </div>
       <UiButton size="sm" @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-1.5" /> Write First Article
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('support.knowledgeBase.writeFirst') }}
       </UiButton>
     </div>
 
     <!-- Create / Edit Article Modal -->
-    <UiModal v-model="isCreateModalOpen" :title="editingArticle ? 'Edit Knowledge Article' : 'Publish Knowledge Article'" size="lg">
+    <UiModal v-model="isCreateModalOpen" :title="editingArticle ? t('support.knowledgeBase.modal.editTitle') : t('support.knowledgeBase.modal.createTitle')" size="lg">
       <div class="space-y-4">
-        <UiInput v-model="articleForm.title" label="Article Title" placeholder="e.g. How to reconcile multi-currency invoices" required />
+        <UiInput v-model="articleForm.title" :label="t('support.knowledgeBase.modal.articleTitle')" :placeholder="t('support.knowledgeBase.modal.titlePlaceholder')" required />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="articleForm.category"
-            label="Category"
+            :label="t('support.knowledgeBase.modal.categoryLabel')"
             :options="[
-              { label: 'General Documentation', value: 'general' },
-              { label: 'Billing & Invoices', value: 'billing' },
-              { label: 'Technical Guide', value: 'technical' },
-              { label: 'Account & Security', value: 'account' },
-              { label: 'Frequently Asked Questions (FAQ)', value: 'faq' },
+              { label: t('support.common.categories.general'), value: 'general' },
+              { label: t('support.common.categories.billing'), value: 'billing' },
+              { label: t('support.common.categories.technical'), value: 'technical' },
+              { label: t('support.common.categories.account'), value: 'account' },
+              { label: t('support.common.categories.faq'), value: 'faq' },
             ]"
           />
-          <UiInput v-model="articleForm.summary" label="Summary / Preview Snippet" placeholder="Short description for search results..." />
+          <UiInput v-model="articleForm.summary" :label="t('support.knowledgeBase.modal.summaryLabel')" :placeholder="t('support.knowledgeBase.modal.summaryPlaceholder')" />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Article Content (Markdown Supported)</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('support.knowledgeBase.modal.contentLabel') }}</label>
           <textarea
             v-model="articleForm.content"
             rows="8"
-            placeholder="Step 1: Navigate to the billing section...&#10;Step 2: Click reconcile transactions..."
+            :placeholder="t('support.knowledgeBase.modal.contentPlaceholder')"
             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
             required
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">{{ t('support.common.cancel') }}</UiButton>
           <UiButton :loading="saveArticleMutation.isPending.value" @click="handleSave">
-            {{ editingArticle ? 'Save Changes' : 'Publish Article' }}
+            {{ editingArticle ? t('support.knowledgeBase.modal.saveBtn') : t('support.knowledgeBase.modal.publishBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- View Article Modal -->
-    <UiModal v-model="isViewModalOpen" title="Knowledge Base Article" size="lg">
+    <UiModal v-model="isViewModalOpen" :title="t('support.knowledgeBase.modal.viewTitle')" size="lg">
       <div v-if="viewingArticle" class="space-y-4">
         <div class="space-y-1.5 border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2">
             <UiBadge :variant="getCategoryBadge(viewingArticle.category).variant" class="font-bold text-xs">
               {{ getCategoryBadge(viewingArticle.category).label }}
             </UiBadge>
-            <span class="text-xs text-slate-400 font-mono">• {{ viewingArticle.views_count }} views</span>
+            <span class="text-xs text-slate-400 font-mono">• {{ viewingArticle.views_count }} {{ t('support.knowledgeBase.views') }}</span>
           </div>
           <h2 class="text-xl font-black text-slate-900 leading-snug">{{ viewingArticle.title }}</h2>
           <p v-if="viewingArticle.summary" class="text-xs text-slate-500 italic">{{ viewingArticle.summary }}</p>
@@ -363,8 +365,8 @@ const getCategoryBadge = (cat: string) => {
         </div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-400">
-          <span>Author: <strong class="text-slate-700">{{ viewingArticle.author?.name || 'Support Admin' }}</strong></span>
-          <UiButton size="sm" @click="isViewModalOpen = false">Close</UiButton>
+          <span>{{ t('support.knowledgeBase.modal.authorLabel') }}: <strong class="text-slate-700">{{ viewingArticle.author?.name || t('support.knowledgeBase.modal.defaultAdmin') }}</strong></span>
+          <UiButton size="sm" @click="isViewModalOpen = false">{{ t('support.common.close') }}</UiButton>
         </div>
       </div>
     </UiModal>

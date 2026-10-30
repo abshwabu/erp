@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery } from '@tanstack/vue-query'
 import { supportApi } from '@/api/support'
 import type { SupportTicket } from '@/types/support'
@@ -25,6 +26,7 @@ import {
   Sparkles,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const { data: statsData, isLoading } = useQuery({
@@ -36,22 +38,22 @@ const stats = computed(() => {
   const s = statsData.value
   return [
     {
-      label: 'Open Inquiries',
+      label: t('support.dashboard.kpis.openInquiries'),
       value: s?.open_tickets ?? 0,
       icon: markRaw(MessageSquare),
     },
     {
-      label: 'In Progress Tickets',
+      label: t('support.dashboard.kpis.inProgressTickets'),
       value: s?.in_progress_tickets ?? 0,
       icon: markRaw(Clock),
     },
     {
-      label: 'Resolution Rate',
+      label: t('support.dashboard.kpis.resolutionRate'),
       value: `${s?.resolution_rate ?? 0}%`,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Urgent SLA Inquiries',
+      label: t('support.dashboard.kpis.urgentSla'),
       value: s?.urgent_tickets ?? 0,
       icon: markRaw(AlertTriangle),
     },
@@ -60,21 +62,21 @@ const stats = computed(() => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'open': return { label: 'Open', variant: 'danger' as const }
-    case 'in_progress': return { label: 'In Progress', variant: 'info' as const }
-    case 'pending': return { label: 'Pending Client', variant: 'warning' as const }
-    case 'resolved': return { label: 'Resolved 🎉', variant: 'success' as const }
-    case 'closed': return { label: 'Closed', variant: 'default' as const }
+    case 'open': return { label: t('support.common.statuses.open'), variant: 'danger' as const }
+    case 'in_progress': return { label: t('support.common.statuses.in_progress'), variant: 'info' as const }
+    case 'pending': return { label: t('support.common.statuses.pending'), variant: 'warning' as const }
+    case 'resolved': return { label: t('support.common.statuses.resolved'), variant: 'success' as const }
+    case 'closed': return { label: t('support.common.statuses.closed'), variant: 'default' as const }
     default: return { label: status, variant: 'default' as const }
   }
 }
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
-    case 'urgent': return { label: 'Urgent', variant: 'danger' as const }
-    case 'high': return { label: 'High', variant: 'warning' as const }
-    case 'normal': return { label: 'Normal', variant: 'default' as const }
-    default: return { label: 'Low', variant: 'default' as const }
+    case 'urgent': return { label: t('support.common.priorities.urgent'), variant: 'danger' as const }
+    case 'high': return { label: t('support.common.priorities.high'), variant: 'warning' as const }
+    case 'normal': return { label: t('support.common.priorities.normal'), variant: 'default' as const }
+    default: return { label: t('support.common.priorities.low'), variant: 'default' as const }
   }
 }
 </script>
@@ -84,15 +86,15 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Helpdesk & Support Center</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Manage customer tickets, SLA resolution rates, communication logs, and knowledge base resources.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('support.dashboard.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('support.dashboard.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton variant="outline" size="sm" @click="router.push('/support/knowledge-base')">
-          <BookOpen class="w-3.5 h-3.5 mr-1.5" /> Knowledge Base
+          <BookOpen class="w-3.5 h-3.5 mr-1.5" /> {{ t('support.dashboard.buttons.knowledgeBase') }}
         </UiButton>
         <UiButton size="sm" @click="router.push('/support/tickets')">
-          <MessageSquare class="w-3.5 h-3.5 mr-1.5" /> All Tickets Queue
+          <MessageSquare class="w-3.5 h-3.5 mr-1.5" /> {{ t('support.dashboard.buttons.allTickets') }}
         </UiButton>
       </div>
     </div>
@@ -119,14 +121,14 @@ const getPriorityBadge = (priority: string) => {
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2">
             <Headphones class="w-5 h-5 text-primary-600" />
-            <h2 class="font-bold text-slate-900 text-base">Recent Support Tickets</h2>
+            <h2 class="font-bold text-slate-900 text-base">{{ t('support.dashboard.recentTicketsTitle') }}</h2>
           </div>
           <button
             type="button"
             @click="router.push('/support/tickets')"
             class="text-xs font-bold text-primary-600 hover:text-primary-800 flex items-center gap-1 cursor-pointer"
           >
-            View Ticket Queue <ArrowRight class="w-3 h-3" />
+            {{ t('support.dashboard.buttons.viewQueue') }} <ArrowRight class="w-3 h-3" />
           </button>
         </div>
 
@@ -161,7 +163,7 @@ const getPriorityBadge = (priority: string) => {
                 <span v-if="ticket.customer" class="text-slate-500">
                   ({{ ticket.customer.company || ticket.customer.name }})
                 </span>
-                <span>• {{ ticket.messages_count ?? 0 }} replies</span>
+                <span>• {{ ticket.messages_count ?? 0 }} {{ t('support.dashboard.repliesCount') }}</span>
               </div>
             </div>
 
@@ -171,7 +173,7 @@ const getPriorityBadge = (priority: string) => {
           </div>
         </div>
         <div v-else class="p-12 text-center text-slate-400 text-xs">
-          No customer tickets logged yet.
+          {{ t('support.dashboard.emptyRecent') }}
         </div>
       </div>
 
@@ -179,32 +181,32 @@ const getPriorityBadge = (priority: string) => {
       <div class="space-y-6">
         <!-- Inbound Channels Breakdown -->
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-          <h3 class="font-bold text-slate-900 text-sm">Tickets by Channel</h3>
+          <h3 class="font-bold text-slate-900 text-sm">{{ t('support.dashboard.ticketsByChannel') }}</h3>
           <div class="space-y-2.5">
             <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
               <div class="flex items-center gap-2 text-slate-700 font-semibold">
-                <Globe class="w-4 h-4 text-blue-600" /> Web Inquiries
+                <Globe class="w-4 h-4 text-blue-600" /> {{ t('support.dashboard.webInquiries') }}
               </div>
               <span class="font-mono font-bold text-slate-900">{{ statsData?.tickets_by_channel?.web ?? 0 }}</span>
             </div>
 
             <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
               <div class="flex items-center gap-2 text-slate-700 font-semibold">
-                <Mail class="w-4 h-4 text-amber-600" /> Email Tickets
+                <Mail class="w-4 h-4 text-amber-600" /> {{ t('support.dashboard.emailTickets') }}
               </div>
               <span class="font-mono font-bold text-slate-900">{{ statsData?.tickets_by_channel?.email ?? 0 }}</span>
             </div>
 
             <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
               <div class="flex items-center gap-2 text-slate-700 font-semibold">
-                <Phone class="w-4 h-4 text-emerald-600" /> Phone Support
+                <Phone class="w-4 h-4 text-emerald-600" /> {{ t('support.dashboard.phoneSupport') }}
               </div>
               <span class="font-mono font-bold text-slate-900">{{ statsData?.tickets_by_channel?.phone ?? 0 }}</span>
             </div>
 
             <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
               <div class="flex items-center gap-2 text-slate-700 font-semibold">
-                <Layers class="w-4 h-4 text-purple-600" /> Client Portal
+                <Layers class="w-4 h-4 text-purple-600" /> {{ t('support.dashboard.clientPortal') }}
               </div>
               <span class="font-mono font-bold text-slate-900">{{ statsData?.tickets_by_channel?.portal ?? 0 }}</span>
             </div>
@@ -215,14 +217,14 @@ const getPriorityBadge = (priority: string) => {
         <div class="bg-linear-to-br from-primary-900 to-indigo-950 rounded-2xl p-5 text-white space-y-3 shadow-sm">
           <div class="flex items-center gap-2 text-primary-300">
             <BookOpen class="w-5 h-5" />
-            <h3 class="font-bold text-sm text-white">Knowledge Base & FAQs</h3>
+            <h3 class="font-bold text-sm text-white">{{ t('support.dashboard.knowledgeBaseCard.title') }}</h3>
           </div>
           <p class="text-xs text-primary-100 leading-relaxed">
-            Empower your support team with standard operating procedures and FAQs to resolve client issues faster.
+            {{ t('support.dashboard.knowledgeBaseCard.text') }}
           </p>
           <div class="pt-1">
             <UiButton variant="secondary" size="sm" class="w-full justify-center" @click="router.push('/support/knowledge-base')">
-              Browse Articles ({{ statsData?.total_articles ?? 0 }}) →
+              {{ t('support.dashboard.buttons.browseArticles') }} ({{ statsData?.total_articles ?? 0 }}) →
             </UiButton>
           </div>
         </div>

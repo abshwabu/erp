@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { supportApi } from '@/api/support'
 import { crmApi } from '@/api/crm'
@@ -35,6 +36,7 @@ import {
   HelpCircle,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -95,22 +97,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Open Inquiries',
+      label: t('support.tickets.kpis.openInquiries'),
       value: open,
       icon: markRaw(MessageSquare),
     },
     {
-      label: 'In Progress',
+      label: t('support.tickets.kpis.inProgress'),
       value: inProg,
       icon: markRaw(Clock),
     },
     {
-      label: 'Resolved Inquiries',
+      label: t('support.tickets.kpis.resolvedInquiries'),
       value: resolved,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Urgent Priority',
+      label: t('support.tickets.kpis.urgentPriority'),
       value: urgent,
       icon: markRaw(AlertCircle),
     },
@@ -123,10 +125,10 @@ const createTicketMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['support'] })
     isCreateModalOpen.value = false
-    toast.success('Support ticket created')
+    toast.success(t('support.tickets.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to create ticket')
+    toast.error(err?.response?.data?.message || t('support.tickets.messages.failedCreate'))
   },
 })
 
@@ -140,10 +142,10 @@ const replyMutation = useMutation({
     }
     queryClient.invalidateQueries({ queryKey: ['support'] })
     replyText.value = ''
-    toast.success(isInternalNote.value ? 'Internal agent note added' : 'Reply sent to customer')
+    toast.success(isInternalNote.value ? t('support.tickets.messages.internalNoteAdded') : t('support.tickets.messages.replySent'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to send message')
+    toast.error(err?.response?.data?.message || t('support.tickets.messages.failedReply'))
   },
 })
 
@@ -156,7 +158,7 @@ const updateStatusMutation = useMutation({
       selectedTicket.value = refreshed.data.data
     }
     queryClient.invalidateQueries({ queryKey: ['support'] })
-    toast.success('Ticket status updated')
+    toast.success(t('support.tickets.messages.statusUpdated'))
   },
 })
 
@@ -165,7 +167,7 @@ const deleteTicketMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['support'] })
     if (selectedTicket.value) selectedTicket.value = null
-    toast.success('Ticket deleted')
+    toast.success(t('support.tickets.messages.deleted'))
   },
 })
 
@@ -180,7 +182,7 @@ const openTicketDetails = async (t: SupportTicket) => {
 
 const handleCreateTicket = () => {
   if (!newTicketForm.value.subject || !newTicketForm.value.message) {
-    toast.error('Subject and message description are required')
+    toast.error(t('support.tickets.messages.requiredFields'))
     return
   }
   createTicketMutation.mutate({
@@ -203,21 +205,21 @@ const handleSendReply = () => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'open': return { label: 'Open', variant: 'danger' as const }
-    case 'in_progress': return { label: 'In Progress', variant: 'info' as const }
-    case 'pending': return { label: 'Pending Client', variant: 'warning' as const }
-    case 'resolved': return { label: 'Resolved 🎉', variant: 'success' as const }
-    case 'closed': return { label: 'Closed', variant: 'default' as const }
+    case 'open': return { label: t('support.common.statuses.open'), variant: 'danger' as const }
+    case 'in_progress': return { label: t('support.common.statuses.in_progress'), variant: 'info' as const }
+    case 'pending': return { label: t('support.common.statuses.pending'), variant: 'warning' as const }
+    case 'resolved': return { label: t('support.common.statuses.resolved'), variant: 'success' as const }
+    case 'closed': return { label: t('support.common.statuses.closed'), variant: 'default' as const }
     default: return { label: status, variant: 'default' as const }
   }
 }
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
-    case 'urgent': return { label: 'Urgent', variant: 'danger' as const }
-    case 'high': return { label: 'High', variant: 'warning' as const }
-    case 'normal': return { label: 'Normal', variant: 'default' as const }
-    default: return { label: 'Low', variant: 'default' as const }
+    case 'urgent': return { label: t('support.common.priorities.urgent'), variant: 'danger' as const }
+    case 'high': return { label: t('support.common.priorities.high'), variant: 'warning' as const }
+    case 'normal': return { label: t('support.common.priorities.normal'), variant: 'default' as const }
+    default: return { label: t('support.common.priorities.low'), variant: 'default' as const }
   }
 }
 </script>
@@ -227,11 +229,11 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Support Ticket Queue</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Track and respond to client inquiries, communicate through thread histories, and post internal agent notes.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('support.tickets.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('support.tickets.subtitle') }}</p>
       </div>
       <UiButton @click="isCreateModalOpen = true">
-        <Plus class="w-4 h-4 mr-2" /> New Support Ticket
+        <Plus class="w-4 h-4 mr-2" /> {{ t('support.tickets.newTicket') }}
       </UiButton>
     </div>
 
@@ -261,13 +263,13 @@ const getPriorityBadge = (priority: string) => {
               class="px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer whitespace-nowrap"
               :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
             >
-              {{ st === 'all' ? `All (${tickets?.length || 0})` : st.replace('_', ' ') }}
+              {{ st === 'all' ? `${t('support.tickets.filters.all')} (${tickets?.length || 0})` : t(`support.common.statuses.${st}`) }}
             </button>
           </div>
 
           <UiInput
             v-model="searchQuery"
-            placeholder="Search tickets, customers, emails..."
+            :placeholder="t('support.tickets.filters.searchPlaceholder')"
             size="sm"
           >
             <template #prefix><Search class="w-3.5 h-3.5 text-slate-400" /></template>
@@ -312,7 +314,7 @@ const getPriorityBadge = (priority: string) => {
 
             <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
               <span class="truncate font-semibold text-slate-700">
-                {{ ticket.contact_name || ticket.customer?.name || 'Customer' }}
+                {{ ticket.contact_name || ticket.customer?.name || t('support.tickets.thread.customerFallback') }}
               </span>
               <span class="text-[11px] text-slate-400 font-mono">
                 {{ new Date(ticket.created_at).toLocaleDateString() }}
@@ -322,7 +324,7 @@ const getPriorityBadge = (priority: string) => {
         </div>
 
         <div v-else class="p-12 bg-white rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
-          No tickets found matching your filter.
+          {{ t('support.tickets.filters.emptyList') }}
         </div>
       </div>
 
@@ -330,9 +332,9 @@ const getPriorityBadge = (priority: string) => {
       <div class="lg:col-span-7">
         <div v-if="!selectedTicket" class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-3 text-slate-400">
           <Headphones class="w-12 h-12 mx-auto text-slate-300" />
-          <h3 class="font-bold text-slate-700 text-sm">Select a ticket from the queue</h3>
+          <h3 class="font-bold text-slate-700 text-sm">{{ t('support.tickets.thread.noSelectedTitle') }}</h3>
           <p class="text-xs max-w-sm mx-auto">
-            Click any ticket on the left to inspect conversation history, send replies, or add internal notes.
+            {{ t('support.tickets.thread.noSelectedText') }}
           </p>
         </div>
 
@@ -371,7 +373,7 @@ const getPriorityBadge = (priority: string) => {
                 @click="updateStatusMutation.mutate({ id: selectedTicket.id, status: 'resolved' })"
                 class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
               >
-                <Check class="w-3.5 h-3.5" /> Resolve
+                <Check class="w-3.5 h-3.5" /> {{ t('support.tickets.thread.resolveBtn') }}
               </button>
 
               <button
@@ -380,14 +382,14 @@ const getPriorityBadge = (priority: string) => {
                 @click="updateStatusMutation.mutate({ id: selectedTicket.id, status: 'in_progress' })"
                 class="px-2.5 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
               >
-                Re-open Ticket
+                {{ t('support.tickets.thread.reopenBtn') }}
               </button>
 
               <button
                 type="button"
                 @click="deleteTicketMutation.mutate(selectedTicket.id)"
                 class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                title="Delete Ticket"
+                :title="t('support.tickets.thread.deleteTicketTitle')"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
@@ -415,10 +417,10 @@ const getPriorityBadge = (priority: string) => {
                     {{ msg.sender_name }}
                   </span>
                   <span v-if="msg.is_internal" class="text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.2 rounded">
-                    INTERNAL NOTE
+                    {{ t('support.tickets.thread.internalNoteBadge') }}
                   </span>
                   <span v-else-if="msg.sender_type === 'agent'" class="text-[10px] font-bold bg-primary-100 text-primary-800 px-1.5 py-0.2 rounded">
-                    SUPPORT AGENT
+                    {{ t('support.tickets.thread.supportAgentBadge') }}
                   </span>
                 </div>
 
@@ -443,7 +445,7 @@ const getPriorityBadge = (priority: string) => {
                   class="px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer"
                   :class="!isInternalNote ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
                 >
-                  Public Reply
+                  {{ t('support.tickets.thread.publicReply') }}
                 </button>
                 <button
                   type="button"
@@ -451,18 +453,18 @@ const getPriorityBadge = (priority: string) => {
                   class="px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1"
                   :class="isInternalNote ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
                 >
-                  <Lock class="w-3 h-3" /> Internal Agent Note
+                  <Lock class="w-3 h-3" /> {{ t('support.tickets.thread.internalAgentNote') }}
                 </button>
               </div>
 
-              <span class="text-[11px] text-slate-400">Press send to post</span>
+              <span class="text-[11px] text-slate-400">{{ t('support.tickets.thread.pressSendHint') }}</span>
             </div>
 
             <div class="relative">
               <textarea
                 v-model="replyText"
                 rows="3"
-                :placeholder="isInternalNote ? 'Write an internal note visible only to your support team...' : 'Type your reply to the customer...'"
+                :placeholder="isInternalNote ? t('support.tickets.thread.internalPlaceholder') : t('support.tickets.thread.publicPlaceholder')"
                 class="w-full px-3.5 py-2.5 rounded-xl border text-xs text-slate-900 focus:outline-none transition-all"
                 :class="isInternalNote ? 'bg-amber-50/50 border-amber-300 focus:ring-1 focus:ring-amber-500' : 'bg-slate-50 border-slate-300 focus:bg-white focus:ring-1 focus:ring-primary-500'"
               ></textarea>
@@ -476,7 +478,7 @@ const getPriorityBadge = (priority: string) => {
                 @click="handleSendReply"
               >
                 <Send class="w-3.5 h-3.5 mr-1.5" />
-                {{ isInternalNote ? 'Post Internal Note' : 'Send Reply' }}
+                {{ isInternalNote ? t('support.tickets.thread.postInternalNoteBtn') : t('support.tickets.thread.sendReplyBtn') }}
               </UiButton>
             </div>
           </div>
@@ -485,59 +487,59 @@ const getPriorityBadge = (priority: string) => {
     </div>
 
     <!-- Create Ticket Modal -->
-    <UiModal v-model="isCreateModalOpen" title="Create Customer Support Ticket" size="md">
+    <UiModal v-model="isCreateModalOpen" :title="t('support.tickets.modal.createTitle')" size="md">
       <div class="space-y-4">
-        <UiInput v-model="newTicketForm.subject" label="Subject / Problem Summary" placeholder="e.g. Invoicing calculation mismatch" required />
+        <UiInput v-model="newTicketForm.subject" :label="t('support.tickets.modal.subjectLabel')" :placeholder="t('support.tickets.modal.subjectPlaceholder')" required />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="newTicketForm.customer_id"
-            label="Linked Client Account (Optional)"
-            :options="[{ label: 'None (Direct Inquirer)', value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
+            :label="t('support.tickets.modal.clientLabel')"
+            :options="[{ label: t('support.tickets.modal.directInquirer'), value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
           />
           <UiSelect
             v-model="newTicketForm.priority"
-            label="Priority Level"
+            :label="t('support.tickets.modal.priorityLabel')"
             :options="[
-              { label: 'Low', value: 'low' },
-              { label: 'Normal', value: 'normal' },
-              { label: 'High', value: 'high' },
-              { label: 'Urgent (SLA)', value: 'urgent' },
+              { label: t('support.common.priorities.low'), value: 'low' },
+              { label: t('support.common.priorities.normal'), value: 'normal' },
+              { label: t('support.common.priorities.high'), value: 'high' },
+              { label: t('support.common.priorities.urgent'), value: 'urgent' },
             ]"
           />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="newTicketForm.contact_name" label="Contact Name" placeholder="Jane Doe" />
-          <UiInput v-model="newTicketForm.contact_email" label="Contact Email" type="email" placeholder="jane@client.com" />
+          <UiInput v-model="newTicketForm.contact_name" :label="t('support.tickets.modal.contactNameLabel')" placeholder="Jane Doe" />
+          <UiInput v-model="newTicketForm.contact_email" :label="t('support.tickets.modal.contactEmailLabel')" type="email" placeholder="jane@client.com" />
         </div>
 
         <UiSelect
           v-model="newTicketForm.channel"
-          label="Inbound Channel"
+          :label="t('support.tickets.modal.channelLabel')"
           :options="[
-            { label: 'Web Helpdesk', value: 'web' },
-            { label: 'Email', value: 'email' },
-            { label: 'Phone Call', value: 'phone' },
-            { label: 'Client Portal', value: 'portal' },
+            { label: t('support.common.channels.web'), value: 'web' },
+            { label: t('support.common.channels.email'), value: 'email' },
+            { label: t('support.common.channels.phone'), value: 'phone' },
+            { label: t('support.common.channels.portal'), value: 'portal' },
           ]"
         />
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Initial Inquiry / Message</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('support.tickets.modal.messageLabel') }}</label>
           <textarea
             v-model="newTicketForm.message"
             rows="4"
-            placeholder="Detailed description of the customer inquiry, error logs, or request..."
+            :placeholder="t('support.tickets.modal.messagePlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
             required
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isCreateModalOpen = false">{{ t('support.common.cancel') }}</UiButton>
           <UiButton :loading="createTicketMutation.isPending.value" @click="handleCreateTicket">
-            Create Ticket
+            {{ t('support.tickets.modal.createBtn') }}
           </UiButton>
         </div>
       </div>

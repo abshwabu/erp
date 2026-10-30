@@ -25,11 +25,13 @@ import enPayroll from '../locales/en/payroll'
 import amPayroll from '../locales/am/payroll'
 import enProjects from '../locales/en/projects'
 import amProjects from '../locales/am/projects'
+import enSupport from '../locales/en/support'
+import amSupport from '../locales/am/support'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, and projects in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, and support in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -56,6 +58,37 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.payroll).toBeDefined()
     expect(en.projects).toBeDefined()
     expect(am.projects).toBeDefined()
+    expect(en.support).toBeDefined()
+    expect(am.support).toBeDefined()
+  })
+
+  it('has identical keys for support in en and am', () => {
+    const enKeys = Object.keys(enSupport).sort()
+    const amKeys = Object.keys(amSupport).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enSupport.common).sort()).toEqual(Object.keys(amSupport.common).sort())
+    expect(Object.keys(enSupport.common.statuses).sort()).toEqual(Object.keys(amSupport.common.statuses).sort())
+    expect(Object.keys(enSupport.common.priorities).sort()).toEqual(Object.keys(amSupport.common.priorities).sort())
+    expect(Object.keys(enSupport.common.channels).sort()).toEqual(Object.keys(amSupport.common.channels).sort())
+    expect(Object.keys(enSupport.common.categories).sort()).toEqual(Object.keys(amSupport.common.categories).sort())
+
+    expect(Object.keys(enSupport.dashboard).sort()).toEqual(Object.keys(amSupport.dashboard).sort())
+    expect(Object.keys(enSupport.dashboard.buttons).sort()).toEqual(Object.keys(amSupport.dashboard.buttons).sort())
+    expect(Object.keys(enSupport.dashboard.kpis).sort()).toEqual(Object.keys(amSupport.dashboard.kpis).sort())
+    expect(Object.keys(enSupport.dashboard.knowledgeBaseCard).sort()).toEqual(Object.keys(amSupport.dashboard.knowledgeBaseCard).sort())
+
+    expect(Object.keys(enSupport.tickets).sort()).toEqual(Object.keys(amSupport.tickets).sort())
+    expect(Object.keys(enSupport.tickets.kpis).sort()).toEqual(Object.keys(amSupport.tickets.kpis).sort())
+    expect(Object.keys(enSupport.tickets.filters).sort()).toEqual(Object.keys(amSupport.tickets.filters).sort())
+    expect(Object.keys(enSupport.tickets.thread).sort()).toEqual(Object.keys(amSupport.tickets.thread).sort())
+    expect(Object.keys(enSupport.tickets.modal).sort()).toEqual(Object.keys(amSupport.tickets.modal).sort())
+    expect(Object.keys(enSupport.tickets.messages).sort()).toEqual(Object.keys(amSupport.tickets.messages).sort())
+
+    expect(Object.keys(enSupport.knowledgeBase).sort()).toEqual(Object.keys(amSupport.knowledgeBase).sort())
+    expect(Object.keys(enSupport.knowledgeBase.kpis).sort()).toEqual(Object.keys(amSupport.knowledgeBase.kpis).sort())
+    expect(Object.keys(enSupport.knowledgeBase.modal).sort()).toEqual(Object.keys(amSupport.knowledgeBase.modal).sort())
+    expect(Object.keys(enSupport.knowledgeBase.messages).sort()).toEqual(Object.keys(amSupport.knowledgeBase.messages).sort())
   })
 
   it('has identical keys for projects in en and am', () => {
