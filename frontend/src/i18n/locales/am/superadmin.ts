@@ -82,7 +82,7 @@ export default {
     adminName: 'የአስተዳዳሪው ሙሉ ስም',
     adminNamePlaceholder: 'ለምሳሌ፡ ሳራ ደበበ',
     adminEmail: 'የአስተዳዳሪው ኢሜይል',
-    adminEmailPlaceholder: 'sarah@acme.com',
+    adminEmailPlaceholder: "sarah{'@'}acme.com",
     adminPassword: 'የመጀመሪያ የይለፍ ቃል',
     adminPasswordPlaceholder: 'ቢያንስ 8 ፊደላት/ቁጥሮች',
     cancel: 'ሰርዝ',

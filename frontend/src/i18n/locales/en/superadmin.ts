@@ -82,7 +82,7 @@ export default {
     adminName: 'Admin Full Name',
     adminNamePlaceholder: 'e.g. Sarah Jenkins',
     adminEmail: 'Admin Email',
-    adminEmailPlaceholder: 'sarah@acme.com',
+    adminEmailPlaceholder: "sarah{'@'}acme.com",
     adminPassword: 'Initial Password',
     adminPasswordPlaceholder: 'Min. 8 characters',
     cancel: 'Cancel',

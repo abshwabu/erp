@@ -111,7 +111,7 @@ export default {
     name: 'ስም',
     namePlaceholder: 'አክሜ ኃ/የተ/የግ/ማህበር',
     email: 'ኢሜይል',
-    emailPlaceholder: 'billing@acme.com',
+    emailPlaceholder: "billing{'@'}acme.com",
     phone: 'ስልክ ቁጥር',
     phonePlaceholder: '+251 911 000000',
     cancel: 'ሰርዝ',

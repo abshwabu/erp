@@ -52,7 +52,7 @@ export default {
     nameLabel: 'የአቅራቢው ድርጅት / ስም *',
     namePlaceholder: 'ለምሳሌ፡ አክሜ ኃላ/የተ/የግ/ማ',
     emailLabel: 'ኢሜይል አድራሻ',
-    emailPlaceholder: 'contact@acme.com',
+    emailPlaceholder: "contact{'@'}acme.com",
     phoneLabel: 'ስልክ ቁጥር',
     phonePlaceholder: '+251 91 123 4567',
     submit: 'አቅራቢ መዝግብ',

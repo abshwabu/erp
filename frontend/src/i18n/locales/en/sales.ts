@@ -111,7 +111,7 @@ export default {
     name: 'Name',
     namePlaceholder: 'Acme Corp',
     email: 'Email',
-    emailPlaceholder: 'billing@acme.com',
+    emailPlaceholder: "billing{'@'}acme.com",
     phone: 'Phone',
     phonePlaceholder: '+1 555 0100',
     cancel: 'Cancel',

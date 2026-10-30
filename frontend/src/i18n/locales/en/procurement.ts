@@ -52,7 +52,7 @@ export default {
     nameLabel: 'Supplier Company / Name *',
     namePlaceholder: 'e.g. Acme Corp',
     emailLabel: 'Email Address',
-    emailPlaceholder: 'contact@acme.com',
+    emailPlaceholder: "contact{'@'}acme.com",
     phoneLabel: 'Phone Number',
     phonePlaceholder: '+1 (555) 000-0000',
     submit: 'Save Supplier',

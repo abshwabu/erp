@@ -42,7 +42,7 @@ export default {
     fullName: 'Full Name',
     fullNamePlaceholder: 'e.g. Sarah Connor',
     email: 'Email Address',
-    emailPlaceholder: 'sarah@company.com',
+    emailPlaceholder: "sarah{'@'}company.com",
     password: 'Account Password',
     passwordCreatePlaceholder: 'Min. 8 characters',
     passwordEditPlaceholder: 'Leave blank to keep existing password',

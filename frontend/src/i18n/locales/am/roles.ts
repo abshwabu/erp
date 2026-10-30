@@ -42,7 +42,7 @@ export default {
     fullName: 'ሙሉ ስም',
     fullNamePlaceholder: 'ለምሳሌ፡ ሳራ ደበበ',
     email: 'የኢሜይል አድራሻ',
-    emailPlaceholder: 'sarah@company.com',
+    emailPlaceholder: "sarah{'@'}company.com",
     password: 'የመለያ የይለፍ ቃል',
     passwordCreatePlaceholder: 'ቢያንስ 8 ፊደላት/ቁጥሮች',
     passwordEditPlaceholder: 'ያለውን የይለፍ ቃል ለመጠበቅ ባዶ ይተዉት',
