@@ -31,11 +31,13 @@ import enFinance from '../locales/en/finance'
 import amFinance from '../locales/am/finance'
 import enAccounting from '../locales/en/accounting'
 import amAccounting from '../locales/am/accounting'
+import enAssets from '../locales/en/assets'
+import amAssets from '../locales/am/assets'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, support, finance, and accounting in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, support, finance, accounting, and assets in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -68,6 +70,26 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.finance).toBeDefined()
     expect(en.accounting).toBeDefined()
     expect(am.accounting).toBeDefined()
+    expect(en.assets).toBeDefined()
+    expect(am.assets).toBeDefined()
+  })
+
+  it('has identical keys for assets in en and am', () => {
+    const enKeys = Object.keys(enAssets).sort()
+    const amKeys = Object.keys(amAssets).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enAssets.emptyState).sort()).toEqual(Object.keys(amAssets.emptyState).sort())
+    expect(Object.keys(enAssets.stats).sort()).toEqual(Object.keys(amAssets.stats).sort())
+    expect(Object.keys(enAssets.filters).sort()).toEqual(Object.keys(amAssets.filters).sort())
+    expect(Object.keys(enAssets.categories).sort()).toEqual(Object.keys(amAssets.categories).sort())
+    expect(Object.keys(enAssets.statuses).sort()).toEqual(Object.keys(amAssets.statuses).sort())
+    expect(Object.keys(enAssets.methods).sort()).toEqual(Object.keys(amAssets.methods).sort())
+    expect(Object.keys(enAssets.details).sort()).toEqual(Object.keys(amAssets.details).sort())
+    expect(Object.keys(enAssets.details.table).sort()).toEqual(Object.keys(amAssets.details.table).sort())
+    expect(Object.keys(enAssets.modal).sort()).toEqual(Object.keys(amAssets.modal).sort())
+    expect(Object.keys(enAssets.deleteModal).sort()).toEqual(Object.keys(amAssets.deleteModal).sort())
+    expect(Object.keys(enAssets.notifications).sort()).toEqual(Object.keys(amAssets.notifications).sort())
   })
 
   it('has identical keys for finance in en and am', () => {

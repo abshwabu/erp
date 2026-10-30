@@ -77,11 +77,17 @@ class AssetController extends BaseController
         $asset = Asset::findOrFail($id);
 
         $data = $request->validate([
-            'name'        => ['sometimes', 'string', 'max:255'],
-            'category'    => ['sometimes', 'in:equipment,machinery,vehicle,electronics,furniture,building'],
-            'status'      => ['sometimes', 'in:active,maintenance,disposed,retired'],
-            'assigned_to' => ['nullable', 'uuid', 'exists:users,id'],
-            'notes'       => ['nullable', 'string'],
+            'name'                => ['sometimes', 'string', 'max:255'],
+            'category'            => ['sometimes', 'in:equipment,machinery,vehicle,electronics,furniture,building'],
+            'serial_number'       => ['nullable', 'string', 'max:100'],
+            'purchase_date'       => ['nullable', 'date'],
+            'purchase_cost_cents' => ['sometimes', 'integer', 'min:0'],
+            'salvage_value_cents' => ['sometimes', 'integer', 'min:0'],
+            'useful_life_years'   => ['sometimes', 'integer', 'min:1'],
+            'depreciation_method' => ['sometimes', 'in:straight_line,declining_balance'],
+            'status'              => ['sometimes', 'in:active,maintenance,disposed,retired'],
+            'assigned_to'         => ['nullable', 'uuid', 'exists:users,id'],
+            'notes'               => ['nullable', 'string'],
         ]);
 
         $asset->update($data);
