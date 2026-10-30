@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
 import { FolderKanban, Plus, Clock, CheckCircle2, AlertCircle } from '@lucide/vue'
+
+const { t } = useI18n()
 
 interface ProjectTask {
   id: string
@@ -46,6 +49,14 @@ const taskStatusColors: Record<string, string> = {
   done: 'bg-green-100 text-green-700',
 }
 
+function getStatusLabel(status: string) {
+  return t(`projects.common.statuses.${status}`) || status.replace('_', ' ')
+}
+
+function getTaskStatusLabel(status: string) {
+  return t(`projects.tasks.statuses.${status}`) || status.replace('_', ' ')
+}
+
 async function fetchProjects() {
   loading.value = true
   try {
@@ -79,16 +90,16 @@ onMounted(fetchProjects)
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <FolderKanban class="w-7 h-7 text-gray-700" />
-        <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('projects.common.title') }}</h1>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-gray-500">Loading projects…</div>
+    <div v-if="loading" class="text-center py-12 text-gray-500">{{ t('projects.common.loading') }}</div>
 
     <div v-else-if="projects.length === 0" class="text-center py-16 bg-white rounded-lg border border-gray-200">
       <FolderKanban class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500 font-medium">No projects created yet</p>
-      <p class="text-sm text-gray-400 mt-1">Start by creating your first client or internal project.</p>
+      <p class="text-gray-500 font-medium">{{ t('projects.common.noData') }}</p>
+      <p class="text-sm text-gray-400 mt-1">{{ t('projects.common.noDataSubtitle') }}</p>
     </div>
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -106,14 +117,14 @@ onMounted(fetchProjects)
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-mono font-medium text-gray-500">{{ proj.code }}</span>
             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border" :class="statusColors[proj.status] ?? 'bg-gray-100'">
-              {{ proj.status.replace('_', ' ') }}
+              {{ getStatusLabel(proj.status) }}
             </span>
           </div>
           <h3 class="text-sm font-semibold text-gray-900">{{ proj.name }}</h3>
           <p v-if="proj.description" class="text-xs text-gray-500 mt-1 line-clamp-2">{{ proj.description }}</p>
           <div class="flex items-center justify-between text-xs text-gray-400 mt-3 pt-2 border-t border-gray-100">
-            <span>{{ proj.manager?.name ?? 'Unassigned' }}</span>
-            <span>{{ proj.tasks_count ?? 0 }} tasks</span>
+            <span>{{ proj.manager?.name ?? t('projects.overview.detailModal.unassigned') }}</span>
+            <span>{{ proj.tasks_count ?? 0 }} {{ t('projects.overview.card.tasksCount') }}</span>
           </div>
         </div>
       </div>
@@ -121,7 +132,7 @@ onMounted(fetchProjects)
       <!-- Project Detail / Tasks Panel -->
       <div class="lg:col-span-2">
         <div v-if="!selectedProject" class="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-400">
-          Select a project from the left to view details and task breakdown.
+          {{ t('projects.common.selectProjectToView') }}
         </div>
         <div v-else class="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
           <div class="flex items-start justify-between">
@@ -131,35 +142,35 @@ onMounted(fetchProjects)
               <p v-if="selectedProject.description" class="text-sm text-gray-600 mt-1">{{ selectedProject.description }}</p>
             </div>
             <span class="inline-flex px-3 py-1 rounded-full text-xs font-medium border" :class="statusColors[selectedProject.status] ?? 'bg-gray-100'">
-              {{ selectedProject.status.replace('_', ' ') }}
+              {{ getStatusLabel(selectedProject.status) }}
             </span>
           </div>
 
           <!-- Metadata Grid -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
             <div>
-              <span class="text-xs text-gray-500 block">Manager</span>
+              <span class="text-xs text-gray-500 block">{{ t('projects.common.manager') }}</span>
               <span class="font-medium text-gray-900">{{ selectedProject.manager?.name ?? '—' }}</span>
             </div>
             <div>
-              <span class="text-xs text-gray-500 block">Budget</span>
+              <span class="text-xs text-gray-500 block">{{ t('projects.common.budget') }}</span>
               <span class="font-medium text-gray-900">{{ formatCents(selectedProject.budget_cents) }}</span>
             </div>
             <div>
-              <span class="text-xs text-gray-500 block">Start Date</span>
+              <span class="text-xs text-gray-500 block">{{ t('projects.common.startDate') }}</span>
               <span class="font-medium text-gray-900">{{ selectedProject.start_date?.substring(0, 10) ?? '—' }}</span>
             </div>
             <div>
-              <span class="text-xs text-gray-500 block">Due Date</span>
+              <span class="text-xs text-gray-500 block">{{ t('projects.common.dueDate') }}</span>
               <span class="font-medium text-gray-900">{{ selectedProject.due_date?.substring(0, 10) ?? '—' }}</span>
             </div>
           </div>
 
           <!-- Tasks Section -->
           <div class="space-y-3">
-            <h3 class="text-sm font-semibold text-gray-900">Tasks</h3>
+            <h3 class="text-sm font-semibold text-gray-900">{{ t('projects.overview.detailModal.projectTasks') }}</h3>
             <div v-if="!selectedProject.tasks || selectedProject.tasks.length === 0" class="text-sm text-gray-400 py-4 text-center">
-              No tasks added to this project yet.
+              {{ t('projects.overview.detailModal.noTasks') }}
             </div>
             <div v-else class="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
               <div
@@ -175,7 +186,7 @@ onMounted(fetchProjects)
                   </div>
                 </div>
                 <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium" :class="taskStatusColors[task.status] ?? 'bg-gray-100'">
-                  {{ task.status.replace('_', ' ') }}
+                  {{ getTaskStatusLabel(task.status) }}
                 </span>
               </div>
             </div>

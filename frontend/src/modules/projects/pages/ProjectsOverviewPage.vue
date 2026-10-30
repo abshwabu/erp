@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { projectsApi } from '@/api/projects'
 import { crmApi } from '@/api/crm'
@@ -34,6 +35,7 @@ import {
   Flag,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const queryClient = useQueryClient()
 const toast = useToast()
@@ -79,22 +81,22 @@ const stats = computed(() => {
   const s = statsData.value
   return [
     {
-      label: 'Active Projects',
+      label: t('projects.overview.kpis.activeProjects'),
       value: s?.active_projects ?? 0,
       icon: markRaw(FolderKanban),
     },
     {
-      label: 'Total Portfolio Budget',
+      label: t('projects.overview.kpis.totalPortfolioBudget'),
       value: `$${Number(s?.total_budget || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: markRaw(DollarSign),
     },
     {
-      label: 'Task Completion Rate',
+      label: t('projects.overview.kpis.taskCompletionRate'),
       value: `${s?.task_completion_rate || 0}%`,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Logged Work Hours',
+      label: t('projects.overview.kpis.loggedWorkHours'),
       value: `${Number(s?.total_logged_hours || 0).toFixed(1)} hrs`,
       icon: markRaw(Clock),
     },
@@ -130,10 +132,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isModalOpen.value = false
-    toast.success(editingProject.value ? 'Project updated' : 'New project initialized')
+    toast.success(editingProject.value ? t('projects.overview.messages.updated') : t('projects.overview.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save project')
+    toast.error(err?.response?.data?.message || t('projects.overview.messages.failedSave'))
   },
 })
 
@@ -142,7 +144,7 @@ const deleteMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isDetailModalOpen.value = false
-    toast.success('Project deleted')
+    toast.success(t('projects.overview.messages.deleted'))
   },
 })
 
@@ -195,7 +197,7 @@ const viewProjectDetail = async (proj: Project) => {
 
 const handleSave = () => {
   if (!projectForm.value.name) {
-    toast.error('Please enter a project name')
+    toast.error(t('projects.overview.messages.nameRequired'))
     return
   }
   saveMutation.mutate({
@@ -211,21 +213,21 @@ const handleSave = () => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'in_progress': return { label: 'In Progress', variant: 'info' as const }
-    case 'planned': return { label: 'Planned', variant: 'purple' as const }
-    case 'on_hold': return { label: 'On Hold', variant: 'warning' as const }
-    case 'completed': return { label: 'Completed 🎉', variant: 'success' as const }
-    case 'cancelled': return { label: 'Cancelled', variant: 'danger' as const }
+    case 'in_progress': return { label: t('projects.common.statuses.in_progress'), variant: 'info' as const }
+    case 'planned': return { label: t('projects.common.statuses.planned'), variant: 'purple' as const }
+    case 'on_hold': return { label: t('projects.common.statuses.on_hold'), variant: 'warning' as const }
+    case 'completed': return { label: t('projects.common.statuses.completed'), variant: 'success' as const }
+    case 'cancelled': return { label: t('projects.common.statuses.cancelled'), variant: 'danger' as const }
     default: return { label: status, variant: 'default' as const }
   }
 }
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
-    case 'urgent': return { label: 'Urgent', variant: 'danger' as const }
-    case 'high': return { label: 'High', variant: 'warning' as const }
-    case 'medium': return { label: 'Medium', variant: 'default' as const }
-    default: return { label: 'Low', variant: 'default' as const }
+    case 'urgent': return { label: t('projects.common.priorities.urgent'), variant: 'danger' as const }
+    case 'high': return { label: t('projects.common.priorities.high'), variant: 'warning' as const }
+    case 'medium': return { label: t('projects.common.priorities.medium'), variant: 'default' as const }
+    default: return { label: t('projects.common.priorities.low'), variant: 'default' as const }
   }
 }
 </script>
@@ -235,15 +237,15 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Projects Portfolio</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Plan deliverables, track resource allocation, manage milestones, and monitor project budgets.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('projects.overview.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('projects.overview.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton variant="outline" size="sm" @click="router.push('/projects/tasks')">
-          <CheckSquare class="w-3.5 h-3.5 mr-1" /> Kanban Board
+          <CheckSquare class="w-3.5 h-3.5 mr-1" /> {{ t('projects.overview.buttons.kanbanBoard') }}
         </UiButton>
         <UiButton size="sm" @click="openCreateModal">
-          <Plus class="w-3.5 h-3.5 mr-1" /> New Project
+          <Plus class="w-3.5 h-3.5 mr-1" /> {{ t('projects.overview.buttons.newProject') }}
         </UiButton>
       </div>
     </div>
@@ -270,13 +272,13 @@ const getPriorityBadge = (priority: string) => {
           class="px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer"
           :class="selectedStatus === st ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          {{ st === 'all' ? `All (${projects?.length || 0})` : st.replace('_', ' ') }}
+          {{ st === 'all' ? `${t('projects.overview.filters.all')} (${projects?.length || 0})` : t(`projects.overview.filters.${st}`) }}
         </button>
       </div>
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Search code, name, client..."
+        :placeholder="t('projects.overview.filters.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -330,7 +332,7 @@ const getPriorityBadge = (priority: string) => {
               <Building2 class="w-3.5 h-3.5 text-slate-400" />
               {{ proj.customer.company || proj.customer.name }}
             </span>
-            <span v-else class="text-slate-400 italic">Internal Project</span>
+            <span v-else class="text-slate-400 italic">{{ t('projects.overview.card.internalProject') }}</span>
 
             <span class="font-mono font-bold text-slate-900">
               ${{ Number(proj.budget).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
@@ -340,7 +342,7 @@ const getPriorityBadge = (priority: string) => {
           <!-- Progress Bar -->
           <div class="space-y-1.5 pt-1">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-              <span>Task Progress</span>
+              <span>{{ t('projects.overview.card.taskProgress') }}</span>
               <span class="font-bold font-mono">{{ proj.progress_percent }}%</span>
             </div>
             <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -356,7 +358,7 @@ const getPriorityBadge = (priority: string) => {
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs" @click.stop>
           <div class="flex items-center gap-3 text-slate-400">
             <span class="flex items-center gap-1">
-              <CheckSquare class="w-3.5 h-3.5" /> {{ proj.tasks_count ?? 0 }} tasks
+              <CheckSquare class="w-3.5 h-3.5" /> {{ proj.tasks_count ?? 0 }} {{ t('projects.overview.card.tasksCount') }}
             </span>
             <span v-if="proj.due_date" class="flex items-center gap-1">
               <Calendar class="w-3.5 h-3.5" /> {{ new Date(proj.due_date).toLocaleDateString() }}
@@ -379,81 +381,81 @@ const getPriorityBadge = (priority: string) => {
     <div v-else class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-4">
       <FolderKanban class="w-12 h-12 mx-auto text-slate-300" />
       <div>
-        <h3 class="font-bold text-slate-900 text-base">No projects found</h3>
+        <h3 class="font-bold text-slate-900 text-base">{{ t('projects.overview.emptyState.title') }}</h3>
         <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-          Create client engagements or internal operational projects to start organizing tasks and tracking hours.
+          {{ t('projects.overview.emptyState.text') }}
         </p>
       </div>
       <UiButton size="sm" @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-1.5" /> Create First Project
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('projects.overview.emptyState.createFirst') }}
       </UiButton>
     </div>
 
     <!-- Create / Edit Project Modal -->
-    <UiModal v-model="isModalOpen" :title="editingProject ? 'Edit Project' : 'Initialize New Project'" size="lg">
+    <UiModal v-model="isModalOpen" :title="editingProject ? t('projects.overview.modal.editTitle') : t('projects.overview.modal.createTitle')" size="lg">
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="sm:col-span-2">
-            <UiInput v-model="projectForm.name" label="Project Name" placeholder="e.g. ERP Cloud Migration & Mobile App" required />
+            <UiInput v-model="projectForm.name" :label="t('projects.overview.modal.projectName')" :placeholder="t('projects.overview.modal.namePlaceholder')" required />
           </div>
-          <UiInput v-model="projectForm.code" label="Project Code" placeholder="Auto (e.g. PRJ-001)" />
+          <UiInput v-model="projectForm.code" :label="t('projects.overview.modal.projectCode')" :placeholder="t('projects.overview.modal.codePlaceholder')" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="projectForm.customer_id"
-            label="Client / Customer Account (Optional)"
-            :options="[{ label: 'Internal Initiative (None)', value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
+            :label="t('projects.overview.modal.clientLabel')"
+            :options="[{ label: t('projects.overview.modal.internalInitiative'), value: '' }, ...(contacts?.map(c => ({ label: c.company ? `${c.name} (${c.company})` : c.name, value: c.id })) || [])]"
           />
-          <UiInput v-model="projectForm.budget" label="Project Budget ($)" type="number" placeholder="25000" />
+          <UiInput v-model="projectForm.budget" :label="t('projects.overview.modal.budgetLabel')" type="number" placeholder="25000" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <UiSelect
             v-model="projectForm.status"
-            label="Project Status"
+            :label="t('projects.overview.modal.statusLabel')"
             :options="[
-              { label: 'Planned / Scoping', value: 'planned' },
-              { label: 'In Progress / Active', value: 'in_progress' },
-              { label: 'On Hold', value: 'on_hold' },
-              { label: 'Completed', value: 'completed' },
-              { label: 'Cancelled', value: 'cancelled' },
+              { label: t('projects.common.statuses.planned'), value: 'planned' },
+              { label: t('projects.common.statuses.in_progress'), value: 'in_progress' },
+              { label: t('projects.common.statuses.on_hold'), value: 'on_hold' },
+              { label: t('projects.common.statuses.completed'), value: 'completed' },
+              { label: t('projects.common.statuses.cancelled'), value: 'cancelled' },
             ]"
           />
           <UiSelect
             v-model="projectForm.priority"
-            label="Priority Level"
+            :label="t('projects.overview.modal.priorityLabel')"
             :options="[
-              { label: 'Low', value: 'low' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'High', value: 'high' },
-              { label: 'Urgent', value: 'urgent' },
+              { label: t('projects.common.priorities.low'), value: 'low' },
+              { label: t('projects.common.priorities.medium'), value: 'medium' },
+              { label: t('projects.common.priorities.high'), value: 'high' },
+              { label: t('projects.common.priorities.urgent'), value: 'urgent' },
             ]"
           />
-          <UiInput v-model="projectForm.due_date" label="Target Deadline" type="date" />
+          <UiInput v-model="projectForm.due_date" :label="t('projects.overview.modal.deadlineLabel')" type="date" />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Project Scope & Description</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('projects.overview.modal.scopeLabel') }}</label>
           <textarea
             v-model="projectForm.description"
             rows="3"
-            placeholder="Objectives, key deliverable milestones, architecture notes..."
+            :placeholder="t('projects.overview.modal.scopePlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('projects.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingProject ? 'Save Project Changes' : 'Initialize Project' }}
+            {{ editingProject ? t('projects.overview.modal.saveBtn') : t('projects.overview.modal.createBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Project Detail Dossier Modal -->
-    <UiModal v-model="isDetailModalOpen" title="Project Overview & Tasks Dossier" size="xl">
+    <UiModal v-model="isDetailModalOpen" :title="t('projects.overview.detailModal.title')" size="xl">
       <div v-if="selectedProject" class="space-y-6">
         <!-- Header banner -->
         <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -471,7 +473,7 @@ const getPriorityBadge = (priority: string) => {
           </div>
 
           <div class="text-right shrink-0">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Budget</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{{ t('projects.overview.detailModal.totalBudget') }}</span>
             <span class="text-lg font-mono font-black text-slate-900">
               ${{ Number(selectedProject.budget).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}
             </span>
@@ -482,10 +484,10 @@ const getPriorityBadge = (priority: string) => {
         <div class="space-y-3">
           <div class="flex items-center justify-between border-b border-slate-100 pb-2">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Project Tasks ({{ selectedProject.tasks?.length || 0 }})
+              {{ t('projects.overview.detailModal.projectTasks') }} ({{ selectedProject.tasks?.length || 0 }})
             </h3>
             <UiButton size="sm" variant="outline" @click="router.push('/projects/tasks')">
-              Open Full Kanban Board →
+              {{ t('projects.overview.detailModal.openKanban') }}
             </UiButton>
           </div>
 
@@ -498,7 +500,7 @@ const getPriorityBadge = (priority: string) => {
               <div class="space-y-0.5">
                 <h4 class="font-bold text-slate-900">{{ t.title }}</h4>
                 <p class="text-[11px] text-slate-400">
-                  {{ t.assignee?.name || 'Unassigned' }} • {{ t.logged_hours }} / {{ t.estimated_hours }} hrs
+                  {{ t.assignee?.name || t('projects.overview.detailModal.unassigned') }} • {{ t.logged_hours }} / {{ t.estimated_hours }} hrs
                 </p>
               </div>
               <UiBadge :variant="t.status === 'done' ? 'success' : 'info'" class="capitalize font-bold text-[10px]">
@@ -506,11 +508,11 @@ const getPriorityBadge = (priority: string) => {
               </UiBadge>
             </div>
           </div>
-          <p v-else class="text-xs text-slate-400 italic">No tasks created under this project yet.</p>
+          <p v-else class="text-xs text-slate-400 italic">{{ t('projects.overview.detailModal.noTasks') }}</p>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton size="sm" @click="isDetailModalOpen = false">Close</UiButton>
+          <UiButton size="sm" @click="isDetailModalOpen = false">{{ t('projects.overview.detailModal.close') }}</UiButton>
         </div>
       </div>
     </UiModal>

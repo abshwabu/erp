@@ -13,6 +13,7 @@ import sales from './sales'
 import hr from './hr'
 import crm from './crm'
 import payroll from './payroll'
+import projects from './projects'
 
 export default {
   common,
@@ -29,5 +30,6 @@ export default {
   sales,
   hr,
   crm,
-  payroll
+  payroll,
+  projects
 }

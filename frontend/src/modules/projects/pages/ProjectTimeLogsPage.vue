@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { projectsApi } from '@/api/projects'
 import type { ProjectTimeLog } from '@/types/projects'
@@ -26,6 +27,7 @@ import {
   CheckSquare,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -91,22 +93,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Hours Recorded',
+      label: t('projects.timeLogs.kpis.totalHoursRecorded'),
       value: `${totalHours.toFixed(1)} hrs`,
       icon: markRaw(Clock),
     },
     {
-      label: 'Billable Hours',
+      label: t('projects.timeLogs.kpis.billableHours'),
       value: `${billableHours.toFixed(1)} hrs`,
       icon: markRaw(DollarSign),
     },
     {
-      label: 'Billable Efficiency',
+      label: t('projects.timeLogs.kpis.billableEfficiency'),
       value: `${billableRatio}%`,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Total Log Entries',
+      label: t('projects.timeLogs.kpis.totalLogEntries'),
       value: list.length,
       icon: markRaw(CheckSquare),
     },
@@ -124,10 +126,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isModalOpen.value = false
-    toast.success(editingLog.value ? 'Time log updated' : 'Work hours recorded')
+    toast.success(editingLog.value ? t('projects.timeLogs.messages.updated') : t('projects.timeLogs.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save time log')
+    toast.error(err?.response?.data?.message || t('projects.timeLogs.messages.failedSave'))
   },
 })
 
@@ -135,7 +137,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => projectsApi.deleteTimeLog(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
-    toast.success('Time log deleted')
+    toast.success(t('projects.timeLogs.messages.deleted'))
   },
 })
 
@@ -167,11 +169,11 @@ const openEditModal = (log: ProjectTimeLog) => {
 
 const handleSave = () => {
   if (!logForm.value.project_id) {
-    toast.error('Please select a project')
+    toast.error(t('projects.timeLogs.messages.projectRequired'))
     return
   }
   if (!logForm.value.hours || Number(logForm.value.hours) <= 0) {
-    toast.error('Please enter valid hours spent')
+    toast.error(t('projects.timeLogs.messages.hoursRequired'))
     return
   }
   saveMutation.mutate({
@@ -187,11 +189,11 @@ const handleSave = () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Timesheets & Work Logs</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Track labor expenditure, billable consultant hours, and development timesheets.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('projects.timeLogs.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('projects.timeLogs.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Log Work Hours
+        <Plus class="w-4 h-4 mr-2" /> {{ t('projects.timeLogs.logWorkHours') }}
       </UiButton>
     </div>
 
@@ -215,7 +217,7 @@ const handleSave = () => {
           class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
           :class="selectedProjectId === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          All Projects ({{ timeLogs?.length || 0 }})
+          {{ t('projects.tasks.filterAllProjects') }} ({{ timeLogs?.length || 0 }})
         </button>
         <button
           v-for="proj in projects"
@@ -232,7 +234,7 @@ const handleSave = () => {
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter logs by description, member, task..."
+        :placeholder="t('projects.timeLogs.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -251,20 +253,20 @@ const handleSave = () => {
         <table class="min-w-full divide-y divide-slate-100 text-xs">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
             <tr>
-              <th class="px-4 py-3 text-left">Project & Task</th>
-              <th class="px-4 py-3 text-left">Team Member</th>
-              <th class="px-4 py-3 text-left">Work Description</th>
-              <th class="px-4 py-3 text-left">Work Date</th>
-              <th class="px-4 py-3 text-right">Hours Logged</th>
-              <th class="px-4 py-3 text-center">Billable</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.timeLogs.table.projectTask') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.timeLogs.table.teamMember') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.timeLogs.table.workDescription') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.timeLogs.table.workDate') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('projects.timeLogs.table.hoursLogged') }}</th>
+              <th class="px-4 py-3 text-center">{{ t('projects.timeLogs.table.billable') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('projects.timeLogs.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
             <tr v-for="log in filteredLogs" :key="log.id" class="hover:bg-slate-50/70 transition-colors">
               <td class="px-4 py-3">
                 <div class="font-bold text-slate-900 text-sm">
-                  {{ log.task?.title || 'General Project Work' }}
+                  {{ log.task?.title || t('projects.timeLogs.table.generalProjectWork') }}
                 </div>
                 <div class="text-[11px] text-slate-500 mt-0.5">
                   <span class="font-mono font-semibold text-primary-700">{{ log.project?.code }}</span> • {{ log.project?.name }}
@@ -272,7 +274,7 @@ const handleSave = () => {
               </td>
 
               <td class="px-4 py-3 font-semibold text-slate-800">
-                {{ log.user?.name || 'Current User' }}
+                {{ log.user?.name || t('projects.timeLogs.table.currentUser') }}
               </td>
 
               <td class="px-4 py-3 text-slate-600 max-w-xs truncate">
@@ -289,7 +291,7 @@ const handleSave = () => {
 
               <td class="px-4 py-3 text-center">
                 <UiBadge :variant="log.is_billable ? 'success' : 'default'" class="text-[10px] font-bold">
-                  {{ log.is_billable ? 'Billable' : 'Internal' }}
+                  {{ log.is_billable ? t('projects.timeLogs.table.billableBadge') : t('projects.timeLogs.table.internalBadge') }}
                 </UiBadge>
               </td>
 
@@ -306,37 +308,37 @@ const handleSave = () => {
         </table>
       </div>
       <div v-else class="p-12 text-center text-slate-400 text-xs">
-        No timesheet logs recorded yet.
+        {{ t('projects.timeLogs.table.emptyTitle') }}
       </div>
     </div>
 
     <!-- Create / Edit Time Log Modal -->
-    <UiModal v-model="isModalOpen" :title="editingLog ? 'Edit Time Log' : 'Record Timesheet Work Hours'" size="md">
+    <UiModal v-model="isModalOpen" :title="editingLog ? t('projects.timeLogs.modal.editTitle') : t('projects.timeLogs.modal.createTitle')" size="md">
       <div class="space-y-4">
         <UiSelect
           v-model="logForm.project_id"
-          label="Project"
+          :label="t('projects.timeLogs.modal.projectLabel')"
           :options="projects?.map(p => ({ label: `${p.code} - ${p.name}`, value: p.id })) || []"
           required
         />
 
         <UiSelect
           v-model="logForm.task_id"
-          label="Associated Task (Optional)"
-          :options="[{ label: 'General Project Work (No Task)', value: '' }, ...(filteredTasksForProject.map(t => ({ label: t.title, value: t.id })) || [])]"
+          :label="t('projects.timeLogs.modal.associatedTask')"
+          :options="[{ label: t('projects.timeLogs.modal.noTaskOption'), value: '' }, ...(filteredTasksForProject.map(t => ({ label: t.title, value: t.id })) || [])]"
         />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="logForm.hours" label="Hours Spent" type="number" step="0.25" min="0.1" max="24" required />
-          <UiInput v-model="logForm.log_date" label="Work Date" type="date" required />
+          <UiInput v-model="logForm.hours" :label="t('projects.timeLogs.modal.hoursSpent')" type="number" step="0.25" min="0.1" max="24" required />
+          <UiInput v-model="logForm.log_date" :label="t('projects.timeLogs.modal.workDate')" type="date" required />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Work Delivered & Summary</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('projects.timeLogs.modal.workDelivered') }}</label>
           <textarea
             v-model="logForm.description"
             rows="3"
-            placeholder="Describe completed tasks, milestone progress, or meeting notes..."
+            :placeholder="t('projects.timeLogs.modal.deliveredPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
@@ -349,14 +351,14 @@ const handleSave = () => {
             class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
           />
           <label for="modal_billable_checkbox" class="text-xs text-slate-700 font-semibold cursor-pointer">
-            Billable client work
+            {{ t('projects.timeLogs.modal.billableCheckbox') }}
           </label>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('projects.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingLog ? 'Save Changes' : 'Record Time Log' }}
+            {{ editingLog ? t('projects.timeLogs.modal.saveBtn') : t('projects.timeLogs.modal.createBtn') }}
           </UiButton>
         </div>
       </div>

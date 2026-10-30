@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { projectsApi } from '@/api/projects'
 import type { ProjectTask, TaskStatus, ProjectPriority } from '@/types/projects'
@@ -32,6 +33,7 @@ import {
   Timer,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -71,12 +73,12 @@ const { data: projects } = useQuery({
   queryFn: () => projectsApi.getProjects().then((r) => r.data.data),
 })
 
-const columns: Array<{ key: TaskStatus; label: string; color: string; border: string }> = [
-  { key: 'todo', label: 'To Do', color: 'bg-slate-50 text-slate-800', border: 'border-slate-200' },
-  { key: 'in_progress', label: 'In Progress', color: 'bg-blue-50 text-blue-800', border: 'border-blue-200' },
-  { key: 'review', label: 'Under Review', color: 'bg-amber-50 text-amber-800', border: 'border-amber-200' },
-  { key: 'done', label: 'Done 🎉', color: 'bg-emerald-50 text-emerald-800', border: 'border-emerald-200' },
-]
+const columns = computed<Array<{ key: TaskStatus; label: string; color: string; border: string }>>(() => [
+  { key: 'todo', label: t('projects.tasks.statuses.todo'), color: 'bg-slate-50 text-slate-800', border: 'border-slate-200' },
+  { key: 'in_progress', label: t('projects.tasks.statuses.in_progress'), color: 'bg-blue-50 text-blue-800', border: 'border-blue-200' },
+  { key: 'review', label: t('projects.tasks.statuses.review'), color: 'bg-amber-50 text-amber-800', border: 'border-amber-200' },
+  { key: 'done', label: t('projects.tasks.statuses.done'), color: 'bg-emerald-50 text-emerald-800', border: 'border-emerald-200' },
+])
 
 const filteredTasks = computed(() => {
   let list = tasks.value || []
@@ -120,22 +122,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Backlog / To Do',
+      label: t('projects.tasks.kpis.backlog'),
       value: todo,
       icon: markRaw(CheckSquare),
     },
     {
-      label: 'In Progress Tasks',
+      label: t('projects.tasks.kpis.inProgress'),
       value: inProgress,
       icon: markRaw(Timer),
     },
     {
-      label: 'Completed Tasks',
+      label: t('projects.tasks.kpis.completed'),
       value: done,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Total Hours Logged',
+      label: t('projects.tasks.kpis.totalHoursLogged'),
       value: `${totalLogged.toFixed(1)} hrs`,
       icon: markRaw(Clock),
     },
@@ -153,10 +155,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isModalOpen.value = false
-    toast.success(editingTask.value ? 'Task updated' : 'New task added to project')
+    toast.success(editingTask.value ? t('projects.tasks.messages.updated') : t('projects.tasks.messages.created'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save task')
+    toast.error(err?.response?.data?.message || t('projects.tasks.messages.failedSave'))
   },
 })
 
@@ -165,7 +167,7 @@ const statusMutation = useMutation({
     projectsApi.updateTaskStatus(id, status),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
-    toast.success('Task status updated')
+    toast.success(t('projects.tasks.messages.statusUpdated'))
   },
 })
 
@@ -173,7 +175,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => projectsApi.deleteTask(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
-    toast.success('Task deleted')
+    toast.success(t('projects.tasks.messages.deleted'))
   },
 })
 
@@ -182,10 +184,10 @@ const logTimeMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isTimeLogModalOpen.value = false
-    toast.success('Work hours logged to task! ⏱️')
+    toast.success(t('projects.tasks.messages.timeLogged'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to log hours')
+    toast.error(err?.response?.data?.message || t('projects.tasks.messages.failedLogTime'))
   },
 })
 
@@ -230,11 +232,11 @@ const openTimeLogModal = (task: ProjectTask) => {
 
 const handleSave = () => {
   if (!taskForm.value.title) {
-    toast.error('Please enter a task title')
+    toast.error(t('projects.tasks.messages.titleRequired'))
     return
   }
   if (!taskForm.value.project_id) {
-    toast.error('Please select a project for this task')
+    toast.error(t('projects.tasks.messages.projectRequired'))
     return
   }
   saveMutation.mutate({
@@ -274,10 +276,10 @@ const getPrevStatus = (curr: TaskStatus): TaskStatus | null => {
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
-    case 'urgent': return { label: 'Urgent', variant: 'danger' as const }
-    case 'high': return { label: 'High', variant: 'warning' as const }
-    case 'medium': return { label: 'Medium', variant: 'default' as const }
-    default: return { label: 'Low', variant: 'default' as const }
+    case 'urgent': return { label: t('projects.common.priorities.urgent'), variant: 'danger' as const }
+    case 'high': return { label: t('projects.common.priorities.high'), variant: 'warning' as const }
+    case 'medium': return { label: t('projects.common.priorities.medium'), variant: 'default' as const }
+    default: return { label: t('projects.common.priorities.low'), variant: 'default' as const }
   }
 }
 </script>
@@ -287,8 +289,8 @@ const getPriorityBadge = (priority: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Task Board & Kanban</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Track execution flow across project backlogs, active sprints, reviews, and completed items.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('projects.tasks.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('projects.tasks.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <div class="flex items-center bg-slate-100 p-1 rounded-xl">
@@ -298,7 +300,7 @@ const getPriorityBadge = (priority: string) => {
             class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
             :class="viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
           >
-            <LayoutGrid class="w-3.5 h-3.5" /> Kanban
+            <LayoutGrid class="w-3.5 h-3.5" /> {{ t('projects.tasks.viewKanban') }}
           </button>
           <button
             type="button"
@@ -306,11 +308,11 @@ const getPriorityBadge = (priority: string) => {
             class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
             :class="viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
           >
-            <List class="w-3.5 h-3.5" /> Table
+            <List class="w-3.5 h-3.5" /> {{ t('projects.tasks.viewTable') }}
           </button>
         </div>
         <UiButton @click="openCreateModal">
-          <Plus class="w-4 h-4 mr-1.5" /> Create Task
+          <Plus class="w-4 h-4 mr-1.5" /> {{ t('projects.tasks.createTask') }}
         </UiButton>
       </div>
     </div>
@@ -335,7 +337,7 @@ const getPriorityBadge = (priority: string) => {
           class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
           :class="selectedProjectId === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          All Projects ({{ tasks?.length || 0 }})
+          {{ t('projects.tasks.filterAllProjects') }} ({{ tasks?.length || 0 }})
         </button>
         <button
           v-for="proj in projects"
@@ -352,7 +354,7 @@ const getPriorityBadge = (priority: string) => {
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter task title, description..."
+        :placeholder="t('projects.tasks.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -434,7 +436,7 @@ const getPriorityBadge = (priority: string) => {
                 type="button"
                 @click="openTimeLogModal(task)"
                 class="text-[11px] font-mono font-bold text-slate-600 hover:text-primary-700 flex items-center gap-1 bg-slate-50 hover:bg-primary-50 px-2 py-0.5 rounded border border-slate-200 transition-colors cursor-pointer"
-                title="Log Hours"
+                :title="t('projects.tasks.kanban.logHoursTitle')"
               >
                 <Clock class="w-3 h-3 text-slate-400" />
                 {{ Number(task.logged_hours).toFixed(1) }} / {{ Number(task.estimated_hours).toFixed(0) }}h
@@ -449,7 +451,7 @@ const getPriorityBadge = (priority: string) => {
                 @click="moveToStatus(task, getPrevStatus(task.status)!)"
                 class="text-slate-400 hover:text-slate-700 font-bold inline-flex items-center cursor-pointer"
               >
-                <ChevronLeft class="w-3 h-3" /> Back
+                <ChevronLeft class="w-3 h-3" /> {{ t('projects.tasks.kanban.back') }}
               </button>
               <div v-else></div>
 
@@ -459,13 +461,13 @@ const getPriorityBadge = (priority: string) => {
                 @click="moveToStatus(task, getNextStatus(task.status)!)"
                 class="text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-primary-50 cursor-pointer"
               >
-                Next <ChevronRight class="w-3 h-3" />
+                {{ t('projects.tasks.kanban.next') }} <ChevronRight class="w-3 h-3" />
               </button>
             </div>
           </div>
 
           <div v-if="!tasksByStatus[col.key]?.length" class="p-6 text-center text-slate-300 text-xs italic">
-            No tasks in {{ col.label }}
+            {{ t('projects.tasks.kanban.noTasksInStatus') }} {{ col.label }}
           </div>
         </div>
       </div>
@@ -477,12 +479,12 @@ const getPriorityBadge = (priority: string) => {
         <table class="min-w-full divide-y divide-slate-100 text-xs">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
             <tr>
-              <th class="px-4 py-3 text-left">Task & Project</th>
-              <th class="px-4 py-3 text-left">Status</th>
-              <th class="px-4 py-3 text-left">Priority</th>
-              <th class="px-4 py-3 text-right">Logged / Est. Hours</th>
-              <th class="px-4 py-3 text-right">Target Due Date</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.tasks.table.taskProject') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.tasks.table.status') }}</th>
+              <th class="px-4 py-3 text-left">{{ t('projects.tasks.table.priority') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('projects.tasks.table.loggedEstHours') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('projects.tasks.table.targetDueDate') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('projects.tasks.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -516,7 +518,7 @@ const getPriorityBadge = (priority: string) => {
 
               <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                 <UiButton size="sm" variant="outline" @click="openTimeLogModal(task)">
-                  <Clock class="w-3.5 h-3.5 mr-1" /> Log Time
+                  <Clock class="w-3.5 h-3.5 mr-1" /> {{ t('projects.tasks.table.logTimeBtn') }}
                 </UiButton>
                 <UiButton variant="ghost" size="sm" @click="openEditModal(task)">
                   <Edit class="w-3.5 h-3.5" />
@@ -530,71 +532,71 @@ const getPriorityBadge = (priority: string) => {
         </table>
       </div>
       <div v-else class="p-12 text-center text-slate-400 text-xs">
-        No tasks found matching your filters.
+        {{ t('projects.tasks.table.emptySearch') }}
       </div>
     </div>
 
     <!-- Create / Edit Task Modal -->
-    <UiModal v-model="isModalOpen" :title="editingTask ? 'Edit Task' : 'Add Task to Project'" size="md">
+    <UiModal v-model="isModalOpen" :title="editingTask ? t('projects.tasks.modal.editTitle') : t('projects.tasks.modal.createTitle')" size="md">
       <div class="space-y-4">
         <UiSelect
           v-model="taskForm.project_id"
-          label="Project"
+          :label="t('projects.tasks.modal.projectLabel')"
           :options="projects?.map(p => ({ label: `${p.code} - ${p.name}`, value: p.id })) || []"
           required
         />
 
-        <UiInput v-model="taskForm.title" label="Task Title" placeholder="e.g. Implement OAuth2 client provider" required />
+        <UiInput v-model="taskForm.title" :label="t('projects.tasks.modal.titleLabel')" :placeholder="t('projects.tasks.modal.titlePlaceholder')" required />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="taskForm.status"
-            label="Initial Status"
+            :label="t('projects.tasks.modal.initialStatus')"
             :options="[
-              { label: 'To Do', value: 'todo' },
-              { label: 'In Progress', value: 'in_progress' },
-              { label: 'Under Review', value: 'review' },
-              { label: 'Done', value: 'done' },
+              { label: t('projects.tasks.statuses.todo'), value: 'todo' },
+              { label: t('projects.tasks.statuses.in_progress'), value: 'in_progress' },
+              { label: t('projects.tasks.statuses.review'), value: 'review' },
+              { label: t('projects.tasks.statuses.done'), value: 'done' },
             ]"
           />
           <UiSelect
             v-model="taskForm.priority"
-            label="Priority"
+            :label="t('projects.tasks.modal.priorityLabel')"
             :options="[
-              { label: 'Low', value: 'low' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'High', value: 'high' },
-              { label: 'Urgent', value: 'urgent' },
+              { label: t('projects.common.priorities.low'), value: 'low' },
+              { label: t('projects.common.priorities.medium'), value: 'medium' },
+              { label: t('projects.common.priorities.high'), value: 'high' },
+              { label: t('projects.common.priorities.urgent'), value: 'urgent' },
             ]"
           />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="taskForm.estimated_hours" label="Estimated Hours" type="number" min="0" />
-          <UiInput v-model="taskForm.due_date" label="Due Date" type="date" />
+          <UiInput v-model="taskForm.estimated_hours" :label="t('projects.tasks.modal.estHoursLabel')" type="number" min="0" />
+          <UiInput v-model="taskForm.due_date" :label="t('projects.tasks.modal.dueDateLabel')" type="date" />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Description & Acceptance Criteria</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('projects.tasks.modal.descriptionLabel') }}</label>
           <textarea
             v-model="taskForm.description"
             rows="3"
-            placeholder="Implementation requirements, checklists, dependencies..."
+            :placeholder="t('projects.tasks.modal.descriptionPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('projects.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingTask ? 'Save Task' : 'Create Task' }}
+            {{ editingTask ? t('projects.tasks.modal.saveBtn') : t('projects.tasks.modal.createBtn') }}
           </UiButton>
         </div>
       </div>
     </UiModal>
 
     <!-- Log Time Modal -->
-    <UiModal v-model="isTimeLogModalOpen" title="Log Work Hours on Task" size="md">
+    <UiModal v-model="isTimeLogModalOpen" :title="t('projects.tasks.logTimeModal.title')" size="md">
       <div v-if="timeLogTask" class="space-y-4">
         <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
           <span class="text-[10px] font-mono font-bold text-primary-700">{{ timeLogTask.project?.code }}</span>
@@ -602,16 +604,16 @@ const getPriorityBadge = (priority: string) => {
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UiInput v-model="timeLogForm.hours" label="Hours Spent" type="number" step="0.25" min="0.1" max="24" required />
-          <UiInput v-model="timeLogForm.log_date" label="Work Date" type="date" required />
+          <UiInput v-model="timeLogForm.hours" :label="t('projects.tasks.logTimeModal.hoursSpent')" type="number" step="0.25" min="0.1" max="24" required />
+          <UiInput v-model="timeLogForm.log_date" :label="t('projects.tasks.logTimeModal.workDate')" type="date" required />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Work Description</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('projects.tasks.logTimeModal.workDescription') }}</label>
           <textarea
             v-model="timeLogForm.description"
             rows="3"
-            placeholder="Summary of work delivered, commits, or bugfixes..."
+            :placeholder="t('projects.tasks.logTimeModal.descriptionPlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
@@ -624,14 +626,14 @@ const getPriorityBadge = (priority: string) => {
             class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
           />
           <label for="billable_checkbox" class="text-xs text-slate-700 font-semibold cursor-pointer">
-            Billable client work
+            {{ t('projects.tasks.logTimeModal.billableCheckbox') }}
           </label>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isTimeLogModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isTimeLogModalOpen = false">{{ t('projects.common.cancel') }}</UiButton>
           <UiButton :loading="logTimeMutation.isPending.value" @click="handleLogTime">
-            Record Timesheet Log
+            {{ t('projects.tasks.logTimeModal.recordBtn') }}
           </UiButton>
         </div>
       </div>

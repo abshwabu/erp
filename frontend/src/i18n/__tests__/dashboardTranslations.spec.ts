@@ -23,11 +23,13 @@ import enCrm from '../locales/en/crm'
 import amCrm from '../locales/am/crm'
 import enPayroll from '../locales/en/payroll'
 import amPayroll from '../locales/am/payroll'
+import enProjects from '../locales/en/projects'
+import amProjects from '../locales/am/projects'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, and payroll in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, and projects in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -52,6 +54,51 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.crm).toBeDefined()
     expect(en.payroll).toBeDefined()
     expect(am.payroll).toBeDefined()
+    expect(en.projects).toBeDefined()
+    expect(am.projects).toBeDefined()
+  })
+
+  it('has identical keys for projects in en and am', () => {
+    const enKeys = Object.keys(enProjects).sort()
+    const amKeys = Object.keys(amProjects).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enProjects.common).sort()).toEqual(Object.keys(amProjects.common).sort())
+    expect(Object.keys(enProjects.common.statuses).sort()).toEqual(Object.keys(amProjects.common.statuses).sort())
+    expect(Object.keys(enProjects.common.priorities).sort()).toEqual(Object.keys(amProjects.common.priorities).sort())
+
+    expect(Object.keys(enProjects.overview).sort()).toEqual(Object.keys(amProjects.overview).sort())
+    expect(Object.keys(enProjects.overview.buttons).sort()).toEqual(Object.keys(amProjects.overview.buttons).sort())
+    expect(Object.keys(enProjects.overview.kpis).sort()).toEqual(Object.keys(amProjects.overview.kpis).sort())
+    expect(Object.keys(enProjects.overview.filters).sort()).toEqual(Object.keys(amProjects.overview.filters).sort())
+    expect(Object.keys(enProjects.overview.card).sort()).toEqual(Object.keys(amProjects.overview.card).sort())
+    expect(Object.keys(enProjects.overview.emptyState).sort()).toEqual(Object.keys(amProjects.overview.emptyState).sort())
+    expect(Object.keys(enProjects.overview.modal).sort()).toEqual(Object.keys(amProjects.overview.modal).sort())
+    expect(Object.keys(enProjects.overview.detailModal).sort()).toEqual(Object.keys(amProjects.overview.detailModal).sort())
+    expect(Object.keys(enProjects.overview.messages).sort()).toEqual(Object.keys(amProjects.overview.messages).sort())
+
+    expect(Object.keys(enProjects.tasks).sort()).toEqual(Object.keys(amProjects.tasks).sort())
+    expect(Object.keys(enProjects.tasks.kpis).sort()).toEqual(Object.keys(amProjects.tasks.kpis).sort())
+    expect(Object.keys(enProjects.tasks.statuses).sort()).toEqual(Object.keys(amProjects.tasks.statuses).sort())
+    expect(Object.keys(enProjects.tasks.kanban).sort()).toEqual(Object.keys(amProjects.tasks.kanban).sort())
+    expect(Object.keys(enProjects.tasks.table).sort()).toEqual(Object.keys(amProjects.tasks.table).sort())
+    expect(Object.keys(enProjects.tasks.modal).sort()).toEqual(Object.keys(amProjects.tasks.modal).sort())
+    expect(Object.keys(enProjects.tasks.logTimeModal).sort()).toEqual(Object.keys(amProjects.tasks.logTimeModal).sort())
+    expect(Object.keys(enProjects.tasks.messages).sort()).toEqual(Object.keys(amProjects.tasks.messages).sort())
+
+    expect(Object.keys(enProjects.timeLogs).sort()).toEqual(Object.keys(amProjects.timeLogs).sort())
+    expect(Object.keys(enProjects.timeLogs.kpis).sort()).toEqual(Object.keys(amProjects.timeLogs.kpis).sort())
+    expect(Object.keys(enProjects.timeLogs.table).sort()).toEqual(Object.keys(amProjects.timeLogs.table).sort())
+    expect(Object.keys(enProjects.timeLogs.modal).sort()).toEqual(Object.keys(amProjects.timeLogs.modal).sort())
+    expect(Object.keys(enProjects.timeLogs.messages).sort()).toEqual(Object.keys(amProjects.timeLogs.messages).sort())
+
+    expect(Object.keys(enProjects.milestones).sort()).toEqual(Object.keys(amProjects.milestones).sort())
+    expect(Object.keys(enProjects.milestones.kpis).sort()).toEqual(Object.keys(amProjects.milestones.kpis).sort())
+    expect(Object.keys(enProjects.milestones.statuses).sort()).toEqual(Object.keys(amProjects.milestones.statuses).sort())
+    expect(Object.keys(enProjects.milestones.card).sort()).toEqual(Object.keys(amProjects.milestones.card).sort())
+    expect(Object.keys(enProjects.milestones.emptyState).sort()).toEqual(Object.keys(amProjects.milestones.emptyState).sort())
+    expect(Object.keys(enProjects.milestones.modal).sort()).toEqual(Object.keys(amProjects.milestones.modal).sort())
+    expect(Object.keys(enProjects.milestones.messages).sort()).toEqual(Object.keys(amProjects.milestones.messages).sort())
   })
 
   it('has identical keys for crm in en and am', () => {

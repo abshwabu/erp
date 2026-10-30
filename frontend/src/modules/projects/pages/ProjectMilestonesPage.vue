@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { projectsApi } from '@/api/projects'
 import type { ProjectMilestone, MilestoneStatus } from '@/types/projects'
@@ -27,6 +28,7 @@ import {
   Sparkles,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
 
@@ -80,22 +82,22 @@ const stats = computed(() => {
 
   return [
     {
-      label: 'Total Milestones',
+      label: t('projects.milestones.kpis.totalMilestones'),
       value: list.length,
       icon: markRaw(Flag),
     },
     {
-      label: 'In Progress Targets',
+      label: t('projects.milestones.kpis.inProgressTargets'),
       value: inProgress,
       icon: markRaw(Clock),
     },
     {
-      label: 'Achieved Deliverables',
+      label: t('projects.milestones.kpis.achievedDeliverables'),
       value: achieved,
       icon: markRaw(CheckCircle2),
     },
     {
-      label: 'Delayed / Blocked',
+      label: t('projects.milestones.kpis.delayedBlocked'),
       value: delayed,
       icon: markRaw(AlertTriangle),
     },
@@ -113,10 +115,10 @@ const saveMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     isModalOpen.value = false
-    toast.success(editingMilestone.value ? 'Milestone updated' : 'Milestone scheduled')
+    toast.success(editingMilestone.value ? t('projects.milestones.messages.updated') : t('projects.milestones.messages.scheduled'))
   },
   onError: (err: any) => {
-    toast.error(err?.response?.data?.message || 'Failed to save milestone')
+    toast.error(err?.response?.data?.message || t('projects.milestones.messages.failedSave'))
   },
 })
 
@@ -124,7 +126,7 @@ const deleteMutation = useMutation({
   mutationFn: (id: string) => projectsApi.deleteMilestone(id),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] })
-    toast.success('Milestone deleted')
+    toast.success(t('projects.milestones.messages.deleted'))
   },
 })
 
@@ -154,11 +156,11 @@ const openEditModal = (m: ProjectMilestone) => {
 
 const handleSave = () => {
   if (!milestoneForm.value.title) {
-    toast.error('Please enter a milestone title')
+    toast.error(t('projects.milestones.messages.titleRequired'))
     return
   }
   if (!milestoneForm.value.project_id) {
-    toast.error('Please select a project')
+    toast.error(t('projects.milestones.messages.projectRequired'))
     return
   }
   saveMutation.mutate({
@@ -169,10 +171,10 @@ const handleSave = () => {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'achieved': return { label: 'Achieved 🎉', variant: 'success' as const }
-    case 'in_progress': return { label: 'In Progress', variant: 'info' as const }
-    case 'delayed': return { label: 'Delayed', variant: 'danger' as const }
-    default: return { label: 'Pending', variant: 'default' as const }
+    case 'achieved': return { label: t('projects.milestones.statuses.achieved'), variant: 'success' as const }
+    case 'in_progress': return { label: t('projects.milestones.statuses.in_progress'), variant: 'info' as const }
+    case 'delayed': return { label: t('projects.milestones.statuses.delayed'), variant: 'danger' as const }
+    default: return { label: t('projects.milestones.statuses.pending'), variant: 'default' as const }
   }
 }
 </script>
@@ -182,11 +184,11 @@ const getStatusBadge = (status: string) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Project Milestones & Deliverables</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Plan roadmap releases, client approval gates, and delivery commitments.</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t('projects.milestones.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('projects.milestones.subtitle') }}</p>
       </div>
       <UiButton @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-2" /> Add Milestone
+        <Plus class="w-4 h-4 mr-2" /> {{ t('projects.milestones.addMilestone') }}
       </UiButton>
     </div>
 
@@ -210,7 +212,7 @@ const getStatusBadge = (status: string) => {
           class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
           :class="selectedProjectId === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'"
         >
-          All Projects ({{ milestones?.length || 0 }})
+          {{ t('projects.tasks.filterAllProjects') }} ({{ milestones?.length || 0 }})
         </button>
         <button
           v-for="proj in projects"
@@ -227,7 +229,7 @@ const getStatusBadge = (status: string) => {
 
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter milestones..."
+        :placeholder="t('projects.milestones.searchPlaceholder')"
         size="sm"
         class="w-full sm:w-64"
       >
@@ -270,7 +272,7 @@ const getStatusBadge = (status: string) => {
             <div class="flex items-center gap-3 text-xs text-slate-400 pt-0.5">
               <span>{{ m.project?.name }}</span>
               <span v-if="m.due_date" class="flex items-center gap-1 font-medium text-slate-600">
-                <Calendar class="w-3 h-3 text-slate-400" /> Target: {{ new Date(m.due_date).toLocaleDateString() }}
+                <Calendar class="w-3 h-3 text-slate-400" /> {{ t('projects.milestones.card.target') }}: {{ new Date(m.due_date).toLocaleDateString() }}
               </span>
             </div>
           </div>
@@ -291,56 +293,56 @@ const getStatusBadge = (status: string) => {
     <div v-else class="bg-white rounded-2xl border border-slate-200 p-16 text-center space-y-4">
       <Flag class="w-12 h-12 mx-auto text-slate-300" />
       <div>
-        <h3 class="font-bold text-slate-900 text-base">No milestones found</h3>
+        <h3 class="font-bold text-slate-900 text-base">{{ t('projects.milestones.emptyState.title') }}</h3>
         <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-          Set key project target deadlines and release milestones to keep your team aligned.
+          {{ t('projects.milestones.emptyState.text') }}
         </p>
       </div>
       <UiButton size="sm" @click="openCreateModal">
-        <Plus class="w-4 h-4 mr-1.5" /> Schedule Milestone
+        <Plus class="w-4 h-4 mr-1.5" /> {{ t('projects.milestones.emptyState.scheduleFirst') }}
       </UiButton>
     </div>
 
     <!-- Create / Edit Milestone Modal -->
-    <UiModal v-model="isModalOpen" :title="editingMilestone ? 'Edit Milestone' : 'Schedule Project Milestone'" size="md">
+    <UiModal v-model="isModalOpen" :title="editingMilestone ? t('projects.milestones.modal.editTitle') : t('projects.milestones.modal.createTitle')" size="md">
       <div class="space-y-4">
         <UiSelect
           v-model="milestoneForm.project_id"
-          label="Project"
+          :label="t('projects.milestones.modal.projectLabel')"
           :options="projects?.map(p => ({ label: `${p.code} - ${p.name}`, value: p.id })) || []"
           required
         />
 
-        <UiInput v-model="milestoneForm.title" label="Milestone Title" placeholder="e.g. Beta Release 1.0 Deployment" required />
+        <UiInput v-model="milestoneForm.title" :label="t('projects.milestones.modal.milestoneTitle')" :placeholder="t('projects.milestones.modal.titlePlaceholder')" required />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UiSelect
             v-model="milestoneForm.status"
-            label="Status"
+            :label="t('projects.milestones.modal.statusLabel')"
             :options="[
-              { label: 'Pending', value: 'pending' },
-              { label: 'In Progress', value: 'in_progress' },
-              { label: 'Achieved', value: 'achieved' },
-              { label: 'Delayed', value: 'delayed' },
+              { label: t('projects.milestones.statuses.pending'), value: 'pending' },
+              { label: t('projects.milestones.statuses.in_progress'), value: 'in_progress' },
+              { label: t('projects.milestones.statuses.achieved'), value: 'achieved' },
+              { label: t('projects.milestones.statuses.delayed'), value: 'delayed' },
             ]"
           />
-          <UiInput v-model="milestoneForm.due_date" label="Target Due Date" type="date" required />
+          <UiInput v-model="milestoneForm.due_date" :label="t('projects.milestones.modal.dueDateLabel')" type="date" required />
         </div>
 
         <div class="space-y-1">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Milestone Scope & Deliverables</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">{{ t('projects.milestones.modal.scopeLabel') }}</label>
           <textarea
             v-model="milestoneForm.description"
             rows="3"
-            placeholder="Key deliverables, verification criteria..."
+            :placeholder="t('projects.milestones.modal.scopePlaceholder')"
             class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <UiButton variant="outline" type="button" @click="isModalOpen = false">Cancel</UiButton>
+          <UiButton variant="outline" type="button" @click="isModalOpen = false">{{ t('projects.common.cancel') }}</UiButton>
           <UiButton :loading="saveMutation.isPending.value" @click="handleSave">
-            {{ editingMilestone ? 'Save Changes' : 'Schedule Milestone' }}
+            {{ editingMilestone ? t('projects.milestones.modal.saveBtn') : t('projects.milestones.modal.createBtn') }}
           </UiButton>
         </div>
       </div>
