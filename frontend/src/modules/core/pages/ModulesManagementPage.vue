@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { modulesApi, type ModuleItem } from '@/api/modules'
 import { useAuthStore } from '@/stores/auth'
@@ -37,6 +38,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
 import PlanSelectionModal from '@/components/shared/PlanSelectionModal.vue'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const toast = useToast()
 const queryClient = useQueryClient()
@@ -182,22 +184,22 @@ const isModuleActive = (key: string): boolean => {
       <div class="space-y-2 z-10">
         <div class="flex items-center gap-2">
           <Boxes class="w-6 h-6 text-indigo-400" />
-          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Modules & Capability Center</h1>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">{{ t('settings.modules.title') }}</h1>
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-            {{ enabledCount }} of {{ modules.length }} Active
+            {{ t('settings.modules.activeCount', { enabled: enabledCount, total: modules.length }) }}
           </span>
         </div>
         <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-          Customize your workspace engines. Activating a specialized module automatically enables its required prerequisites to ensure continuous accounting and ledger integrity.
+          {{ t('settings.modules.subtitle') }}
         </p>
       </div>
 
       <div class="flex items-center gap-3 z-10">
         <div class="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-right">
-          <span class="text-[10px] text-slate-300 uppercase tracking-wider block font-semibold">Active Plan</span>
+          <span class="text-[10px] text-slate-300 uppercase tracking-wider block font-semibold">{{ t('settings.modules.activePlan') }}</span>
           <span class="text-sm font-black text-amber-400 flex items-center gap-1">
             <Sparkles class="w-3.5 h-3.5" />
-            {{ planInfo?.name || 'Enterprise' }} Tier
+            {{ t('settings.modules.tierBadge', { name: planInfo?.name || 'Enterprise' }) }}
           </span>
         </div>
 
@@ -206,7 +208,7 @@ const isModuleActive = (key: string): boolean => {
           class="bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-xs cursor-pointer"
           @click="isPlanModalOpen = true"
         >
-          Change Plan
+          {{ t('settings.modules.changePlan') }}
         </UiButton>
       </div>
 
@@ -230,14 +232,14 @@ const isModuleActive = (key: string): boolean => {
               : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           ]"
         >
-          {{ cat === 'all' ? `All Modules (${modules.length})` : cat }}
+          {{ cat === 'all' ? t('settings.modules.allCategories', { count: modules.length }) : cat }}
         </button>
       </div>
 
       <!-- Search -->
       <UiInput
         v-model="searchQuery"
-        placeholder="Filter by module, keyword..."
+        :placeholder="t('settings.modules.searchPlaceholder')"
         size="sm"
         class="w-full lg:w-72"
       >
@@ -288,7 +290,7 @@ const isModuleActive = (key: string): boolean => {
                     v-if="mod.is_core"
                     class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase bg-slate-100 text-slate-600 border border-slate-200"
                   >
-                    Core
+                    {{ t('settings.modules.coreBadge') }}
                   </span>
                 </div>
                 <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -306,7 +308,7 @@ const isModuleActive = (key: string): boolean => {
                 title="Core system is always active"
               >
                 <Lock class="w-3 h-3" />
-                <span>Locked</span>
+                <span>{{ t('settings.modules.locked') }}</span>
               </div>
 
               <!-- Locked by Plan Upgrade -->
@@ -318,7 +320,7 @@ const isModuleActive = (key: string): boolean => {
                 title="Upgrade plan to unlock this module"
               >
                 <Lock class="w-3 h-3 text-amber-600" />
-                <span>Upgrade</span>
+                <span>{{ t('settings.modules.upgrade') }}</span>
               </button>
 
               <!-- Interactive Switch -->
@@ -349,7 +351,7 @@ const isModuleActive = (key: string): boolean => {
         <div class="pt-3 border-t border-slate-100 space-y-2 text-[11px]">
           <!-- Prerequisites (Requires) -->
           <div v-if="mod.dependencies.length > 0" class="flex items-start gap-2">
-            <span class="text-slate-400 font-bold shrink-0 mt-0.5">Requires:</span>
+            <span class="text-slate-400 font-bold shrink-0 mt-0.5">{{ t('settings.modules.requires') }}</span>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="dep in mod.dependencies"
@@ -371,7 +373,7 @@ const isModuleActive = (key: string): boolean => {
 
           <!-- Downstream (Powers) -->
           <div v-if="mod.dependents.length > 0" class="flex items-start gap-2">
-            <span class="text-slate-400 font-bold shrink-0 mt-0.5">Powers:</span>
+            <span class="text-slate-400 font-bold shrink-0 mt-0.5">{{ t('settings.modules.powers') }}</span>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="down in mod.dependents.slice(0, 3)"
@@ -381,7 +383,7 @@ const isModuleActive = (key: string): boolean => {
                 {{ getModuleName(down) }}
               </span>
               <span v-if="mod.dependents.length > 3" class="text-[10px] text-slate-400 font-bold">
-                +{{ mod.dependents.length - 3 }} more
+                {{ t('settings.modules.moreItems', { count: mod.dependents.length - 3 }) }}
               </span>
             </div>
           </div>
@@ -392,7 +394,7 @@ const isModuleActive = (key: string): boolean => {
     <!-- Confirmation Modal When Disabling a Module with Active Dependents -->
     <UiModal
       v-model="confirmModalOpen"
-      title="Deactivate Dependent Modules"
+      :title="t('settings.modules.deactivateTitle')"
       size="md"
     >
       <div v-if="pendingDisableModule" class="space-y-4">
@@ -400,10 +402,10 @@ const isModuleActive = (key: string): boolean => {
           <AlertTriangle class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div class="space-y-1 text-xs text-amber-900">
             <h4 class="font-bold text-sm">
-              Deactivating {{ pendingDisableModule.name }}
+              {{ t('settings.modules.deactivateHeading', { name: pendingDisableModule.name }) }}
             </h4>
             <p class="leading-relaxed">
-              The following active modules depend on <strong>{{ pendingDisableModule.name }}</strong> and will also be automatically deactivated:
+              {{ t('settings.modules.deactivateWarning', { name: pendingDisableModule.name }) }}
             </p>
             <div class="flex flex-wrap gap-1.5 pt-2">
               <span
@@ -418,7 +420,7 @@ const isModuleActive = (key: string): boolean => {
         </div>
 
         <p class="text-xs text-slate-500">
-          You can reactivate {{ pendingDisableModule.name }} and its dependent engines at any time from this dashboard.
+          {{ t('settings.modules.deactivateNotice', { name: pendingDisableModule.name }) }}
         </p>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
@@ -428,7 +430,7 @@ const isModuleActive = (key: string): boolean => {
             type="button"
             @click="confirmModalOpen = false"
           >
-            Cancel
+            {{ t('settings.modules.cancelBtn') }}
           </UiButton>
           <UiButton
             variant="danger"
@@ -436,7 +438,7 @@ const isModuleActive = (key: string): boolean => {
             :loading="toggleMutation.isPending.value"
             @click="confirmDisable"
           >
-            Confirm & Deactivate
+            {{ t('settings.modules.confirmDeactivateBtn') }}
           </UiButton>
         </div>
       </div>

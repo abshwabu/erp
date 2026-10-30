@@ -18,6 +18,7 @@ import support from './support'
 import finance from './finance'
 import accounting from './accounting'
 import assets from './assets'
+import settings from './settings'
 
 export default {
   common,
@@ -39,5 +40,6 @@ export default {
   support,
   finance,
   accounting,
-  assets
+  assets,
+  settings
 }
