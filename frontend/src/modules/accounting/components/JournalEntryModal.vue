@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Plus, Search, Trash2 } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -26,6 +27,8 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void
   (event: 'saved', value: { status: 'draft' | 'posted'; journal: JournalEntryPayload }): void
 }>()
+
+const { t } = useI18n()
 
 interface JournalEntryPayload {
   reference: string
@@ -163,7 +166,7 @@ const saveAsDraft = () => {
 
 const postJournal = () => {
   if (!isBalanced.value) {
-    balanceError.value = 'Journal must balance before posting.'
+    balanceError.value = t('accounting.journals.entryModal.balanceError')
     return
   }
 
@@ -174,12 +177,12 @@ const postJournal = () => {
 </script>
 
 <template>
-  <UiModal :model-value="modelValue" title="New Journal Entry" size="full" @update:modelValue="emit('update:modelValue', $event)">
+  <UiModal :model-value="modelValue" :title="t('accounting.journals.entryModal.title')" size="full" @update:modelValue="emit('update:modelValue', $event)">
     <div class="space-y-6">
       <div class="grid gap-3 grid-cols-1 sm:grid-cols-3">
-        <UiInput v-model="form.reference" label="Reference" placeholder="JE-2026-0040" />
-        <UiInput v-model="form.journalDate" label="Date" type="date" />
-        <UiInput v-model="form.description" label="Description" placeholder="Brief entry description" />
+        <UiInput v-model="form.reference" :label="t('accounting.journals.entryModal.reference')" :placeholder="t('accounting.journals.entryModal.referencePlaceholder')" />
+        <UiInput v-model="form.journalDate" :label="t('accounting.journals.entryModal.date')" type="date" />
+        <UiInput v-model="form.description" :label="t('accounting.journals.entryModal.description')" :placeholder="t('accounting.journals.entryModal.descriptionPlaceholder')" />
       </div>
 
       <div class="overflow-hidden rounded-2xl border border-slate-200">
@@ -187,11 +190,11 @@ const postJournal = () => {
           <table class="min-w-full min-w-[700px] divide-y divide-slate-200">
             <thead class="bg-slate-50">
               <tr>
-                <th class="w-64 sm:w-72 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Account</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">Description</th>
-                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Debit</th>
-                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Credit</th>
-                <th class="w-14 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Action</th>
+                <th class="w-64 sm:w-72 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.detailModal.account') }}</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">{{ t('accounting.journals.detailModal.description') }}</th>
+                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.detailModal.debit') }}</th>
+                <th class="w-32 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.detailModal.credit') }}</th>
+                <th class="w-14 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 bg-white">
@@ -201,7 +204,7 @@ const postJournal = () => {
                     <input
                       v-model="line.accountSearch"
                       type="text"
-                      placeholder="Search account..."
+                      :placeholder="t('accounting.journals.entryModal.accountSearchPlaceholder')"
                       class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
                       @focus="line.pickerOpen = true"
                       @input="line.pickerOpen = true"
@@ -217,7 +220,7 @@ const postJournal = () => {
                       >
                         <span>
                           <span class="block text-sm font-medium text-slate-900">{{ account.code }} - {{ account.name }}</span>
-                          <span class="block text-xs text-slate-500">{{ account.type }}</span>
+                          <span class="block text-xs text-slate-500">{{ t(`accounting.common.types.${account.type}`) || account.type }}</span>
                         </span>
                         <span class="text-xs text-slate-500">{{ formatCurrency(account.currentPeriodBalance) }}</span>
                       </button>
@@ -228,7 +231,7 @@ const postJournal = () => {
                   <input
                     v-model="line.description"
                     type="text"
-                    placeholder="Line description"
+                    :placeholder="t('accounting.journals.entryModal.lineDescPlaceholder')"
                     class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
                   />
                 </td>
@@ -268,24 +271,24 @@ const postJournal = () => {
 
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 sm:p-4">
         <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="addLine">
-          <Plus class="mr-2 h-4 w-4" /> Add Line
+          <Plus class="mr-2 h-4 w-4" /> {{ t('accounting.journals.entryModal.addLine') }}
         </UiButton>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
           <div class="rounded-xl bg-white px-3 sm:px-4 py-2 border border-slate-200">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Total Debits</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500">{{ t('accounting.journals.entryModal.totalDebits') }}</p>
             <p class="text-base sm:text-lg font-semibold text-slate-900">{{ formatCurrency(totalDebits) }}</p>
           </div>
           <div class="rounded-xl bg-white px-3 sm:px-4 py-2 border border-slate-200">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Total Credits</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500">{{ t('accounting.journals.entryModal.totalCredits') }}</p>
             <p class="text-base sm:text-lg font-semibold text-slate-900">{{ formatCurrency(totalCredits) }}</p>
           </div>
           <div
             class="rounded-xl px-3 sm:px-4 py-2 border"
             :class="isBalanced ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'"
           >
-            <p class="text-xs uppercase tracking-wide">Balance</p>
+            <p class="text-xs uppercase tracking-wide">{{ t('accounting.journals.entryModal.balance') }}</p>
             <p class="text-base sm:text-lg font-semibold">
-              {{ isBalanced ? 'Balanced' : `Out by ${formatCurrency(Math.abs(balanceDifference))}` }}
+              {{ isBalanced ? t('accounting.journals.entryModal.balanced') : t('accounting.journals.entryModal.outBy', { amount: formatCurrency(Math.abs(balanceDifference)) }) }}
             </p>
           </div>
         </div>
@@ -298,9 +301,9 @@ const postJournal = () => {
 
     <template #footer>
       <div class="flex flex-col-reverse sm:flex-row w-full justify-end gap-2 sm:gap-3">
-        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">Cancel</UiButton>
-        <UiButton variant="secondary" class="w-full sm:w-auto justify-center" @click="saveAsDraft">Save as Draft</UiButton>
-        <UiButton :disabled="!isBalanced" class="w-full sm:w-auto justify-center" @click="postJournal">Post</UiButton>
+        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">{{ t('accounting.journals.entryModal.cancel') }}</UiButton>
+        <UiButton variant="secondary" class="w-full sm:w-auto justify-center" @click="saveAsDraft">{{ t('accounting.journals.entryModal.saveDraft') }}</UiButton>
+        <UiButton :disabled="!isBalanced" class="w-full sm:w-auto justify-center" @click="postJournal">{{ t('accounting.journals.entryModal.post') }}</UiButton>
       </div>
     </template>
   </UiModal>

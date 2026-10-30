@@ -27,11 +27,15 @@ import enProjects from '../locales/en/projects'
 import amProjects from '../locales/am/projects'
 import enSupport from '../locales/en/support'
 import amSupport from '../locales/am/support'
+import enFinance from '../locales/en/finance'
+import amFinance from '../locales/am/finance'
+import enAccounting from '../locales/en/accounting'
+import amAccounting from '../locales/am/accounting'
 import en from '../locales/en'
 import am from '../locales/am'
 
 describe('Dashboard and Onboarding Translations Parity', () => {
-  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, and support in index modules for both en and am', () => {
+  it('registers dashboard, onboarding, inventory, warehouse, shops, procurement, manufacturing, documents, sales, hr, crm, payroll, projects, support, finance, and accounting in index modules for both en and am', () => {
     expect(en.dashboard).toBeDefined()
     expect(am.dashboard).toBeDefined()
     expect(en.onboarding).toBeDefined()
@@ -60,6 +64,59 @@ describe('Dashboard and Onboarding Translations Parity', () => {
     expect(am.projects).toBeDefined()
     expect(en.support).toBeDefined()
     expect(am.support).toBeDefined()
+    expect(en.finance).toBeDefined()
+    expect(am.finance).toBeDefined()
+    expect(en.accounting).toBeDefined()
+    expect(am.accounting).toBeDefined()
+  })
+
+  it('has identical keys for finance in en and am', () => {
+    const enKeys = Object.keys(enFinance).sort()
+    const amKeys = Object.keys(amFinance).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enFinance.common).sort()).toEqual(Object.keys(amFinance.common).sort())
+    expect(Object.keys(enFinance.common.statuses).sort()).toEqual(Object.keys(amFinance.common.statuses).sort())
+    expect(Object.keys(enFinance.common.paymentMethods).sort()).toEqual(Object.keys(amFinance.common.paymentMethods).sort())
+
+    expect(Object.keys(enFinance.transactionsPage).sort()).toEqual(Object.keys(amFinance.transactionsPage).sort())
+    expect(Object.keys(enFinance.transactionsPage.kpis).sort()).toEqual(Object.keys(amFinance.transactionsPage.kpis).sort())
+    expect(Object.keys(enFinance.transactionsPage.table).sort()).toEqual(Object.keys(amFinance.transactionsPage.table).sort())
+    expect(Object.keys(enFinance.transactionsPage.empty).sort()).toEqual(Object.keys(amFinance.transactionsPage.empty).sort())
+    expect(Object.keys(enFinance.transactionsPage.exportModal).sort()).toEqual(Object.keys(amFinance.transactionsPage.exportModal).sort())
+    expect(Object.keys(enFinance.transactionsPage.deleteModal).sort()).toEqual(Object.keys(amFinance.transactionsPage.deleteModal).sort())
+
+    expect(Object.keys(enFinance.transactionModal).sort()).toEqual(Object.keys(amFinance.transactionModal).sort())
+    expect(Object.keys(enFinance.detailModal).sort()).toEqual(Object.keys(amFinance.detailModal).sort())
+    expect(Object.keys(enFinance.categoryModal).sort()).toEqual(Object.keys(amFinance.categoryModal).sort())
+  })
+
+  it('has identical keys for accounting in en and am', () => {
+    const enKeys = Object.keys(enAccounting).sort()
+    const amKeys = Object.keys(amAccounting).sort()
+    expect(enKeys).toEqual(amKeys)
+
+    expect(Object.keys(enAccounting.common).sort()).toEqual(Object.keys(amAccounting.common).sort())
+    expect(Object.keys(enAccounting.common.types).sort()).toEqual(Object.keys(amAccounting.common.types).sort())
+    expect(Object.keys(enAccounting.common.statuses).sort()).toEqual(Object.keys(amAccounting.common.statuses).sort())
+
+    expect(Object.keys(enAccounting.chartOfAccounts).sort()).toEqual(Object.keys(amAccounting.chartOfAccounts).sort())
+    expect(Object.keys(enAccounting.chartOfAccounts.tabs).sort()).toEqual(Object.keys(amAccounting.chartOfAccounts.tabs).sort())
+    expect(Object.keys(enAccounting.chartOfAccounts.table).sort()).toEqual(Object.keys(amAccounting.chartOfAccounts.table).sort())
+    expect(Object.keys(enAccounting.chartOfAccounts.modal).sort()).toEqual(Object.keys(amAccounting.chartOfAccounts.modal).sort())
+
+    expect(Object.keys(enAccounting.journals).sort()).toEqual(Object.keys(amAccounting.journals).sort())
+    expect(Object.keys(enAccounting.journals.tabs).sort()).toEqual(Object.keys(amAccounting.journals.tabs).sort())
+    expect(Object.keys(enAccounting.journals.table).sort()).toEqual(Object.keys(amAccounting.journals.table).sort())
+    expect(Object.keys(enAccounting.journals.detailModal).sort()).toEqual(Object.keys(amAccounting.journals.detailModal).sort())
+    expect(Object.keys(enAccounting.journals.entryModal).sort()).toEqual(Object.keys(amAccounting.journals.entryModal).sort())
+
+    expect(Object.keys(enAccounting.trialBalance).sort()).toEqual(Object.keys(amAccounting.trialBalance).sort())
+    expect(Object.keys(enAccounting.trialBalance.table).sort()).toEqual(Object.keys(amAccounting.trialBalance.table).sort())
+
+    expect(Object.keys(enAccounting.profitLoss).sort()).toEqual(Object.keys(amAccounting.profitLoss).sort())
+    expect(Object.keys(enAccounting.balanceSheet).sort()).toEqual(Object.keys(amAccounting.balanceSheet).sort())
+    expect(Object.keys(enAccounting.aging).sort()).toEqual(Object.keys(amAccounting.aging).sort())
   })
 
   it('has identical keys for support in en and am', () => {

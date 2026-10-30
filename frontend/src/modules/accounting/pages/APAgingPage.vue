@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AgingReportPanel from '../components/AgingReportPanel.vue'
 import { accountingApi } from '@/api/accounting'
 
+const { t } = useI18n()
 const rows = ref<any[]>([])
 
 const loadAging = async () => {
@@ -21,9 +23,9 @@ onMounted(() => {
 
 <template>
   <AgingReportPanel
-    title="Accounts Payable Aging"
-    subtitle="Monitor supplier balances by aging bucket and plan upcoming payment runs."
-    party-label="Supplier"
+    :title="t('accounting.aging.apTitle')"
+    :subtitle="t('accounting.aging.apSubtitle')"
+    :party-label="t('accounting.aging.supplier')"
     :rows="rows"
     :resolve-name="(row) => row.supplierName ?? ''"
   />

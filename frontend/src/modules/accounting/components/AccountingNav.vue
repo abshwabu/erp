@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   Calculator,
   FileText,
@@ -12,17 +14,18 @@ import {
 } from '@lucide/vue'
 
 const route = useRoute()
+const { t } = useI18n()
 
-const tabs = [
-  { name: 'Income & Expenses', to: '/accounting/finance', icon: Banknote },
-  { name: 'Chart of Accounts', to: '/accounting/chart-of-accounts', icon: Calculator },
-  { name: 'Journals', to: '/accounting/journals', icon: FileText },
-  { name: 'Trial Balance', to: '/accounting/trial-balance', icon: Scale },
-  { name: 'Profit & Loss', to: '/accounting/profit-loss', icon: TrendingUp },
-  { name: 'Balance Sheet', to: '/accounting/balance-sheet', icon: Landmark },
-  { name: 'AR Aging', to: '/accounting/ar-aging', icon: ArrowDownLeft },
-  { name: 'AP Aging', to: '/accounting/ap-aging', icon: ArrowUpRight },
-]
+const tabs = computed(() => [
+  { name: t('nav.incomeExpenses'), to: '/accounting/finance', icon: Banknote },
+  { name: t('nav.chartOfAccounts'), to: '/accounting/chart-of-accounts', icon: Calculator },
+  { name: t('nav.journals'), to: '/accounting/journals', icon: FileText },
+  { name: t('nav.trialBalance'), to: '/accounting/trial-balance', icon: Scale },
+  { name: t('nav.profitLoss'), to: '/accounting/profit-loss', icon: TrendingUp },
+  { name: t('nav.balanceSheet'), to: '/accounting/balance-sheet', icon: Landmark },
+  { name: t('nav.arAging'), to: '/accounting/ar-aging', icon: ArrowDownLeft },
+  { name: t('nav.apAging'), to: '/accounting/ap-aging', icon: ArrowUpRight },
+])
 
 const isActive = (path: string) => route.path === path || route.path.startsWith(`${path}/`)
 </script>

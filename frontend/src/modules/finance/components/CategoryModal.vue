@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Tag,
   Plus,
@@ -25,6 +26,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'saved'])
+const { t } = useI18n()
 const toast = useToast()
 
 const isAddingNew = ref(false)
@@ -113,7 +115,7 @@ const handleSave = async () => {
 }
 
 const handleDelete = async (id: string) => {
-  if (!confirm('Are you sure you want to delete this category?')) return
+  if (!confirm(t('finance.categoryModal.deleteConfirm'))) return
 
   try {
     await financeApi.deleteCategory(id)
@@ -131,14 +133,14 @@ const handleDelete = async (id: string) => {
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     size="lg"
-    title="Manage Finance Categories"
+    :title="t('finance.categoryModal.title')"
   >
     <div class="space-y-4 text-slate-800">
       <!-- Create / Edit Sub-form -->
       <div v-if="isAddingNew" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3.5">
         <div class="flex items-center justify-between">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600">
-            {{ editingId ? 'Edit Category' : 'New Category' }}
+            {{ editingId ? t('finance.categoryModal.editCategory') : t('finance.categoryModal.newCategory') }}
           </h4>
           <button
             type="button"
@@ -152,32 +154,32 @@ const handleDelete = async (id: string) => {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <!-- Name -->
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Category Name *</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1">{{ t('finance.categoryModal.categoryName') }} *</label>
             <input
               type="text"
               v-model="form.name"
-              placeholder="e.g. Consulting, Equipment, Fuel..."
+              :placeholder="t('finance.categoryModal.categoryNamePlaceholder')"
               class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             />
           </div>
 
           <!-- Type -->
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Type *</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1">{{ t('finance.categoryModal.type') }} *</label>
             <select
               v-model="form.type"
               class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             >
-              <option value="expense">Expense Only</option>
-              <option value="income">Income Only</option>
-              <option value="both">Both Income & Expense</option>
+              <option value="expense">{{ t('finance.categoryModal.expenseOnly') }}</option>
+              <option value="income">{{ t('finance.categoryModal.incomeOnly') }}</option>
+              <option value="both">{{ t('finance.categoryModal.both') }}</option>
             </select>
           </div>
         </div>
 
         <!-- Color Swatches -->
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">Badge Color</label>
+          <label class="block text-xs font-bold text-slate-600 mb-1">{{ t('finance.categoryModal.badgeColor') }}</label>
           <div class="flex flex-wrap items-center gap-1.5">
             <button
               v-for="color in colorPresets"
@@ -195,11 +197,11 @@ const handleDelete = async (id: string) => {
 
         <!-- Description -->
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">Description (Optional)</label>
+          <label class="block text-xs font-bold text-slate-600 mb-1">{{ t('finance.categoryModal.description') }}</label>
           <input
             type="text"
             v-model="form.description"
-            placeholder="Short memo or scope of this category"
+            :placeholder="t('finance.categoryModal.descriptionPlaceholder')"
             class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
           />
         </div>
@@ -211,7 +213,7 @@ const handleDelete = async (id: string) => {
             @click="resetForm"
             class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg"
           >
-            Cancel
+            {{ t('finance.categoryModal.cancel') }}
           </button>
           <UiButton
             type="button"
@@ -221,7 +223,7 @@ const handleDelete = async (id: string) => {
             @click="handleSave"
             class="text-xs"
           >
-            {{ editingId ? 'Update Category' : 'Save Category' }}
+            {{ editingId ? t('finance.categoryModal.updateCategory') : t('finance.categoryModal.saveCategory') }}
           </UiButton>
         </div>
       </div>
@@ -234,7 +236,7 @@ const handleDelete = async (id: string) => {
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition-colors"
         >
           <Plus class="w-4 h-4" />
-          <span>Add Category</span>
+          <span>{{ t('finance.categoryModal.addCategory') }}</span>
         </button>
       </div>
 
@@ -263,10 +265,10 @@ const handleDelete = async (id: string) => {
                       : 'bg-blue-50 text-blue-700',
                   ]"
                 >
-                  {{ cat.type }}
+                  {{ t(`finance.common.${cat.type}`) || cat.type }}
                 </span>
                 <span v-if="cat.is_system" class="text-[10px] text-slate-400 font-semibold">
-                  (Default)
+                  {{ t('finance.categoryModal.default') }}
                 </span>
               </div>
               <p v-if="cat.description" class="text-[11px] text-slate-400 mt-0.5">
@@ -280,7 +282,7 @@ const handleDelete = async (id: string) => {
               type="button"
               @click="handleStartEdit(cat)"
               class="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100"
-              title="Edit"
+              :title="t('finance.categoryModal.edit')"
             >
               <Edit2 class="w-3.5 h-3.5" />
             </button>
@@ -289,7 +291,7 @@ const handleDelete = async (id: string) => {
               type="button"
               @click="handleDelete(cat.id)"
               class="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100"
-              title="Delete"
+              :title="t('finance.categoryModal.delete')"
             >
               <Trash2 class="w-3.5 h-3.5" />
             </button>
@@ -306,7 +308,7 @@ const handleDelete = async (id: string) => {
           @click="emit('update:modelValue', false)"
           class="text-xs sm:text-sm"
         >
-          Done
+          {{ t('finance.categoryModal.done') }}
         </UiButton>
       </div>
     </template>

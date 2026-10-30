@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronDown, ChevronRight, Filter, Plus, Search, Pencil, Trash2 } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -9,6 +10,8 @@ import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import { formatCurrency } from '@/utils/format'
 import type { Account, AccountType } from '@/types/accounting'
+
+const { t } = useI18n()
 
 type TypeFilter = 'all' | AccountType
 
@@ -181,21 +184,26 @@ const visibleRows = computed(() => {
 const flattenedAccounts = computed(() => flattenAccounts(accountTree.value))
 
 const typeLabel = (type: AccountType) => {
-  switch (type) {
-    case 'asset':
-      return 'Assets'
-    case 'liability':
-      return 'Liabilities'
-    case 'equity':
-      return 'Equity'
-    case 'revenue':
-      return 'Revenue'
-    case 'expense':
-      return 'Expenses'
-    case 'cost_of_sales':
-      return 'Cost of Sales'
-  }
+  return t(`accounting.common.types.${type}`) || type
 }
+
+const filterTabs = computed(() => [
+  { label: t('accounting.chartOfAccounts.tabs.all'), value: 'all' },
+  { label: t('accounting.chartOfAccounts.tabs.assets'), value: 'asset' },
+  { label: t('accounting.chartOfAccounts.tabs.liabilities'), value: 'liability' },
+  { label: t('accounting.chartOfAccounts.tabs.equity'), value: 'equity' },
+  { label: t('accounting.chartOfAccounts.tabs.revenue'), value: 'revenue' },
+  { label: t('accounting.chartOfAccounts.tabs.expenses'), value: 'expense' },
+])
+
+const accountTypeOptions = computed(() => [
+  { label: t('accounting.common.types.asset'), value: 'asset' as AccountType },
+  { label: t('accounting.common.types.liability'), value: 'liability' as AccountType },
+  { label: t('accounting.common.types.equity'), value: 'equity' as AccountType },
+  { label: t('accounting.common.types.revenue'), value: 'revenue' as AccountType },
+  { label: t('accounting.common.types.expense'), value: 'expense' as AccountType },
+  { label: t('accounting.common.types.cost_of_sales'), value: 'cost_of_sales' as AccountType },
+])
 
 const toggleExpanded = (accountId: string) => {
   if (expandedIds.value.includes(accountId)) {
@@ -241,7 +249,7 @@ const handleSaveAccount = async (payload: Partial<Account>) => {
 }
 
 const handleDeleteAccount = async (id: string) => {
-  if (confirm('Are you sure you want to delete this account?')) {
+  if (confirm(t('accounting.chartOfAccounts.modal.deleteConfirm'))) {
     try {
       await accountingApi.deleteAccount(id)
       await loadAccounts()
@@ -259,12 +267,12 @@ const handleDeleteAccount = async (id: string) => {
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Chart of Accounts</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Browse the full account hierarchy and manage account definitions.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ t('accounting.chartOfAccounts.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.chartOfAccounts.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton class="w-full sm:w-auto justify-center" @click="openCreateAccount">
-          <Plus class="mr-2 h-4 w-4 shrink-0" /> New Account
+          <Plus class="mr-2 h-4 w-4 shrink-0" /> {{ t('accounting.chartOfAccounts.newAccount') }}
         </UiButton>
       </div>
     </div>
@@ -272,21 +280,14 @@ const handleDeleteAccount = async (id: string) => {
     <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div class="relative flex-1">
-          <UiInput v-model="searchQuery" placeholder="Search by code, name, or description..." />
+          <UiInput v-model="searchQuery" :placeholder="t('accounting.chartOfAccounts.searchPlaceholder')" />
           <Search class="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-400" />
         </div>
         <div class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none shrink-0">
           <Filter class="h-4 w-4 text-slate-400 shrink-0 hidden sm:block" />
           <button
-            v-for="tab in [
-              { label: 'All', value: 'all' },
-              { label: 'Assets', value: 'asset' },
-              { label: 'Liabilities', value: 'liability' },
-              { label: 'Equity', value: 'equity' },
-              { label: 'Revenue', value: 'revenue' },
-              { label: 'Expenses', value: 'expense' },
-            ]"
-            :key="tab.label"
+            v-for="tab in filterTabs"
+            :key="tab.value"
             class="whitespace-nowrap rounded-full border px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors shrink-0"
             :class="filter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
             @click="filter = tab.value as TypeFilter"
@@ -302,11 +303,11 @@ const handleDeleteAccount = async (id: string) => {
         <table class="min-w-full min-w-[650px] divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Code</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">Name</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Type</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Balance</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.chartOfAccounts.table.code') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">{{ t('accounting.chartOfAccounts.table.name') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.chartOfAccounts.table.type') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.chartOfAccounts.table.balance') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.chartOfAccounts.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -354,14 +355,7 @@ const handleDeleteAccount = async (id: string) => {
     <AccountModal
       v-model="isAccountModalOpen"
       :account="selectedAccount"
-      :account-types="[
-        { label: 'Assets', value: 'asset' },
-        { label: 'Liabilities', value: 'liability' },
-        { label: 'Equity', value: 'equity' },
-        { label: 'Revenue', value: 'revenue' },
-        { label: 'Expenses', value: 'expense' },
-        { label: 'Cost of Sales', value: 'cost_of_sales' },
-      ]"
+      :account-types="accountTypeOptions"
       :parent-options="flattenedAccounts.map((entry) => entry.account)"
       @save="handleSaveAccount"
     />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Download } from '@lucide/vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -9,6 +10,7 @@ import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { AccountType, TrialBalanceRow, TrialBalanceSection } from '@/types/accounting'
 
+const { t } = useI18n()
 const currentYear = new Date().getFullYear()
 
 // Generate fiscal periods matching the database seed
@@ -50,12 +52,12 @@ const loadTrialBalance = async () => {
     const rawRows = res.data || []
 
     const sectionsMap: Record<string, { label: string; type: AccountType; rows: TrialBalanceRow[] }> = {
-      Asset: { label: 'Assets', type: 'asset', rows: [] },
-      Liability: { label: 'Liabilities', type: 'liability', rows: [] },
-      Equity: { label: 'Equity', type: 'equity', rows: [] },
-      Revenue: { label: 'Revenue', type: 'revenue', rows: [] },
-      COGS: { label: 'Cost of Goods Sold', type: 'cost_of_sales', rows: [] },
-      Expense: { label: 'Expenses', type: 'expense', rows: [] },
+      Asset: { label: t('accounting.common.types.asset'), type: 'asset', rows: [] },
+      Liability: { label: t('accounting.common.types.liability'), type: 'liability', rows: [] },
+      Equity: { label: t('accounting.common.types.equity'), type: 'equity', rows: [] },
+      Revenue: { label: t('accounting.common.types.revenue'), type: 'revenue', rows: [] },
+      COGS: { label: t('accounting.common.types.cost_of_sales'), type: 'cost_of_sales', rows: [] },
+      Expense: { label: t('accounting.common.types.expense'), type: 'expense', rows: [] },
     }
 
     rawRows.forEach((row: any) => {
@@ -147,8 +149,25 @@ watch(
 
 const downloadCsv = () => {
   const header = comparePreviousPeriod.value
-    ? ['Section', 'Code', 'Name', 'Opening Balance', 'Debits', 'Credits', 'Closing Balance', 'Prior Period']
-    : ['Section', 'Code', 'Name', 'Opening Balance', 'Debits', 'Credits', 'Closing Balance']
+    ? [
+        t('accounting.trialBalance.table.section'),
+        t('accounting.trialBalance.table.code'),
+        t('accounting.trialBalance.table.name'),
+        t('accounting.trialBalance.table.openingBalance'),
+        t('accounting.trialBalance.table.debits'),
+        t('accounting.trialBalance.table.credits'),
+        t('accounting.trialBalance.table.closingBalance'),
+        t('accounting.trialBalance.table.priorPeriod'),
+      ]
+    : [
+        t('accounting.trialBalance.table.section'),
+        t('accounting.trialBalance.table.code'),
+        t('accounting.trialBalance.table.name'),
+        t('accounting.trialBalance.table.openingBalance'),
+        t('accounting.trialBalance.table.debits'),
+        t('accounting.trialBalance.table.credits'),
+        t('accounting.trialBalance.table.closingBalance'),
+      ]
 
   const lines = [header.join(',')]
 
@@ -192,11 +211,11 @@ const periodLabel = computed(() => {
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Trial Balance</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Grouped ledger balances for the selected reporting period.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ t('accounting.trialBalance.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.trialBalance.subtitle') }}</p>
       </div>
       <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="downloadCsv">
-        <Download class="mr-2 h-4 w-4 shrink-0" /> Export to Excel
+        <Download class="mr-2 h-4 w-4 shrink-0" /> {{ t('accounting.trialBalance.exportExcel') }}
       </UiButton>
     </div>
 
@@ -204,29 +223,29 @@ const periodLabel = computed(() => {
       <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <UiSelect
           v-model="mode"
-          label="Period Mode"
+          :label="t('accounting.trialBalance.periodMode')"
           :options="[
-            { label: 'Custom Dates', value: 'custom' },
-            { label: 'Fiscal Period', value: 'fiscal' },
+            { label: t('accounting.trialBalance.customDates'), value: 'custom' },
+            { label: t('accounting.trialBalance.fiscalPeriod'), value: 'fiscal' },
           ]"
         />
-        <UiInput v-if="mode === 'custom'" v-model="fromDate" label="From" type="date" />
-        <UiInput v-if="mode === 'custom'" v-model="toDate" label="To" type="date" />
+        <UiInput v-if="mode === 'custom'" v-model="fromDate" :label="t('accounting.trialBalance.from')" type="date" />
+        <UiInput v-if="mode === 'custom'" v-model="toDate" :label="t('accounting.trialBalance.to')" type="date" />
         <UiSelect
           v-if="mode === 'fiscal'"
           v-model="selectedPeriod"
-          label="Fiscal Period"
+          :label="t('accounting.trialBalance.fiscalPeriod')"
           :options="accountingFiscalPeriods.map((period) => ({ label: `${period.year}-${String(period.month).padStart(2, '0')}`, value: period.id }))"
         />
         <label class="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 sm:col-span-2 lg:col-span-1">
           <input v-model="comparePreviousPeriod" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 shrink-0" />
           <span class="min-w-0">
-            <span class="block text-sm font-medium text-slate-900">Compare previous period</span>
-            <span class="block text-xs text-slate-500">Shows a prior-period balance column.</span>
+            <span class="block text-sm font-medium text-slate-900">{{ t('accounting.trialBalance.comparePrevious') }}</span>
+            <span class="block text-xs text-slate-500">{{ t('accounting.trialBalance.compareDesc') }}</span>
           </span>
         </label>
       </div>
-      <p class="text-xs sm:text-sm text-slate-500">Reporting window: {{ periodLabel }}</p>
+      <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.trialBalance.reportingWindow', { window: periodLabel }) }}</p>
     </div>
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -234,13 +253,13 @@ const periodLabel = computed(() => {
         <table class="min-w-full min-w-[760px] divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Code</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">Name</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Opening Balance</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Debits</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Credits</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Closing Balance</th>
-              <th v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Prior Period</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.code') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">{{ t('accounting.trialBalance.table.name') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.openingBalance') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.debits') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.credits') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.closingBalance') }}</th>
+              <th v-if="comparePreviousPeriod" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.trialBalance.table.priorPeriod') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 text-sm">
@@ -261,7 +280,7 @@ const periodLabel = computed(() => {
               </tr>
               <tr class="bg-slate-50/70 font-semibold">
                 <td class="px-4 py-3" colspan="2"></td>
-                <td class="px-4 py-3 text-right text-xs uppercase tracking-wider text-slate-500">Subtotal</td>
+                <td class="px-4 py-3 text-right text-xs uppercase tracking-wider text-slate-500">{{ t('accounting.trialBalance.table.subtotal') }}</td>
                 <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.debits) }}</td>
                 <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.credits) }}</td>
                 <td class="px-4 py-3 text-right text-slate-900 whitespace-nowrap">{{ formatCurrency(section.subtotal.closingBalance) }}</td>
@@ -271,7 +290,7 @@ const periodLabel = computed(() => {
           </tbody>
           <tfoot class="bg-slate-900 text-white">
             <tr>
-              <td colspan="2" class="px-4 py-3.5 text-xs sm:text-sm font-semibold uppercase tracking-wider">Grand Total</td>
+              <td colspan="2" class="px-4 py-3.5 text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ t('accounting.trialBalance.table.grandTotal') }}</td>
               <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.openingBalance) }}</td>
               <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.debits) }}</td>
               <td class="px-4 py-3.5 text-right text-xs sm:text-sm font-semibold whitespace-nowrap">{{ formatCurrency(totals.credits) }}</td>

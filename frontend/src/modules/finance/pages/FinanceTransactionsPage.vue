@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import {
   Plus,
@@ -48,8 +49,24 @@ import type {
   TransactionType,
 } from '@/types/finance'
 
+const { t } = useI18n()
 const queryClient = useQueryClient()
 const toast = useToast()
+
+const paymentMethodLabel = (method?: string) => {
+  if (!method) return t('finance.common.paymentMethods.cash')
+  return t(`finance.common.paymentMethods.${method}`) || method.replace('_', ' ')
+}
+
+const statusLabel = (status?: string) => {
+  if (!status) return ''
+  return t(`finance.common.statuses.${status}`) || status
+}
+
+const typeLabel = (type?: string) => {
+  if (!type) return ''
+  return t(`finance.common.${type}`) || type
+}
 
 const page = ref(1)
 const activeTypeTab = ref<'all' | 'income' | 'expense'>('all')
@@ -314,14 +331,14 @@ const handleSyncSales = async () => {
       <div>
         <div class="flex items-center space-x-2">
           <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Finance & Cash Flow
+            {{ t('finance.transactionsPage.title') }}
           </h1>
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
-            {{ meta.total }} Records
+            {{ t('finance.transactionsPage.recordsCount', { count: meta.total }) }}
           </span>
         </div>
         <p class="text-slate-500 text-xs sm:text-sm mt-1">
-          Record income, operating expenses, and auto-post balanced double-entry journals into the general ledger.
+          {{ t('finance.transactionsPage.subtitle') }}
         </p>
       </div>
 
@@ -332,10 +349,10 @@ const handleSyncSales = async () => {
           :disabled="isSyncing"
           @click="handleSyncSales"
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-2xs transition-all disabled:opacity-50"
-          title="Sync POS sales and invoice payments into Income"
+          :title="t('finance.transactionsPage.syncTooltip')"
         >
           <RefreshCw class="h-4 w-4 text-emerald-600" :class="{ 'animate-spin': isSyncing }" />
-          <span>{{ isSyncing ? 'Syncing...' : 'Sync Sales' }}</span>
+          <span>{{ isSyncing ? t('finance.transactionsPage.syncingBtn') : t('finance.transactionsPage.syncSalesBtn') }}</span>
         </button>
 
         <button
@@ -344,7 +361,7 @@ const handleSyncSales = async () => {
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-2xs transition-all"
         >
           <Tag class="h-4 w-4 text-slate-400" />
-          <span>Categories</span>
+          <span>{{ t('finance.transactionsPage.categoriesBtn') }}</span>
         </button>
 
         <button
@@ -353,7 +370,7 @@ const handleSyncSales = async () => {
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-2xs transition-all"
         >
           <Download class="h-4 w-4 text-blue-600" />
-          <span>Export</span>
+          <span>{{ t('finance.transactionsPage.exportBtn') }}</span>
         </button>
 
         <!-- Record Income Button -->
@@ -363,7 +380,7 @@ const handleSyncSales = async () => {
           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
         >
           <Plus class="h-4 w-4" />
-          <span>Add Income</span>
+          <span>{{ t('finance.transactionsPage.addIncomeBtn') }}</span>
         </button>
 
         <!-- Record Expense Button -->
@@ -373,7 +390,7 @@ const handleSyncSales = async () => {
           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-rose-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
         >
           <Plus class="h-4 w-4" />
-          <span>Add Expense</span>
+          <span>{{ t('finance.transactionsPage.addExpenseBtn') }}</span>
         </button>
       </div>
     </div>
@@ -383,12 +400,12 @@ const handleSyncSales = async () => {
       <!-- Total Income -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Income</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('finance.transactionsPage.kpis.totalIncome') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
             {{ formatCurrency(summaryData?.total_income || 0) }}
           </h3>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            {{ summaryData?.income_count || 0 }} received payments
+            {{ t('finance.transactionsPage.kpis.receivedPayments', { count: summaryData?.income_count || 0 }) }}
           </p>
         </div>
         <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -399,12 +416,12 @@ const handleSyncSales = async () => {
       <!-- Total Expenses -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Expenses</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('finance.transactionsPage.kpis.totalExpenses') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-rose-600 mt-1">
             {{ formatCurrency(summaryData?.total_expense || 0) }}
           </h3>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            {{ summaryData?.expense_count || 0 }} expenditures
+            {{ t('finance.transactionsPage.kpis.expenditures', { count: summaryData?.expense_count || 0 }) }}
           </p>
         </div>
         <div class="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
@@ -415,7 +432,7 @@ const handleSyncSales = async () => {
       <!-- Net Cash Flow / Profit -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Net Balance</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('finance.transactionsPage.kpis.netBalance') }}</p>
           <h3
             class="text-xl sm:text-2xl font-black mt-1"
             :class="(summaryData?.net || 0) >= 0 ? 'text-blue-600' : 'text-amber-600'"
@@ -423,7 +440,7 @@ const handleSyncSales = async () => {
             {{ formatCurrency(summaryData?.net || 0) }}
           </h3>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            {{ (summaryData?.net || 0) >= 0 ? 'Cash flow surplus' : 'Cash flow deficit' }}
+            {{ (summaryData?.net || 0) >= 0 ? t('finance.transactionsPage.kpis.cashFlowSurplus') : t('finance.transactionsPage.kpis.cashFlowDeficit') }}
           </p>
         </div>
         <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
@@ -434,12 +451,12 @@ const handleSyncSales = async () => {
       <!-- Accounting Ledger Sync -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Accounting Ledger</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ t('finance.transactionsPage.kpis.accountingLedger') }}</p>
           <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-            100% Synced
+            {{ t('finance.transactionsPage.kpis.syncedPercent') }}
           </h3>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            Real-time double-entry
+            {{ t('finance.transactionsPage.kpis.realtimeDoubleEntry') }}
           </p>
         </div>
         <div class="p-2.5 bg-primary-50 text-primary-600 rounded-xl">
@@ -459,7 +476,7 @@ const handleSyncSales = async () => {
             class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
             :class="activeTypeTab === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
           >
-            All Transactions
+            {{ t('finance.common.allTransactions') }}
           </button>
           <button
             type="button"
@@ -468,7 +485,7 @@ const handleSyncSales = async () => {
             :class="activeTypeTab === 'income' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-700 hover:bg-emerald-50'"
           >
             <TrendingUp class="w-3.5 h-3.5" />
-            <span>Income Only</span>
+            <span>{{ t('finance.common.incomeOnly') }}</span>
           </button>
           <button
             type="button"
@@ -477,7 +494,7 @@ const handleSyncSales = async () => {
             :class="activeTypeTab === 'expense' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-700 hover:bg-rose-50'"
           >
             <TrendingDown class="w-3.5 h-3.5" />
-            <span>Expenses Only</span>
+            <span>{{ t('finance.common.expensesOnly') }}</span>
           </button>
         </div>
 
@@ -488,7 +505,7 @@ const handleSyncSales = async () => {
           class="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-semibold"
         >
           <X class="w-3.5 h-3.5" />
-          <span>Reset Filters</span>
+          <span>{{ t('finance.common.resetFilters') }}</span>
         </button>
       </div>
 
@@ -502,7 +519,7 @@ const handleSyncSales = async () => {
           <input
             type="text"
             v-model="filters.search"
-            placeholder="Search payee, memo, #..."
+            :placeholder="t('finance.common.searchPlaceholder')"
             class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -513,13 +530,13 @@ const handleSyncSales = async () => {
             v-model="filters.category_id"
             class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">All Categories</option>
+            <option value="">{{ t('finance.common.allCategories') }}</option>
             <option
               v-for="cat in categoriesData"
               :key="cat.id"
               :value="cat.id"
             >
-              {{ cat.name }} ({{ cat.type }})
+              {{ cat.name }} ({{ typeLabel(cat.type) }})
             </option>
           </select>
         </div>
@@ -530,12 +547,12 @@ const handleSyncSales = async () => {
             v-model="filters.payment_method"
             class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">All Payment Methods</option>
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="check">Check</option>
-            <option value="credit_card">Card</option>
-            <option value="mobile_money">Mobile Money</option>
+            <option value="">{{ t('finance.common.allPaymentMethods') }}</option>
+            <option value="cash">{{ t('finance.common.paymentMethods.cash') }}</option>
+            <option value="bank_transfer">{{ t('finance.common.paymentMethods.bank_transfer') }}</option>
+            <option value="check">{{ t('finance.common.paymentMethods.check') }}</option>
+            <option value="credit_card">{{ t('finance.common.paymentMethods.credit_card') }}</option>
+            <option value="mobile_money">{{ t('finance.common.paymentMethods.mobile_money') }}</option>
           </select>
         </div>
 
@@ -545,10 +562,10 @@ const handleSyncSales = async () => {
             v-model="filters.status"
             class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">All Statuses</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="">{{ t('finance.common.allStatuses') }}</option>
+            <option value="completed">{{ t('finance.common.statuses.completed') }}</option>
+            <option value="pending">{{ t('finance.common.statuses.pending') }}</option>
+            <option value="cancelled">{{ t('finance.common.statuses.cancelled') }}</option>
           </select>
         </div>
       </div>
@@ -560,14 +577,14 @@ const handleSyncSales = async () => {
         <table class="w-full text-left text-xs divide-y divide-slate-200">
           <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
             <tr>
-              <th class="px-4 py-3">Txn #</th>
-              <th class="px-4 py-3">Date</th>
-              <th class="px-4 py-3">Payee / Payer & Memo</th>
-              <th class="px-4 py-3">Category</th>
-              <th class="px-4 py-3">Method</th>
-              <th class="px-4 py-3 text-right">Amount</th>
-              <th class="px-4 py-3 text-center">Ledger Entry</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3">{{ t('finance.transactionsPage.table.txnNumber') }}</th>
+              <th class="px-4 py-3">{{ t('finance.transactionsPage.table.date') }}</th>
+              <th class="px-4 py-3">{{ t('finance.transactionsPage.table.payeePayerMemo') }}</th>
+              <th class="px-4 py-3">{{ t('finance.transactionsPage.table.category') }}</th>
+              <th class="px-4 py-3">{{ t('finance.transactionsPage.table.method') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('finance.transactionsPage.table.amount') }}</th>
+              <th class="px-4 py-3 text-center">{{ t('finance.transactionsPage.table.ledgerEntry') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('finance.transactionsPage.table.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -599,19 +616,19 @@ const handleSyncSales = async () => {
                           : 'bg-rose-50 text-rose-700',
                       ]"
                     >
-                      {{ item.type }}
+                      {{ typeLabel(item.type) }}
                     </span>
                     <span
                       v-if="item.source_type === 'pos_transaction' || (item.transaction_number && item.transaction_number.startsWith('POS-'))"
                       class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100"
                     >
-                      POS Sale
+                      {{ t('finance.common.posSale') }}
                     </span>
                     <span
                       v-else-if="item.source_type === 'sales_payment' || (item.transaction_number && item.transaction_number.startsWith('PAY-'))"
                       class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-sky-50 text-sky-700 border border-sky-100"
                     >
-                      Invoice Payment
+                      {{ t('finance.common.invoicePayment') }}
                     </span>
                   </div>
                 </td>
@@ -624,13 +641,13 @@ const handleSyncSales = async () => {
                 <!-- Payee / Payer & Memo -->
                 <td class="px-4 py-3.5 min-w-[200px]">
                   <p class="font-bold text-slate-900 truncate">
-                    {{ item.payee_payer || (item.type === 'income' ? 'Direct Revenue' : 'General Expenditure') }}
+                    {{ item.payee_payer || (item.type === 'income' ? t('finance.common.directRevenue') : t('finance.common.generalExpenditure')) }}
                   </p>
                   <p v-if="item.description" class="text-slate-400 text-[11px] truncate mt-0.5">
                     {{ item.description }}
                   </p>
                   <p v-if="item.reference" class="text-slate-400 text-[10px] font-mono mt-0.5">
-                    Ref: {{ item.reference }}
+                    {{ t('finance.transactionsPage.table.ref') }}: {{ item.reference }}
                   </p>
                 </td>
 
@@ -646,12 +663,12 @@ const handleSyncSales = async () => {
                     />
                     {{ item.category.name }}
                   </span>
-                  <span v-else class="text-slate-400 italic">Uncategorized</span>
+                  <span v-else class="text-slate-400 italic">{{ t('finance.common.uncategorized') }}</span>
                 </td>
 
                 <!-- Method -->
                 <td class="px-4 py-3.5 whitespace-nowrap text-slate-600 capitalize">
-                  {{ (item.payment_method || 'cash').replace('_', ' ') }}
+                  {{ paymentMethodLabel(item.payment_method) }}
                 </td>
 
                 <!-- Amount -->
@@ -671,13 +688,13 @@ const handleSyncSales = async () => {
                     title="View Double-Entry Ledger Entry"
                   >
                     <Scale class="w-3 h-3 text-blue-600" />
-                    <span>Posted Dr/Cr</span>
+                    <span>{{ t('finance.common.postedDrCr') }}</span>
                   </button>
                   <span
                     v-else
                     class="text-[11px] text-slate-400 italic"
                   >
-                    Pending
+                    {{ t('finance.common.pendingLedger') }}
                   </span>
                 </td>
 
@@ -720,9 +737,9 @@ const handleSyncSales = async () => {
                   <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                     <ArrowRightLeft class="w-6 h-6" />
                   </div>
-                  <h4 class="text-sm font-bold text-slate-700">No Transactions Found</h4>
+                  <h4 class="text-sm font-bold text-slate-700">{{ t('finance.transactionsPage.empty.title') }}</h4>
                   <p class="text-xs text-slate-400 leading-relaxed">
-                    Record your company's income and expenses. Transactions will automatically create double-entry journal entries in the accounting module.
+                    {{ t('finance.transactionsPage.empty.description') }}
                   </p>
                   <div class="flex items-center justify-center gap-2 pt-1">
                     <button
@@ -730,14 +747,14 @@ const handleSyncSales = async () => {
                       @click="openCreateTransaction('income')"
                       class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold"
                     >
-                      + Add Income
+                      {{ t('finance.transactionsPage.empty.addIncome') }}
                     </button>
                     <button
                       type="button"
                       @click="openCreateTransaction('expense')"
                       class="px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-bold"
                     >
-                      + Add Expense
+                      {{ t('finance.transactionsPage.empty.addExpense') }}
                     </button>
                   </div>
                 </div>
@@ -750,7 +767,7 @@ const handleSyncSales = async () => {
       <!-- Pagination -->
       <div v-if="meta.total > 0" class="p-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
         <p>
-          Showing {{ meta.from }}–{{ meta.to }} of {{ meta.total }} transactions
+          {{ t('finance.transactionsPage.pagination', { from: meta.from, to: meta.to, total: meta.total }) }}
         </p>
         <UiPagination
           :current-page="page"
@@ -789,10 +806,10 @@ const handleSyncSales = async () => {
     />
 
     <!-- 4. Export Modal -->
-    <UiModal v-model="isExportModalOpen" title="Export Financial Transactions" size="md">
+    <UiModal v-model="isExportModalOpen" :title="t('finance.transactionsPage.exportModal.title')" size="md">
       <div class="space-y-4 text-slate-800">
         <p class="text-xs text-slate-500 leading-relaxed">
-          Select your preferred export format. The report will include all currently filtered income and expense records.
+          {{ t('finance.transactionsPage.exportModal.description') }}
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -803,8 +820,8 @@ const handleSyncSales = async () => {
             class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-center"
           >
             <FileSpreadsheet class="w-8 h-8 text-emerald-600 mb-2" />
-            <span class="font-bold text-xs text-slate-900">Excel (.xlsx)</span>
-            <span class="text-[10px] text-slate-400 mt-0.5">Spreadsheet</span>
+            <span class="font-bold text-xs text-slate-900">{{ t('finance.transactionsPage.exportModal.excel') }}</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">{{ t('finance.transactionsPage.exportModal.excelSubtitle') }}</span>
           </button>
 
           <button
@@ -814,8 +831,8 @@ const handleSyncSales = async () => {
             class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 transition-all text-center"
           >
             <FileText class="w-8 h-8 text-blue-600 mb-2" />
-            <span class="font-bold text-xs text-slate-900">CSV (.csv)</span>
-            <span class="text-[10px] text-slate-400 mt-0.5">Tabular data</span>
+            <span class="font-bold text-xs text-slate-900">{{ t('finance.transactionsPage.exportModal.csv') }}</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">{{ t('finance.transactionsPage.exportModal.csvSubtitle') }}</span>
           </button>
 
           <button
@@ -825,8 +842,8 @@ const handleSyncSales = async () => {
             class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-rose-500 hover:bg-rose-50/50 transition-all text-center"
           >
             <FileText class="w-8 h-8 text-rose-600 mb-2" />
-            <span class="font-bold text-xs text-slate-900">PDF Document</span>
-            <span class="text-[10px] text-slate-400 mt-0.5">Print ready</span>
+            <span class="font-bold text-xs text-slate-900">{{ t('finance.transactionsPage.exportModal.pdf') }}</span>
+            <span class="text-[10px] text-slate-400 mt-0.5">{{ t('finance.transactionsPage.exportModal.pdfSubtitle') }}</span>
           </button>
         </div>
       </div>
@@ -839,37 +856,37 @@ const handleSyncSales = async () => {
             @click="isExportModalOpen = false"
             class="text-xs"
           >
-            Cancel
+            {{ t('finance.transactionsPage.exportModal.cancel') }}
           </UiButton>
         </div>
       </template>
     </UiModal>
 
     <!-- 5. Delete Confirmation Modal -->
-    <UiModal v-model="isDeleteModalOpen" title="Delete Transaction" size="sm">
+    <UiModal v-model="isDeleteModalOpen" :title="t('finance.transactionsPage.deleteModal.title')" size="sm">
       <div v-if="transactionToDelete" class="space-y-4">
         <div class="flex items-start gap-3.5 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl">
           <div class="p-2 bg-rose-100 text-rose-600 rounded-xl shrink-0 mt-0.5">
             <Trash2 class="w-5 h-5" />
           </div>
           <div class="space-y-1">
-            <h4 class="text-sm font-bold text-rose-950">Confirm Deletion</h4>
+            <h4 class="text-sm font-bold text-rose-950">{{ t('finance.transactionsPage.deleteModal.confirmHeader') }}</h4>
             <p class="text-xs text-rose-800 leading-relaxed">
-              Are you sure you want to delete transaction <strong>{{ transactionToDelete.transaction_number }}</strong> ({{ formatCurrency(transactionToDelete.amount) }})?
+              {{ t('finance.transactionsPage.deleteModal.confirmText', { txn: transactionToDelete.transaction_number, amount: formatCurrency(transactionToDelete.amount) }) }}
             </p>
           </div>
         </div>
 
         <p class="text-xs text-slate-500 leading-relaxed">
-          Deleting this transaction will automatically reverse its associated journal entry in the Accounting module.
+          {{ t('finance.transactionsPage.deleteModal.warning') }}
         </p>
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
           <UiButton variant="outline" size="sm" type="button" @click="isDeleteModalOpen = false">
-            Cancel
+            {{ t('finance.transactionsPage.deleteModal.cancel') }}
           </UiButton>
           <UiButton variant="danger" size="sm" type="button" @click="confirmDelete">
-            Delete & Reverse Ledger
+            {{ t('finance.transactionsPage.deleteModal.confirmBtn') }}
           </UiButton>
         </div>
       </div>

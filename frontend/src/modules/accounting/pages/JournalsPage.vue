@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Filter, Plus, Search } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -10,6 +11,8 @@ import JournalEntryModal from '../components/JournalEntryModal.vue'
 import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import type { Account, AccountType, Journal } from '@/types/accounting'
+
+const { t } = useI18n()
 
 const currentYear = new Date().getFullYear()
 const journals = ref<Journal[]>([])
@@ -188,6 +191,12 @@ const handleSaved = async (payload: {
     alert('Failed to save journal entry.')
   }
 }
+const statusTabs = computed(() => [
+  { label: t('accounting.journals.tabs.all'), value: 'all' },
+  { label: t('accounting.journals.tabs.draft'), value: 'draft' },
+  { label: t('accounting.journals.tabs.posted'), value: 'posted' },
+  { label: t('accounting.journals.tabs.reversed'), value: 'reversed' },
+])
 </script>
 
 <template>
@@ -196,11 +205,11 @@ const handleSaved = async (payload: {
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Journal Entries</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Track manual and system-generated postings across the ledger.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ t('accounting.journals.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.journals.subtitle') }}</p>
       </div>
       <UiButton class="w-full sm:w-auto justify-center" @click="createJournal">
-        <Plus class="mr-2 h-4 w-4 shrink-0" /> New Journal Entry
+        <Plus class="mr-2 h-4 w-4 shrink-0" /> {{ t('accounting.journals.newEntry') }}
       </UiButton>
     </div>
 
@@ -208,13 +217,8 @@ const handleSaved = async (payload: {
       <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
         <Filter class="h-4 w-4 text-slate-400 shrink-0 hidden sm:block" />
         <button
-          v-for="tab in [
-            { label: 'All', value: 'all' },
-            { label: 'Draft', value: 'draft' },
-            { label: 'Posted', value: 'posted' },
-            { label: 'Reversed', value: 'reversed' },
-          ]"
-          :key="tab.label"
+          v-for="tab in statusTabs"
+          :key="tab.value"
           class="whitespace-nowrap rounded-full border px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors shrink-0"
           :class="statusFilter === tab.value ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
           @click="statusFilter = tab.value as 'all' | Journal['status']"
@@ -224,11 +228,11 @@ const handleSaved = async (payload: {
       </div>
       <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <div class="relative sm:col-span-2 lg:col-span-2">
-          <UiInput v-model="searchQuery" placeholder="Search reference, description, or source..." />
+          <UiInput v-model="searchQuery" :placeholder="t('accounting.journals.searchPlaceholder')" />
           <Search class="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-400" />
         </div>
-        <UiInput v-model="fromDate" label="From" type="date" />
-        <UiInput v-model="toDate" label="To" type="date" />
+        <UiInput v-model="fromDate" :label="t('accounting.journals.from')" type="date" />
+        <UiInput v-model="toDate" :label="t('accounting.journals.to')" type="date" />
       </div>
     </div>
 
@@ -237,12 +241,12 @@ const handleSaved = async (payload: {
         <table class="min-w-full min-w-[700px] divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Date</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Reference</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">Description</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Total Amount</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Source</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.table.date') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.table.reference') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[200px]">{{ t('accounting.journals.table.description') }}</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.table.totalAmount') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.table.status') }}</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.journals.table.source') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -259,7 +263,7 @@ const handleSaved = async (payload: {
               </td>
               <td class="px-4 py-3 text-right font-semibold text-slate-900 whitespace-nowrap text-sm">{{ formatCurrency(journal.totalDebit) }}</td>
               <td class="px-4 py-3 whitespace-nowrap">
-                <UiBadge :variant="statusVariant(journal.status)">{{ journal.status }}</UiBadge>
+                <UiBadge :variant="statusVariant(journal.status)">{{ t(`accounting.common.statuses.${journal.status}`) || journal.status }}</UiBadge>
               </td>
               <td class="px-4 py-3 text-slate-600 whitespace-nowrap text-sm capitalize">{{ journal.sourceType }}</td>
             </tr>

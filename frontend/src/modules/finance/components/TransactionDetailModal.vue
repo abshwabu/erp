@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   TrendingUp,
   TrendingDown,
@@ -29,6 +30,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'edit'])
 const router = useRouter()
+const { t } = useI18n()
 
 const isIncome = computed(() => props.transaction?.type === 'income')
 
@@ -43,7 +45,7 @@ const goToJournal = (journalId?: string) => {
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     size="lg"
-    title="Transaction Details"
+    :title="t('finance.detailModal.title')"
   >
     <div v-if="transaction" class="space-y-5 text-slate-800">
       <!-- Header Banner with Amount -->
@@ -76,17 +78,17 @@ const goToJournal = (journalId?: string) => {
                     : 'bg-rose-100 text-rose-800',
                 ]"
               >
-                {{ transaction.type }}
+                {{ t(`finance.common.${transaction.type}`) || transaction.type }}
               </span>
             </div>
             <h3 class="text-lg font-black text-slate-900 mt-0.5">
-              {{ transaction.payee_payer || (isIncome ? 'Customer / Income Source' : 'Vendor / Payee') }}
+              {{ transaction.payee_payer || (isIncome ? t('finance.detailModal.customerIncomeSource') : t('finance.detailModal.vendorPayee')) }}
             </h3>
           </div>
         </div>
 
         <div class="text-right">
-          <p class="text-xs font-semibold text-slate-400">Total Amount</p>
+          <p class="text-xs font-semibold text-slate-400">{{ t('finance.detailModal.totalAmount') }}</p>
           <p
             class="text-2xl font-black tracking-tight mt-0.5"
             :class="isIncome ? 'text-emerald-600' : 'text-rose-600'"
@@ -99,11 +101,11 @@ const goToJournal = (journalId?: string) => {
       <!-- Attributes Grid -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-xs">
         <div>
-          <span class="text-slate-400 block font-semibold mb-0.5">Date</span>
+          <span class="text-slate-400 block font-semibold mb-0.5">{{ t('finance.detailModal.date') }}</span>
           <span class="font-bold text-slate-800">{{ transaction.transaction_date }}</span>
         </div>
         <div>
-          <span class="text-slate-400 block font-semibold mb-0.5">Category</span>
+          <span class="text-slate-400 block font-semibold mb-0.5">{{ t('finance.detailModal.category') }}</span>
           <span
             v-if="transaction.category"
             class="inline-flex items-center gap-1 font-bold text-slate-800"
@@ -114,16 +116,16 @@ const goToJournal = (journalId?: string) => {
             />
             {{ transaction.category.name }}
           </span>
-          <span v-else class="font-medium text-slate-400">Uncategorized</span>
+          <span v-else class="font-medium text-slate-400">{{ t('finance.common.uncategorized') }}</span>
         </div>
         <div>
-          <span class="text-slate-400 block font-semibold mb-0.5">Payment Method</span>
+          <span class="text-slate-400 block font-semibold mb-0.5">{{ t('finance.detailModal.paymentMethod') }}</span>
           <span class="font-bold text-slate-800 capitalize">
-            {{ (transaction.payment_method || 'cash').replace('_', ' ') }}
+            {{ t(`finance.common.paymentMethods.${transaction.payment_method}`) || (transaction.payment_method || 'cash').replace('_', ' ') }}
           </span>
         </div>
         <div>
-          <span class="text-slate-400 block font-semibold mb-0.5">Status</span>
+          <span class="text-slate-400 block font-semibold mb-0.5">{{ t('finance.detailModal.status') }}</span>
           <span
             class="inline-flex items-center gap-1 font-bold capitalize"
             :class="[
@@ -137,7 +139,7 @@ const goToJournal = (journalId?: string) => {
             <CheckCircle2 v-if="transaction.status === 'completed'" class="w-3.5 h-3.5" />
             <Clock v-else-if="transaction.status === 'pending'" class="w-3.5 h-3.5" />
             <Ban v-else class="w-3.5 h-3.5" />
-            {{ transaction.status }}
+            {{ t(`finance.common.statuses.${transaction.status}`) || transaction.status }}
           </span>
         </div>
       </div>
@@ -146,30 +148,30 @@ const goToJournal = (journalId?: string) => {
       <div v-if="transaction.reference || transaction.description || transaction.source_type" class="space-y-2 text-xs">
         <div class="flex flex-wrap items-center gap-4 text-slate-600">
           <div v-if="transaction.reference" class="flex items-center gap-2">
-            <span class="font-bold text-slate-400">Reference:</span>
+            <span class="font-bold text-slate-400">{{ t('finance.detailModal.reference') }}:</span>
             <span class="font-mono bg-slate-100 px-2 py-0.5 rounded-md font-semibold text-slate-800">
               {{ transaction.reference }}
             </span>
           </div>
           <div v-if="transaction.source_type" class="flex items-center gap-2">
-            <span class="font-bold text-slate-400">Source:</span>
+            <span class="font-bold text-slate-400">{{ t('finance.detailModal.source') }}:</span>
             <span
               v-if="transaction.source_type === 'pos_transaction'"
               class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[11px]"
             >
-              Point of Sale (POS)
+              {{ t('finance.detailModal.sourcePos') }}
             </span>
             <span
               v-else-if="transaction.source_type === 'sales_payment'"
               class="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold text-[11px]"
             >
-              Sales Invoice Payment
+              {{ t('finance.detailModal.sourceSales') }}
             </span>
             <span v-else class="capitalize text-slate-700 font-semibold">{{ transaction.source_type }}</span>
           </div>
         </div>
         <div v-if="transaction.description" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-slate-700 leading-relaxed">
-          <span class="font-bold text-slate-400 block mb-0.5">Description / Memo:</span>
+          <span class="font-bold text-slate-400 block mb-0.5">{{ t('finance.detailModal.description') }}:</span>
           {{ transaction.description }}
         </div>
       </div>
@@ -180,23 +182,23 @@ const goToJournal = (journalId?: string) => {
           <div class="flex items-center gap-2">
             <Scale class="w-4 h-4 text-blue-600" />
             <h4 class="text-xs font-bold text-slate-900">
-              Accounting Ledger Integration (Double-Entry Journal)
+              {{ t('finance.detailModal.ledgerIntegration') }}
             </h4>
           </div>
           <span
             v-if="transaction.journal"
             class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800"
           >
-            Posted Entry
+            {{ t('finance.detailModal.postedEntry') }}
           </span>
-          <span v-else class="text-[10px] text-slate-400">No Journal Linked</span>
+          <span v-else class="text-[10px] text-slate-400">{{ t('finance.detailModal.noJournalLinked') }}</span>
         </div>
 
         <div class="p-4 space-y-3">
           <div v-if="transaction.journal" class="space-y-3">
             <div class="flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
               <div>
-                <span class="text-slate-400">Journal Ref: </span>
+                <span class="text-slate-400">{{ t('finance.detailModal.journalRef') }}: </span>
                 <span class="font-bold text-slate-900">{{ transaction.journal.reference }}</span>
               </div>
               <button
@@ -204,7 +206,7 @@ const goToJournal = (journalId?: string) => {
                 @click="goToJournal(transaction.journal_id || undefined)"
                 class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-bold hover:underline"
               >
-                <span>Open in Accounting Journals</span>
+                <span>{{ t('finance.detailModal.openInJournals') }}</span>
                 <ExternalLink class="w-3.5 h-3.5" />
               </button>
             </div>
@@ -217,9 +219,9 @@ const goToJournal = (journalId?: string) => {
               <table class="w-full text-left text-xs divide-y divide-slate-200">
                 <thead class="bg-slate-50 text-slate-500 font-bold">
                   <tr>
-                    <th class="px-3 py-2">Ledger Account</th>
-                    <th class="px-3 py-2 text-right">Debit ($)</th>
-                    <th class="px-3 py-2 text-right">Credit ($)</th>
+                    <th class="px-3 py-2">{{ t('finance.detailModal.ledgerAccount') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('finance.detailModal.debit') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('finance.detailModal.credit') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -247,7 +249,7 @@ const goToJournal = (journalId?: string) => {
           </div>
 
           <div v-else class="text-xs text-slate-400 italic">
-            This transaction has not yet been posted to the general ledger. It will automatically post once verified or marked completed.
+            {{ t('finance.detailModal.notPostedNotice') }}
           </div>
         </div>
       </div>
@@ -260,7 +262,7 @@ const goToJournal = (journalId?: string) => {
           @click="emit('update:modelValue', false)"
           class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-xs sm:text-sm"
         >
-          Close
+          {{ t('finance.detailModal.close') }}
         </button>
 
         <UiButton
@@ -269,7 +271,7 @@ const goToJournal = (journalId?: string) => {
           @click="emit('edit', transaction)"
           class="text-xs sm:text-sm"
         >
-          Edit Transaction
+          {{ t('finance.detailModal.editTransaction') }}
         </UiButton>
       </div>
     </template>

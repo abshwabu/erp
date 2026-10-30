@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import AccountingNav from './AccountingNav.vue'
@@ -38,6 +39,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
 const selectedIds = ref<string[]>([])
 const expandedId = ref<string | null>(null)
@@ -59,11 +61,11 @@ const summary = computed(() => {
   const total = totals.outstanding || 1
 
   return [
-    { label: 'Total Outstanding', value: totals.outstanding, percent: 100 },
-    { label: '0-30 Days', value: totals.bucket0_30, percent: Math.round((totals.bucket0_30 / total) * 100) },
-    { label: '31-60 Days', value: totals.bucket31_60, percent: Math.round((totals.bucket31_60 / total) * 100) },
-    { label: '61-90 Days', value: totals.bucket61_90, percent: Math.round((totals.bucket61_90 / total) * 100) },
-    { label: '90+ Days', value: totals.bucket90_plus, percent: Math.round((totals.bucket90_plus / total) * 100) },
+    { label: t('accounting.aging.totalOutstanding'), value: totals.outstanding, percent: 100 },
+    { label: t('accounting.aging.bucket0_30'), value: totals.bucket0_30, percent: Math.round((totals.bucket0_30 / total) * 100) },
+    { label: t('accounting.aging.bucket31_60'), value: totals.bucket31_60, percent: Math.round((totals.bucket31_60 / total) * 100) },
+    { label: t('accounting.aging.bucket61_90'), value: totals.bucket61_90, percent: Math.round((totals.bucket61_90 / total) * 100) },
+    { label: t('accounting.aging.bucket90_plus'), value: totals.bucket90_plus, percent: Math.round((totals.bucket90_plus / total) * 100) },
   ]
 })
 
@@ -97,7 +99,10 @@ const selectOverdue = () => {
 }
 
 const sendReminders = () => {
-  statusMessage.value = `Queued reminders for ${selectedIds.value.length} ${props.partyLabel.toLowerCase()}s.`
+  statusMessage.value = t('accounting.aging.queuedReminders', {
+    count: selectedIds.value.length,
+    party: props.partyLabel.toLowerCase()
+  })
 }
 </script>
 
@@ -111,8 +116,8 @@ const sendReminders = () => {
         <p class="text-xs sm:text-sm text-slate-500">{{ subtitle }}</p>
       </div>
       <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-        <UiButton variant="outline" class="flex-1 sm:flex-none justify-center" @click="selectOverdue">Select Overdue</UiButton>
-        <UiButton :disabled="selectedIds.length === 0" class="flex-1 sm:flex-none justify-center" @click="sendReminders">Send Reminders</UiButton>
+        <UiButton variant="outline" class="flex-1 sm:flex-none justify-center" @click="selectOverdue">{{ t('accounting.aging.selectOverdue') }}</UiButton>
+        <UiButton :disabled="selectedIds.length === 0" class="flex-1 sm:flex-none justify-center" @click="sendReminders">{{ t('accounting.aging.sendReminders') }}</UiButton>
       </div>
     </div>
 
@@ -125,17 +130,17 @@ const sendReminders = () => {
       >
         <p class="text-xs sm:text-sm font-medium text-slate-500">{{ item.label }}</p>
         <p class="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-slate-900">{{ formatCurrency(item.value) }}</p>
-        <p class="mt-1 text-xs text-slate-500">{{ item.percent }}% of total</p>
+        <p class="mt-1 text-xs text-slate-500">{{ t('accounting.aging.percentOfTotal', { percent: item.percent }) }}</p>
       </div>
     </div>
 
     <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <div>
-          <h2 class="text-base sm:text-lg font-semibold text-slate-900">Aging Distribution</h2>
-          <p class="text-xs sm:text-sm text-slate-500">Stacked mix of outstanding balances across buckets.</p>
+          <h2 class="text-base sm:text-lg font-semibold text-slate-900">{{ t('accounting.aging.distributionTitle') }}</h2>
+          <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.aging.distributionSubtitle') }}</p>
         </div>
-        <div class="text-xs sm:text-sm text-slate-500">{{ partyLabel }}s with open balances</div>
+        <div class="text-xs sm:text-sm text-slate-500">{{ t('accounting.aging.openBalancesCount', { party: partyLabel }) }}</div>
       </div>
       <div class="flex h-4 sm:h-5 overflow-hidden rounded-full bg-slate-100">
         <div
@@ -157,9 +162,9 @@ const sendReminders = () => {
 
     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div v-if="rows.length === 0" class="px-6 py-16 text-center">
-        <p class="text-base font-medium text-slate-900">No outstanding balances</p>
+        <p class="text-base font-medium text-slate-900">{{ t('accounting.aging.noBalancesTitle') }}</p>
         <p class="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-          Aging will appear here once invoices or bills with open balances exist. Until Sales/AP data is available, this report stays empty.
+          {{ t('accounting.aging.noBalancesSubtitle') }}
         </p>
       </div>
       <div v-else class="overflow-x-auto">
@@ -168,12 +173,12 @@ const sendReminders = () => {
             <tr>
               <th class="w-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"></th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 min-w-[180px]">{{ partyLabel }}</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Invoices</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.aging.invoices') }}</th>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">0-30</th>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">31-60</th>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">61-90</th>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">90+</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">Total</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{{ t('accounting.aging.total') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 text-sm">
@@ -190,7 +195,7 @@ const sendReminders = () => {
                 <td class="px-4 py-3">
                   <button class="text-left group" @click="toggleRow(row.id)">
                     <div class="font-medium text-slate-900 group-hover:text-primary-600 transition-colors">{{ resolveName(row) }}</div>
-                    <div class="text-xs text-slate-500">Click to expand invoices</div>
+                    <div class="text-xs text-slate-500">{{ t('accounting.aging.clickToExpand') }}</div>
                   </button>
                 </td>
                 <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ row.invoiceCount }}</td>
@@ -204,18 +209,18 @@ const sendReminders = () => {
                 <td colspan="8" class="p-3 sm:p-4">
                   <div class="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
                     <div class="flex items-center justify-between">
-                      <h3 class="text-xs sm:text-sm font-semibold text-slate-900">Overdue invoices</h3>
-                      <UiBadge variant="info">{{ row.invoices.length }} items</UiBadge>
+                      <h3 class="text-xs sm:text-sm font-semibold text-slate-900">{{ t('accounting.aging.overdueInvoices') }}</h3>
+                      <UiBadge variant="info">{{ t('accounting.aging.itemsCount', { count: row.invoices.length }) }}</UiBadge>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                       <table class="min-w-full min-w-[550px] divide-y divide-slate-200 text-xs sm:text-sm">
                         <thead class="bg-slate-50">
                           <tr>
-                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Reference</th>
-                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Invoice Date</th>
-                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Due Date</th>
-                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">Days Overdue</th>
-                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">Amount</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">{{ t('accounting.aging.invoiceRef') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">{{ t('accounting.aging.invoiceDate') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">{{ t('accounting.aging.dueDate') }}</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">{{ t('accounting.aging.daysOverdue') }}</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 whitespace-nowrap">{{ t('accounting.aging.amount') }}</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200">

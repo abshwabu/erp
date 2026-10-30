@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, Download } from '@lucide/vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -8,6 +9,8 @@ import AccountingNav from '../components/AccountingNav.vue'
 import { accountingApi } from '@/api/accounting'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { BalanceSheetGroup } from '@/types/accounting'
+
+const { t } = useI18n()
 
 const currentYear = new Date().getFullYear()
 const asOfDate = ref(`${currentYear}-12-31`)
@@ -118,13 +121,19 @@ watch(asOfDate, () => {
 
 const downloadCsv = () => {
   const lines = [
-    ['Section', 'Group', 'Code', 'Name', 'Balance'].join(','),
+    [
+      t('accounting.trialBalance.table.section'),
+      'Group',
+      t('accounting.chartOfAccounts.table.code'),
+      t('accounting.chartOfAccounts.table.name'),
+      t('accounting.chartOfAccounts.table.balance')
+    ].join(','),
   ]
 
   ;[
-    ['Assets', assets.value],
-    ['Liabilities', liabilities.value],
-    ['Equity', equity.value],
+    [t('accounting.balanceSheet.assets'), assets.value],
+    [t('accounting.balanceSheet.liabilities'), liabilities.value],
+    [t('accounting.balanceSheet.equity'), equity.value],
   ].forEach(([section, groups]) => {
     ;(groups as BalanceSheetGroup[]).forEach((group) => {
       group.rows.forEach((row) => {
@@ -149,28 +158,28 @@ const downloadCsv = () => {
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Balance Sheet</h1>
-        <p class="text-xs sm:text-sm text-slate-500">A statement of financial position as of the selected date.</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ t('accounting.balanceSheet.title') }}</h1>
+        <p class="text-xs sm:text-sm text-slate-500">{{ t('accounting.balanceSheet.subtitle') }}</p>
       </div>
       <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="downloadCsv">
-        <Download class="mr-2 h-4 w-4 shrink-0" /> Export to Excel
+        <Download class="mr-2 h-4 w-4 shrink-0" /> {{ t('accounting.balanceSheet.exportExcel') }}
       </UiButton>
     </div>
 
     <div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
       <div class="grid gap-3 grid-cols-1 sm:grid-cols-2">
-        <UiInput v-model="asOfDate" label="As of Date" type="date" />
-        <UiInput v-model="comparisonDate" label="Comparison Date" type="date" />
+        <UiInput v-model="asOfDate" :label="t('accounting.balanceSheet.asOfDate')" type="date" />
+        <UiInput v-model="comparisonDate" :label="t('accounting.balanceSheet.comparisonDate')" type="date" />
       </div>
       <p class="text-xs sm:text-sm text-slate-500">
-        Current as of {{ formatDate(asOfDate) }}. Comparison against {{ comparisonDate ? formatDate(comparisonDate) : 'prior date' }}.
+        {{ t('accounting.balanceSheet.currentAsOf', { current: formatDate(asOfDate), comparison: comparisonDate ? formatDate(comparisonDate) : t('accounting.balanceSheet.priorDate') }) }}
       </p>
     </div>
 
     <div class="grid gap-6 grid-cols-1 lg:grid-cols-2">
       <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
         <div class="mb-4 flex items-center justify-between gap-2">
-          <h2 class="text-base sm:text-lg font-semibold text-slate-900">Assets</h2>
+          <h2 class="text-base sm:text-lg font-semibold text-slate-900">{{ t('accounting.balanceSheet.assets') }}</h2>
           <UiBadge variant="info">{{ formatCurrency(reportTotals.assetsTotal) }}</UiBadge>
         </div>
         <div class="space-y-4">
@@ -185,7 +194,7 @@ const downloadCsv = () => {
                 <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
               </div>
               <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
-                <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                <span class="text-slate-950 min-w-0 break-words">{{ t('accounting.balanceSheet.subtotalGroup', { group: group.label }) }}</span>
                 <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
               </div>
             </div>
@@ -196,7 +205,7 @@ const downloadCsv = () => {
       <div class="space-y-6">
         <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
           <div class="mb-4 flex items-center justify-between gap-2">
-            <h2 class="text-base sm:text-lg font-semibold text-slate-900">Liabilities</h2>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900">{{ t('accounting.balanceSheet.liabilities') }}</h2>
             <UiBadge variant="info">{{ formatCurrency(reportTotals.liabilitiesTotal) }}</UiBadge>
           </div>
           <div class="space-y-4">
@@ -211,7 +220,7 @@ const downloadCsv = () => {
                   <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
                 </div>
                 <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
-                  <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-950 min-w-0 break-words">{{ t('accounting.balanceSheet.subtotalGroup', { group: group.label }) }}</span>
                   <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
                 </div>
               </div>
@@ -221,7 +230,7 @@ const downloadCsv = () => {
 
         <section class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
           <div class="mb-4 flex items-center justify-between gap-2">
-            <h2 class="text-base sm:text-lg font-semibold text-slate-900">Equity</h2>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900">{{ t('accounting.balanceSheet.equity') }}</h2>
             <UiBadge variant="info">{{ formatCurrency(reportTotals.equityTotal) }}</UiBadge>
           </div>
           <div class="space-y-4">
@@ -236,7 +245,7 @@ const downloadCsv = () => {
                   <span class="font-medium text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(row.balance) }}</span>
                 </div>
                 <div class="flex items-center justify-between bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-t gap-2">
-                  <span class="text-slate-950 min-w-0 break-words">Subtotal {{ group.label }}</span>
+                  <span class="text-slate-950 min-w-0 break-words">{{ t('accounting.balanceSheet.subtotalGroup', { group: group.label }) }}</span>
                   <span class="text-slate-900 shrink-0 whitespace-nowrap">{{ formatCurrency(group.subtotal) }}</span>
                 </div>
               </div>
@@ -250,11 +259,10 @@ const downloadCsv = () => {
         >
           <div class="flex items-center gap-2">
             <AlertTriangle class="h-5 w-5 text-rose-600 shrink-0" />
-            <span class="font-semibold text-rose-900">Ledger is out of balance!</span>
+            <span class="font-semibold text-rose-900">{{ t('accounting.balanceSheet.outOfBalanceTitle') }}</span>
           </div>
           <p class="mt-1">
-            Total Assets must equal total Liabilities + Equity. The discrepancy is
-            {{ formatCurrency(balanceDifference) }}.
+            {{ t('accounting.balanceSheet.outOfBalanceDesc', { amount: formatCurrency(balanceDifference) }) }}
           </p>
         </div>
       </div>

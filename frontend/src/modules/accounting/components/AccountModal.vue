@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -22,6 +23,8 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void
   (event: 'save', value: Partial<Account>): void
 }>()
+
+const { t } = useI18n()
 
 const form = reactive({
   code: '',
@@ -63,41 +66,41 @@ const handleSave = () => {
 </script>
 
 <template>
-  <UiModal :model-value="modelValue" :title="isEditing ? 'Edit Account' : 'New Account'" size="lg" @update:modelValue="emit('update:modelValue', $event)">
+  <UiModal :model-value="modelValue" :title="isEditing ? t('accounting.chartOfAccounts.modal.editTitle') : t('accounting.chartOfAccounts.modal.newTitle')" size="lg" @update:modelValue="emit('update:modelValue', $event)">
     <div class="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-      <UiInput v-model="form.code" label="Account Code" placeholder="1100" />
-      <UiInput v-model="form.name" label="Account Name" placeholder="Cash and Cash Equivalents" />
+      <UiInput v-model="form.code" :label="t('accounting.chartOfAccounts.modal.codeLabel')" :placeholder="t('accounting.chartOfAccounts.modal.codePlaceholder')" />
+      <UiInput v-model="form.name" :label="t('accounting.chartOfAccounts.modal.nameLabel')" :placeholder="t('accounting.chartOfAccounts.modal.namePlaceholder')" />
       <UiSelect
         v-model="form.type"
-        label="Account Type"
+        :label="t('accounting.chartOfAccounts.modal.typeLabel')"
         :options="accountTypes"
       />
       <UiSelect
         v-model="form.parentId"
-        label="Parent Account"
+        :label="t('accounting.chartOfAccounts.modal.parentLabel')"
         :options="[
-          { label: 'No parent', value: '' },
+          { label: t('accounting.chartOfAccounts.modal.noParent'), value: '' },
           ...parentOptions.map((account) => ({ label: `${account.code} - ${account.name}`, value: account.id }))
         ]"
       />
-      <UiInput v-model="form.currencyCode" label="Currency" placeholder="USD" />
+      <UiInput v-model="form.currencyCode" :label="t('accounting.chartOfAccounts.modal.currencyLabel')" placeholder="USD" />
       <UiSelect
         v-model="form.isActive"
-        label="Status"
+        :label="t('accounting.chartOfAccounts.modal.statusLabel')"
         :options="[
-          { label: 'Active', value: 'true' },
-          { label: 'Inactive', value: 'false' },
+          { label: t('accounting.common.active'), value: 'true' },
+          { label: t('accounting.common.inactive'), value: 'false' },
         ]"
       />
       <div class="sm:col-span-2">
-        <UiInput v-model="form.description" label="Description" placeholder="Optional account notes" />
+        <UiInput v-model="form.description" :label="t('accounting.chartOfAccounts.modal.descLabel')" :placeholder="t('accounting.chartOfAccounts.modal.descPlaceholder')" />
       </div>
     </div>
 
     <template #footer>
       <div class="flex flex-col-reverse sm:flex-row w-full justify-end gap-2 sm:gap-3">
-        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">Cancel</UiButton>
-        <UiButton class="w-full sm:w-auto justify-center" @click="handleSave">{{ isEditing ? 'Save Changes' : 'Create Account' }}</UiButton>
+        <UiButton variant="outline" class="w-full sm:w-auto justify-center" @click="close">{{ t('accounting.common.cancel') }}</UiButton>
+        <UiButton class="w-full sm:w-auto justify-center" @click="handleSave">{{ isEditing ? t('accounting.chartOfAccounts.modal.save') : t('accounting.chartOfAccounts.modal.create') }}</UiButton>
       </div>
     </template>
   </UiModal>

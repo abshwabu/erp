@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   TrendingUp,
   TrendingDown,
@@ -45,6 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
+const { t } = useI18n()
 const toast = useToast()
 
 const isSubmitting = ref(false)
@@ -118,19 +120,19 @@ watch(
   }
 )
 
-const paymentMethodOptions = [
-  { label: 'Cash', value: 'cash' },
-  { label: 'Bank Transfer', value: 'bank_transfer' },
-  { label: 'Check', value: 'check' },
-  { label: 'Credit / Debit Card', value: 'credit_card' },
-  { label: 'Mobile Money', value: 'mobile_money' },
-  { label: 'Other', value: 'other' },
-]
+const paymentMethodOptions = computed(() => [
+  { label: t('finance.common.paymentMethods.cash'), value: 'cash' },
+  { label: t('finance.common.paymentMethods.bank_transfer'), value: 'bank_transfer' },
+  { label: t('finance.common.paymentMethods.check'), value: 'check' },
+  { label: t('finance.common.paymentMethods.credit_card'), value: 'credit_card' },
+  { label: t('finance.common.paymentMethods.mobile_money'), value: 'mobile_money' },
+  { label: t('finance.common.paymentMethods.other'), value: 'other' },
+])
 
 const paymentAccountOptions = computed(() => {
   const accounts = props.accounts?.payment_accounts || []
   return [
-    { label: 'Default Cash / Bank Account (Auto)', value: '' },
+    { label: t('finance.transactionModal.defaultPaymentAccount'), value: '' },
     ...accounts.map((a) => ({
       label: `${a.code} - ${a.name}`,
       value: a.id,
@@ -145,7 +147,7 @@ const ledgerAccountOptions = computed(() => {
       : props.accounts?.expense_accounts || []
 
   return [
-    { label: 'Default Category Ledger Account (Auto)', value: '' },
+    { label: t('finance.transactionModal.defaultCategoryAccount'), value: '' },
     ...accounts.map((a) => ({
       label: `${a.code} - ${a.name}`,
       value: a.id,
@@ -212,7 +214,7 @@ const handleSubmit = async () => {
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     size="lg"
-    :title="isEditMode ? 'Edit Transaction' : form.type === 'income' ? 'Record Income' : 'Record Expense'"
+    :title="isEditMode ? t('finance.transactionModal.editTransaction') : form.type === 'income' ? t('finance.transactionModal.recordIncome') : t('finance.transactionModal.recordExpense')"
   >
     <form @submit.prevent="handleSubmit" class="space-y-5 text-slate-800">
       <!-- 1. Type Switcher (Income vs Expense) -->
@@ -228,7 +230,7 @@ const handleSubmit = async () => {
           ]"
         >
           <TrendingUp class="w-4 h-4" />
-          <span>Income (Cash In)</span>
+          <span>{{ t('finance.transactionModal.incomeCashIn') }}</span>
         </button>
 
         <button
@@ -242,7 +244,7 @@ const handleSubmit = async () => {
           ]"
         >
           <TrendingDown class="w-4 h-4" />
-          <span>Expense (Cash Out)</span>
+          <span>{{ t('finance.transactionModal.expenseCashOut') }}</span>
         </button>
       </div>
 
@@ -251,7 +253,7 @@ const handleSubmit = async () => {
         <!-- Amount -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Amount ($) <span class="text-rose-500">*</span>
+            {{ t('finance.transactionModal.amount') }} <span class="text-rose-500">*</span>
           </label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold text-lg">
@@ -272,7 +274,7 @@ const handleSubmit = async () => {
         <!-- Date -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Date <span class="text-rose-500">*</span>
+            {{ t('finance.transactionModal.date') }} <span class="text-rose-500">*</span>
           </label>
           <input
             type="date"
@@ -288,13 +290,13 @@ const handleSubmit = async () => {
         <!-- Category -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Category
+            {{ t('finance.transactionModal.category') }}
           </label>
           <select
             v-model="form.category_id"
             class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
           >
-            <option value="">Select a Category...</option>
+            <option value="">{{ t('finance.transactionModal.selectCategory') }}</option>
             <option
               v-for="cat in filteredCategories"
               :key="cat.id"
@@ -308,12 +310,12 @@ const handleSubmit = async () => {
         <!-- Payee or Payer -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            {{ form.type === 'income' ? 'Received From (Payer)' : 'Paid To (Payee / Vendor)' }}
+            {{ form.type === 'income' ? t('finance.transactionModal.receivedFrom') : t('finance.transactionModal.paidTo') }}
           </label>
           <input
             type="text"
             v-model="form.payee_payer"
-            :placeholder="form.type === 'income' ? 'e.g. Acme Corp / Customer Name' : 'e.g. Office Depot / Landlord'"
+            :placeholder="form.type === 'income' ? t('finance.transactionModal.payerPlaceholder') : t('finance.transactionModal.payeePlaceholder')"
             class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
           />
         </div>
@@ -324,7 +326,7 @@ const handleSubmit = async () => {
         <!-- Payment Method -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Payment Method
+            {{ t('finance.transactionModal.paymentMethod') }}
           </label>
           <select
             v-model="form.payment_method"
@@ -343,12 +345,12 @@ const handleSubmit = async () => {
         <!-- Reference / Check # -->
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Reference / Receipt #
+            {{ t('finance.transactionModal.reference') }}
           </label>
           <input
             type="text"
             v-model="form.reference"
-            placeholder="e.g. CHK-1092, INV-0045, or Receipt ID"
+            :placeholder="t('finance.transactionModal.referencePlaceholder')"
             class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
           />
         </div>
@@ -357,12 +359,12 @@ const handleSubmit = async () => {
       <!-- 5. Description / Memo -->
       <div>
         <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-          Description / Memo
+          {{ t('finance.transactionModal.description') }}
         </label>
         <textarea
           v-model="form.description"
           rows="2"
-          placeholder="Detailed memo or purpose of transaction..."
+          :placeholder="t('finance.transactionModal.descriptionPlaceholder')"
           class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs resize-none"
         ></textarea>
       </div>
@@ -377,10 +379,10 @@ const handleSubmit = async () => {
           <div class="flex items-center gap-2">
             <Scale class="w-4 h-4 text-primary-600" />
             <span class="text-xs font-bold text-slate-800">
-              Accounting Module Double-Entry Settings
+              {{ t('finance.transactionModal.ledgerSettings') }}
             </span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-100 text-primary-800">
-              Auto-Synced
+              {{ t('finance.transactionModal.autoSynced') }}
             </span>
           </div>
           <ChevronDown
@@ -394,7 +396,7 @@ const handleSubmit = async () => {
             <!-- Payment Account (Cash/Bank) -->
             <div>
               <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                Payment Asset Account (Cash / Bank)
+                {{ t('finance.transactionModal.paymentAccount') }}
               </label>
               <select
                 v-model="form.payment_account_id"
@@ -413,7 +415,7 @@ const handleSubmit = async () => {
             <!-- Ledger Revenue or Expense Account -->
             <div>
               <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                {{ form.type === 'income' ? 'Revenue / Income Ledger Account' : 'Expense Ledger Account' }}
+                {{ form.type === 'income' ? t('finance.transactionModal.revenueAccount') : t('finance.transactionModal.expenseAccount') }}
               </label>
               <select
                 v-model="form.account_id"
@@ -434,12 +436,12 @@ const handleSubmit = async () => {
           <div class="p-2.5 bg-blue-50/80 border border-blue-200/70 rounded-xl text-xs text-blue-900 flex items-start gap-2">
             <Sparkles class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div class="leading-relaxed">
-              <span class="font-bold">Automated General Ledger Posting:</span>
+              <span class="font-bold">{{ t('finance.transactionModal.ledgerPostingBanner') }}</span>
               <span v-if="form.type === 'income'">
-                Debit Payment Account (+Asset) and Credit Revenue Account (+Income) in a balanced journal entry.
+                {{ t('finance.transactionModal.incomePostingDesc') }}
               </span>
               <span v-else>
-                Debit Expense Account (+Expense) and Credit Payment Account (-Asset) in a balanced journal entry.
+                {{ t('finance.transactionModal.expensePostingDesc') }}
               </span>
             </div>
           </div>
@@ -453,7 +455,7 @@ const handleSubmit = async () => {
           @click="emit('update:modelValue', false)"
           class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-xs sm:text-sm transition-colors"
         >
-          Cancel
+          {{ t('finance.transactionModal.cancel') }}
         </button>
 
         <UiButton
@@ -463,10 +465,10 @@ const handleSubmit = async () => {
           class="shadow-md text-xs sm:text-sm"
         >
           <span v-if="form.type === 'income'">
-            {{ isEditMode ? 'Update Income' : 'Record Income' }}
+            {{ isEditMode ? t('finance.transactionModal.updateIncome') : t('finance.transactionModal.recordIncome') }}
           </span>
           <span v-else>
-            {{ isEditMode ? 'Update Expense' : 'Record Expense' }}
+            {{ isEditMode ? t('finance.transactionModal.updateExpense') : t('finance.transactionModal.recordExpense') }}
           </span>
         </UiButton>
       </div>
